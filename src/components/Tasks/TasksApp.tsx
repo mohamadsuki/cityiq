@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import type { DepartmentSlug } from "@/lib/demoAccess";
 
@@ -39,6 +41,64 @@ const ALL_DEPARTMENTS: DepartmentSlug[] = [
   "non-formal",
   "business",
 ];
+
+const STATUS_LABELS: Record<TaskStatus, string> = {
+  todo: "לביצוע",
+  in_progress: "בתהליך",
+  blocked: "חסום",
+  done: "הושלם",
+  cancelled: "בוטל",
+};
+
+const PRIORITY_LABELS: Record<TaskPriority, string> = {
+  low: "נמוכה",
+  medium: "בינונית",
+  high: "גבוהה",
+  urgent: "דחוף",
+};
+
+const DEPARTMENT_LABELS: Record<DepartmentSlug, string> = {
+  finance: "כספים",
+  education: "חינוך",
+  engineering: "הנדסה",
+  welfare: "רווחה",
+  "non-formal": "חינוך בלתי פורמלי",
+  business: "עסקים",
+};
+
+function statusBadgeVariant(status: TaskStatus): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case "todo":
+      return "secondary";
+    case "in_progress":
+      return "default";
+    case "blocked":
+      return "destructive";
+    case "done":
+      return "secondary";
+    case "cancelled":
+      return "outline";
+    default:
+      return "secondary";
+  }
+}
+
+function priorityBadgeVariant(priority: TaskPriority): "default" | "secondary" | "destructive" | "outline" {
+  switch (priority) {
+    case "low":
+      return "outline";
+    case "medium":
+      return "secondary";
+    case "high":
+      return "default";
+    case "urgent":
+      return "destructive";
+    default:
+      return "secondary";
+  }
+}
+
+const DATE_TIME_FORMAT_OPTS: Intl.DateTimeFormatOptions = { dateStyle: "short", timeStyle: "short" };
 
 export default function TasksApp() {
   const { role, departments, user, session } = useAuth();
@@ -296,7 +356,7 @@ export default function TasksApp() {
               <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                 <SelectItem value="all">הכל</SelectItem>
                 {visibleDepartments.map((d) => (
-                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                  <SelectItem key={d} value={d}>{DEPARTMENT_LABELS[d]}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -327,11 +387,22 @@ export default function TasksApp() {
             {!loading && filtered.map((t) => (
               <tr key={t.id} className="border-b border-border">
                 <td className="py-3 font-medium">{t.title}</td>
-                <td className="py-3">{t.department_slug}</td>
-                <td className="py-3">{t.priority}</td>
-                <td className="py-3">{t.status}</td>
-                <td className="py-3">{t.due_at ? new Date(t.due_at).toLocaleString() : "—"}</td>
-                <td className="py-3">{t.progress_percent ?? 0}%</td>
+                <td className="py-3">{DEPARTMENT_LABELS[t.department_slug]}</td>
+                <td className="py-3">
+                  <Badge variant={priorityBadgeVariant(t.priority)}>{PRIORITY_LABELS[t.priority]}</Badge>
+                </td>
+                <td className="py-3">
+                  <Badge variant={statusBadgeVariant(t.status)}>{STATUS_LABELS[t.status]}</Badge>
+                </td>
+                <td className="py-3">{t.due_at ? new Date(t.due_at).toLocaleString('he-IL', DATE_TIME_FORMAT_OPTS) : "—"}</td>
+                <td className="py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-24">
+                      <Progress value={t.progress_percent ?? 0} />
+                    </div>
+                    <span className="text-sm text-muted-foreground">{t.progress_percent ?? 0}%</span>
+                  </div>
+                </td>
                 <td className="py-3 space-x-2 space-x-reverse">
                   <Button variant="outline" size="sm" onClick={() => openEdit(t)}>עריכה</Button>
                   {canDelete && (
@@ -371,7 +442,7 @@ export default function TasksApp() {
                 <SelectTrigger disabled={isManager && !managerEditable("department_slug")}><SelectValue aria-label="מחלקה" /></SelectTrigger>
                 <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                   {visibleDepartments.map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                    <SelectItem key={d} value={d}>{DEPARTMENT_LABELS[d]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
