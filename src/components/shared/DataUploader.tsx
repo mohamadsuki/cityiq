@@ -284,7 +284,33 @@ export function DataUploader({ context = "global" }: DataUploaderProps) {
       if (upErr) console.warn("upload warn:", upErr.message);
 
       // Map and insert
-      const mapped = rows.map((r) => ({ ...mapRowToTable(detected.table!, r), user_id: userId }));
+      const inferDept = (table: string, ctx: UploadContext): 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | null => {
+        if (ctx && ctx !== 'global') return ctx;
+        switch (table) {
+          case 'projects':
+          case 'grants':
+            return 'finance';
+          case 'institutions':
+            return 'education';
+          case 'plans':
+            return 'engineering';
+          case 'welfare_services':
+            return 'welfare';
+          case 'activities':
+            return 'non-formal';
+          case 'licenses':
+            return 'business';
+          default:
+            return null;
+        }
+      };
+
+      const deptSlug = inferDept(detected.table!, context);
+      const mapped = rows.map((r) => ({ 
+        ...mapRowToTable(detected.table!, r), 
+        user_id: userId,
+        ...(deptSlug ? { department_slug: deptSlug } : {})
+      }));
       // Filter out completely empty objects
       const filtered = mapped.filter((obj) => Object.values(obj).some((v) => v !== null && v !== undefined && v !== ""));
 
