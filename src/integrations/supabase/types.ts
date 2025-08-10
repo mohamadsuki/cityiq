@@ -19,6 +19,7 @@ export type Database = {
           age_group: string | null
           category: string | null
           created_at: string
+          department_slug: Database["public"]["Enums"]["department_slug"] | null
           id: string
           location: string | null
           name: string | null
@@ -33,6 +34,9 @@ export type Database = {
           age_group?: string | null
           category?: string | null
           created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           id?: string
           location?: string | null
           name?: string | null
@@ -47,6 +51,9 @@ export type Database = {
           age_group?: string | null
           category?: string | null
           created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           id?: string
           location?: string | null
           name?: string | null
@@ -82,6 +89,7 @@ export type Database = {
           amount: number | null
           created_at: string
           decision_at: string | null
+          department_slug: Database["public"]["Enums"]["department_slug"] | null
           id: string
           ministry: string | null
           name: string | null
@@ -94,6 +102,9 @@ export type Database = {
           amount?: number | null
           created_at?: string
           decision_at?: string | null
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           id?: string
           ministry?: string | null
           name?: string | null
@@ -106,6 +117,9 @@ export type Database = {
           amount?: number | null
           created_at?: string
           decision_at?: string | null
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           id?: string
           ministry?: string | null
           name?: string | null
@@ -154,6 +168,7 @@ export type Database = {
           address: string | null
           classes: number | null
           created_at: string
+          department_slug: Database["public"]["Enums"]["department_slug"] | null
           id: string
           lat: number | null
           level: string | null
@@ -168,6 +183,9 @@ export type Database = {
           address?: string | null
           classes?: number | null
           created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           id?: string
           lat?: number | null
           level?: string | null
@@ -182,6 +200,9 @@ export type Database = {
           address?: string | null
           classes?: number | null
           created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           id?: string
           lat?: number | null
           level?: string | null
@@ -199,6 +220,7 @@ export type Database = {
           address: string | null
           business_name: string | null
           created_at: string
+          department_slug: Database["public"]["Enums"]["department_slug"] | null
           expires_at: string | null
           id: string
           lat: number | null
@@ -214,6 +236,9 @@ export type Database = {
           address?: string | null
           business_name?: string | null
           created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           expires_at?: string | null
           id?: string
           lat?: number | null
@@ -229,6 +254,9 @@ export type Database = {
           address?: string | null
           business_name?: string | null
           created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           expires_at?: string | null
           id?: string
           lat?: number | null
@@ -248,6 +276,7 @@ export type Database = {
           area: number | null
           block: string | null
           created_at: string
+          department_slug: Database["public"]["Enums"]["department_slug"] | null
           id: string
           land_use: string | null
           lat: number | null
@@ -264,6 +293,9 @@ export type Database = {
           area?: number | null
           block?: string | null
           created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           id?: string
           land_use?: string | null
           lat?: number | null
@@ -280,6 +312,9 @@ export type Database = {
           area?: number | null
           block?: string | null
           created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           id?: string
           land_use?: string | null
           lat?: number | null
@@ -300,6 +335,7 @@ export type Database = {
           code: string | null
           created_at: string
           department: string | null
+          department_slug: Database["public"]["Enums"]["department_slug"] | null
           domain: string | null
           funding_source: string | null
           id: string
@@ -315,6 +351,9 @@ export type Database = {
           code?: string | null
           created_at?: string
           department?: string | null
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           domain?: string | null
           funding_source?: string | null
           id?: string
@@ -330,6 +369,9 @@ export type Database = {
           code?: string | null
           created_at?: string
           department?: string | null
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           domain?: string | null
           funding_source?: string | null
           id?: string
@@ -387,6 +429,7 @@ export type Database = {
         Row: {
           budget_allocated: number | null
           created_at: string
+          department_slug: Database["public"]["Enums"]["department_slug"] | null
           id: string
           period: string | null
           recipients: number | null
@@ -399,6 +442,9 @@ export type Database = {
         Insert: {
           budget_allocated?: number | null
           created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           id?: string
           period?: string | null
           recipients?: number | null
@@ -411,6 +457,9 @@ export type Database = {
         Update: {
           budget_allocated?: number | null
           created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
           id?: string
           period?: string | null
           recipients?: number | null
