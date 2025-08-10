@@ -26,9 +26,15 @@ export default function AuthPage() {
       let loginEmail = input;
 
       if (input && !input.includes('@')) {
-        // שימוש באימייל פיקטיבי עבור משתמשי דמו כדי לעקוף ולידציית אימיילים
+        // מיפוי שם משתמש לאימייל הדמו האמיתי (למשל mayor -> mayor@city.gov.il)
         usernameNorm = simpleUsernameFromEmail(input);
-        loginEmail = `${usernameNorm}@example.com`;
+        const mapped = emailForUsername(usernameNorm);
+        if (!mapped) {
+          toast({ title: 'שגיאת אימות', description: 'שם המשתמש לא מוכר בדמו. בחר/י מרשימת הדמו למטה או הזן/י אימייל.', variant: 'destructive' });
+          setBusy(false);
+          return;
+        }
+        loginEmail = mapped;
       } else if (input) {
         usernameNorm = simpleUsernameFromEmail(input);
       }
