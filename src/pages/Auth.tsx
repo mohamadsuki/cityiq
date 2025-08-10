@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { DEMO_USERS } from '@/lib/demoAccess';
+import { DEMO_USERS, emailForUsername, simpleUsernameFromEmail } from '@/lib/demoAccess';
 import { useAuth } from '@/context/AuthContext';
 
 export default function AuthPage() {
@@ -19,14 +19,28 @@ export default function AuthPage() {
 
   const submit = async () => {
     setBusy(true);
-    const action = mode === 'login' ? signIn : signUp;
-    const { error } = await action(email, password);
-    setBusy(false);
-    if (error) {
-      toast({ title: 'שגיאת אימות', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'הצלחה', description: mode === 'login' ? 'התחברת בהצלחה' : 'נרשמת בהצלחה, בדוק/י אימייל לאימות' });
-      nav('/');
+    try {
+      // תמיכה בשם משתמש (למשל "mayor") או באימייל מלא
+      let loginEmail = email.trim();
+      if (loginEmail && !loginEmail.includes('@')) {
+        const mapped = emailForUsername(loginEmail);
+        if (!mapped) {
+          setBusy(false);
+          toast({ title: 'שגיאת אימות', description: 'שם המשתמש לא מוכר בדמו. בחר/י מרשימת הדמו למטה או הזן/י אימייל.', variant: 'destructive' });
+          return;
+        }
+        loginEmail = mapped;
+      }
+      const action = mode === 'login' ? signIn : signUp;
+      const { error } = await action(loginEmail, password);
+      if (error) {
+        toast({ title: 'שגיאת אימות', description: error.message, variant: 'destructive' });
+      } else {
+        toast({ title: 'הצלחה', description: mode === 'login' ? 'התחברת בהצלחה' : 'נרשמת בהצלחה, בדוק/י אימייל לאימות' });
+        nav('/');
+      }
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -38,8 +52,8 @@ export default function AuthPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">דוא"ל</Label>
-            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@city.gov.il" />
+            <Label htmlFor="email">שם משתמש או דוא"ל</Label>
+            <Input id="email" type="text" value={email} onChange={e => setEmail(e.target.value)} placeholder="mayor או you@city.gov.il" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">סיסמה</Label>
@@ -59,11 +73,14 @@ export default function AuthPage() {
           <div className="pt-2">
             <p className="text-sm font-medium mb-2">בחר/י משתמש דמו למילוי אוטומטי</p>
             <div className="grid grid-cols-1 gap-2">
-              {DEMO_USERS.map(u => (
-                <Button key={u.email} variant="outline" onClick={() => { setEmail(u.email); setPassword(u.password); setMode('login'); }}>
-                  {u.displayName} · {u.email} · {u.password}
-                </Button>
-              ))}
+              {DEMO_USERS.map(u => {
+                const uname = simpleUsernameFromEmail(u.email);
+                return (
+                  <Button key={u.email} variant="outline" onClick={() => { setEmail(uname); setPassword(u.password); setMode('login'); }}>
+                    {u.displayName} · {uname} · {u.password}
+                  </Button>
+                );
+              })}
             </div>
           </div>
         </CardContent>
