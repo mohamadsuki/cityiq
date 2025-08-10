@@ -34,8 +34,35 @@ export default function Dashboard() {
       "non-formal": "חינוך בלתי פורמאלי - דאשבורד עירוני",
       "business": "רישוי עסקים - דאשבורד עירוני",
     };
+    const descriptions: Record<string, string> = {
+      "overview": "סקירה כללית של מדדי העירייה וכל המחלקות במקום אחד.",
+      "finance": "דאשבורד פיננסים: תקציב, ביצוע, מענקים והתראות חריגה.",
+      "education": "דאשבורד חינוך: תלמידים, מוסדות, כיתות והתפלגויות.",
+      "engineering": "דאשבורד הנדסה: תוכניות, סטטוסים, ייעודי קרקע ומפות.",
+      "welfare": "דאשבורד רווחה: מקבלי שירות, שירותים, מגמות ופילוחים.",
+      "non-formal": "חינוך בלתי פורמאלי: תוכניות, משתתפים, מגמות והשתתפות.",
+      "business": "רישוי עסקים: סטטוס רישיונות, סוגי עסקים והתראות.",
+    };
+
     document.title = titles[currentSection] || "דאשבורד עירוני";
-  }, [currentSection]);
+
+    let descTag = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    if (!descTag) {
+      descTag = document.createElement('meta');
+      descTag.setAttribute('name', 'description');
+      document.head.appendChild(descTag);
+    }
+    descTag.setAttribute('content', descriptions[currentSection] || 'דאשבורד עירוני - מערכת נתונים עירונית.');
+
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    const url = window.location.origin + path;
+    canonical.setAttribute('href', url);
+  }, [currentSection, path]);
 
   const renderDashboard = () => {
     switch (currentSection) {
