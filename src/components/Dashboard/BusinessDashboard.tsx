@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from "recharts";
-import { Store, Bell, FileSpreadsheet, Timer } from "lucide-react";
+import { Store, Bell, FileSpreadsheet, Timer, AlertTriangle } from "lucide-react";
 import { DataTable } from "@/components/shared/DataTable";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { ExportButtons } from "@/components/shared/ExportButtons";
@@ -60,6 +60,13 @@ export default function BusinessDashboard() {
     { accessorKey: "expiresAt", header: "תוקף עד" },
   ];
 
+  const expiredCount = licenseStatus.find((s) => s.name === "פג תוקף")?.value ?? 0;
+  const alerts = [
+    { id: "AL-001", title: "רישיונות שפוקעים בחודש הקרוב", count: kpi.expiringThisMonth, severity: "warning" as const, icon: Timer },
+    { id: "AL-002", title: "בקשות הממתינות לטיפול", count: 12, severity: "default" as const, icon: Bell },
+    { id: "AL-003", title: "עסקים ללא רישיון תקף", count: expiredCount, severity: "destructive" as const, icon: AlertTriangle },
+  ];
+
   return (
     <div className="space-y-8">
       <header className="space-y-2">
@@ -108,11 +115,27 @@ export default function BusinessDashboard() {
       <section>
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-xl flex items-center">התראות ומעקב <Badge variant="secondary" className="ml-2">דמו</Badge></CardTitle>
+            <CardTitle className="text-xl">התראות ומעקב</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-40 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
-              לוח התראות יתווסף בהמשך
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {alerts.map((a) => {
+                const Icon = a.icon;
+                const color = a.severity === 'warning' ? 'text-warning' : a.severity === 'destructive' ? 'text-destructive' : 'text-foreground';
+                const badgeVariant = a.severity === 'warning' ? 'secondary' : a.severity === 'destructive' ? 'destructive' : 'outline';
+                return (
+                  <div key={a.id} className="p-4 rounded-lg border bg-card">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Icon className={`h-4 w-4 ${color}`} />
+                        <h3 className="font-semibold text-sm">{a.title}</h3>
+                      </div>
+                      <Badge variant={badgeVariant as any}>{a.count}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">עודכן אוטומטית לפי נתונים אחרונים</p>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
