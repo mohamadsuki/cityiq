@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  XCircle
+  XCircle,
+  FileSpreadsheet
 } from "lucide-react";
 import { DataTable } from "@/components/shared/DataTable";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
@@ -31,6 +32,8 @@ import { ExportButtons } from "@/components/shared/ExportButtons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DataUploader } from "@/components/shared/DataUploader";
 
 const budgetData = [
   { name: "חינוך", approved: 890, actual: 720, percentage: 81 },
@@ -109,12 +112,24 @@ export default function FinanceDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold text-foreground">מחלקת פיננסים</h1>
-        <p className="text-muted-foreground text-lg">
-          ניהול תקציב ומעקב פיננסי עירוני
-        </p>
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-foreground">מחלקת פיננסים</h1>
+          <p className="text-muted-foreground text-lg">ניהול תקציב ומעקב פיננסי עירוני</p>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>ייבוא נתונים למחלקת פיננסים</DialogTitle>
+            </DialogHeader>
+            <DataUploader context="finance" />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* KPI Cards */}

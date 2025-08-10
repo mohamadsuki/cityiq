@@ -8,6 +8,9 @@ import { ExportButtons } from "@/components/shared/ExportButtons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DataUploader } from "@/components/shared/DataUploader";
+import { Button } from "@/components/ui/button";
 
 const kpi = {
   registered: 1840,
@@ -69,9 +72,24 @@ export default function BusinessDashboard() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-4xl font-bold text-foreground">רישוי עסקים</h1>
-        <p className="text-muted-foreground text-lg">סטטוס רישיונות, סוגי עסקים והתראות</p>
+      <header className="flex items-start justify-between">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-foreground">רישוי עסקים</h1>
+          <p className="text-muted-foreground text-lg">סטטוס רישיונות, סוגי עסקים והתראות</p>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>ייבוא נתונים לרישוי עסקים</DialogTitle>
+            </DialogHeader>
+            <DataUploader context="business" />
+          </DialogContent>
+        </Dialog>
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

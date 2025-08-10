@@ -19,8 +19,11 @@ import {
   Building2,
   BookOpen,
   TrendingUp,
-  MapPin
+  MapPin,
+  FileSpreadsheet
 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DataUploader } from "@/components/shared/DataUploader";
 
 const educationData = [
   { level: "יסודי", students: 8420, institutions: 24, ratio: 35.1 },
@@ -64,12 +67,24 @@ export default function EducationDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold text-foreground">מחלקת חינוך</h1>
-        <p className="text-muted-foreground text-lg">
-          ניהול ומעקב מערכת החינוך העירונית
-        </p>
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-foreground">מחלקת חינוך</h1>
+          <p className="text-muted-foreground text-lg">ניהול ומעקב מערכת החינוך העירונית</p>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>ייבוא נתונים למחלקת חינוך</DialogTitle>
+            </DialogHeader>
+            <DataUploader context="education" />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* KPI Cards */}
