@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import {
   BarChart3,
   Users,
@@ -9,12 +10,16 @@ import {
   TrendingUp,
   Activity,
   Store,
-  AlertTriangle
+  AlertTriangle,
+  ListTodo
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { DEMO_USERS } from "@/lib/demoAccess";
-
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { BarChart, Bar, XAxis, CartesianGrid } from "recharts";
 const KPICard = ({ 
   title, 
   value, 
@@ -103,6 +108,41 @@ const DepartmentCard = ({
 
 export default function OverviewDashboard() {
   const { user } = useAuth();
+
+  type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
+  type TaskRow = { id: string; status: TaskStatus; due_at: string | null; progress_percent: number | null };
+
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
+    queryKey: ['tasks-overview'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id,status,due_at,progress_percent');
+      if (error) return [] as TaskRow[];
+      return (data || []) as TaskRow[];
+    },
+  });
+
+  const now = new Date();
+  const totalTasks = tasks.length;
+  const statusCounts = {
+    todo: tasks.filter(t => t.status === 'todo').length,
+    in_progress: tasks.filter(t => t.status === 'in_progress').length,
+    blocked: tasks.filter(t => t.status === 'blocked').length,
+    done: tasks.filter(t => t.status === 'done').length,
+    cancelled: tasks.filter(t => t.status === 'cancelled').length,
+  };
+  const overdue = tasks.filter(t => t.due_at && new Date(t.due_at) < now && t.status !== 'done' && t.status !== 'cancelled').length;
+  const avgProgress = totalTasks ? Math.round(tasks.reduce((acc, t) => acc + (t.progress_percent ?? 0), 0) / totalTasks) : 0;
+
+  const chartData = [
+    { status: 'לביצוע', count: statusCounts.todo },
+    { status: 'בתהליך', count: statusCounts.in_progress },
+    { status: 'חסום', count: statusCounts.blocked },
+    { status: 'הושלם', count: statusCounts.done },
+    { status: 'בוטל', count: statusCounts.cancelled },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -229,6 +269,55 @@ export default function OverviewDashboard() {
           />
         </div>
       </div>
+
+      {/* Task Overview */}
+      <Card className="shadow-card">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <ListTodo className="h-5 w-5 text-muted-foreground" />
+            סקירת משימות
+          </CardTitle>
+          <Link to="/tasks" aria-label="נווט אל משימות">
+            <Button variant="outline" size="sm">לצפייה בכל המשימות</Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-4">
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="text-xs text-muted-foreground">סה״כ משימות</div>
+                <div className="text-2xl font-bold">{tasksLoading ? '—' : totalTasks}</div>
+              </div>
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="text-xs text-muted-foreground">הושלמו</div>
+                <div className="text-2xl font-bold">{tasksLoading ? '—' : statusCounts.done}</div>
+              </div>
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="text-xs text-muted-foreground">בעיכוב</div>
+                <div className="text-2xl font-bold">{tasksLoading ? '—' : overdue}</div>
+              </div>
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="text-xs text-muted-foreground">התקדמות ממוצעת</div>
+                <div className="text-2xl font-bold">{tasksLoading ? '—' : `${avgProgress}%`}</div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2">
+              <ChartContainer
+                config={{ count: { label: 'כמות' } }}
+                className="aspect-[16/9]"
+              >
+                <BarChart data={chartData} barCategoryGap={20}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis dataKey="status" tickLine={false} axisLine={false} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card className="shadow-card">
