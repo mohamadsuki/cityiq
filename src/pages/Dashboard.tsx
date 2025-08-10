@@ -1,11 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Navigation from "@/components/Layout/Navigation";
 import OverviewDashboard from "@/components/Dashboard/OverviewDashboard";
 import FinanceDashboard from "@/components/Dashboard/FinanceDashboard";
 import EducationDashboard from "@/components/Dashboard/EducationDashboard";
-
+import EngineeringDashboard from "@/components/Dashboard/EngineeringDashboard";
+import WelfareDashboard from "@/components/Dashboard/WelfareDashboard";
+import NonFormalDashboard from "@/components/Dashboard/NonFormalDashboard";
+import BusinessDashboard from "@/components/Dashboard/BusinessDashboard";
 export default function Dashboard() {
   const [currentSection, setCurrentSection] = useState("overview");
+
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      "overview": "סקירה כללית - דאשבורד עירוני",
+      "finance": "מחלקת פיננסים - דאשבורד עירוני",
+      "education": "מחלקת חינוך - דאשבורד עירוני",
+      "engineering": "מחלקת הנדסה - דאשבורד עירוני",
+      "welfare": "מחלקת רווחה - דאשבורד עירוני",
+      "non-formal": "חינוך בלתי פורמאלי - דאשבורד עירוני",
+      "business": "רישוי עסקים - דאשבורד עירוני",
+    };
+    document.title = titles[currentSection] || "דאשבורד עירוני";
+  }, [currentSection]);
 
   const renderDashboard = () => {
     switch (currentSection) {
@@ -16,33 +32,13 @@ export default function Dashboard() {
       case "education":
         return <EducationDashboard />;
       case "engineering":
-        return (
-          <div className="space-y-4">
-            <h1 className="text-4xl font-bold">מחלקת הנדסה</h1>
-            <p className="text-muted-foreground">דאשבורד זה יפותח בשלב הבא</p>
-          </div>
-        );
+        return <EngineeringDashboard />;
       case "welfare":
-        return (
-          <div className="space-y-4">
-            <h1 className="text-4xl font-bold">מחלקת רווחה</h1>
-            <p className="text-muted-foreground">דאשבורד זה יפותח בשלב הבא</p>
-          </div>
-        );
+        return <WelfareDashboard />;
       case "non-formal":
-        return (
-          <div className="space-y-4">
-            <h1 className="text-4xl font-bold">חינוך בלתי פורמאלי</h1>
-            <p className="text-muted-foreground">דאשבורד זה יפותח בשלב הבא</p>
-          </div>
-        );
+        return <NonFormalDashboard />;
       case "business":
-        return (
-          <div className="space-y-4">
-            <h1 className="text-4xl font-bold">רישוי עסקים</h1>
-            <p className="text-muted-foreground">דאשבורד זה יפותח בשלב הבא</p>
-          </div>
-        );
+        return <BusinessDashboard />;
       default:
         return <OverviewDashboard />;
     }
