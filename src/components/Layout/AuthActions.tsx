@@ -17,7 +17,7 @@ export function AuthActions() {
 
   return (
     <div className="flex items-center gap-2">
-      {role && <Badge variant="secondary">{role === 'mayor' ? 'ראש העיר' : 'מנהל/ת'}</Badge>}
+      {role && <Badge variant="secondary">{role === 'mayor' ? 'ראש העיר' : role === 'ceo' ? 'מנכ"ל' : 'מנהל/ת'}</Badge>}
       <Button size="sm" variant="outline" onClick={signOut}>התנתקות</Button>
     </div>
   );

@@ -76,7 +76,7 @@ export default function Dashboard() {
 
   const renderDashboard = () => {
     // Access control: if not mayor and section is department not in permissions -> show overview
-    if (role !== 'mayor' && [
+    if (role !== 'mayor' && role !== 'ceo' && [
       'finance','education','engineering','welfare','non-formal','business']
       .includes(currentSection) && !departments.includes(currentSection as any)) {
       return (

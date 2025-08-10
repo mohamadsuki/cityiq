@@ -74,7 +74,7 @@ export default function Navigation() {
           <nav className="space-y-2">
             {navigationItems
               .filter((item) => {
-                if (!role || role === 'mayor') return true;
+                if (!role || role === 'mayor' || role === 'ceo') return true;
                 // Always allow overview
                 if (item.id === 'overview' || item.id === 'tasks') return true;
                 // Allow only permitted departments

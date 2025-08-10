@@ -129,11 +129,11 @@ export default function TasksApp() {
     progress_notes: "",
   });
 
-  const canCreate = role === "mayor";
-  const canDelete = role === "mayor";
+  const canCreate = role === "mayor" || role === "ceo";
+  const canDelete = role === "mayor" || role === "ceo";
   const isDemo = !session;
 
-  const visibleDepartments: DepartmentSlug[] = role === "mayor" ? ALL_DEPARTMENTS : departments;
+  const visibleDepartments: DepartmentSlug[] = (role === "mayor" || role === "ceo") ? ALL_DEPARTMENTS : departments;
 
   const filtered = useMemo(() => {
     return tasks.filter((t) => {
@@ -309,7 +309,7 @@ export default function TasksApp() {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">משימות</h1>
-          <p className="text-sm text-muted-foreground">ניהול משימות מראש העיר לראשי המחלקות</p>
+          <p className="text-sm text-muted-foreground">ניהול משימות הנהלה לראשי המחלקות</p>
         </div>
         {canCreate && (
           <Button onClick={openCreate}>משימה חדשה</Button>

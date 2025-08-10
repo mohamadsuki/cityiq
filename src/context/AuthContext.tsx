@@ -6,7 +6,7 @@ import { getAccessForEmail, type DepartmentSlug } from '@/lib/demoAccess';
 interface AuthContextValue {
   user: User | null;
   session: Session | null;
-  role: 'mayor' | 'manager' | null;
+  role: 'mayor' | 'ceo' | 'manager' | null;
   departments: DepartmentSlug[];
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [role, setRole] = useState<'mayor' | 'manager' | null>(null);
+  const [role, setRole] = useState<'mayor' | 'ceo' | 'manager' | null>(null);
   const [departments, setDepartments] = useState<DepartmentSlug[]>([]);
 
   // Helper to load access from local storage or demo mapping
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user?.email) {
         // Load cached access if any
-        const cachedRole = localStorage.getItem('app_role') as 'mayor' | 'manager' | null;
+        const cachedRole = localStorage.getItem('app_role') as 'mayor' | 'ceo' | 'manager' | null;
         const cachedDeps = localStorage.getItem('app_departments');
         if (cachedRole && cachedDeps) {
           setRole(cachedRole);
