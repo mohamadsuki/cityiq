@@ -11,6 +11,7 @@ import {
   Users,
   Activity,
   Store,
+  ClipboardList,
   Menu,
   X,
   Home
@@ -22,6 +23,7 @@ import { useAuth } from "@/context/AuthContext";
 
 const navigationItems = [
   { id: "overview", name: "סקירה כללית", icon: Home, url: "/" },
+  { id: "tasks", name: "משימות", icon: ClipboardList, url: "/tasks" },
   { id: "finance", name: "מחלקת פיננסים", icon: BarChart3, url: "/finance" },
   { id: "education", name: "מחלקת חינוך", icon: GraduationCap, url: "/education" },
   { id: "engineering", name: "מחלקת הנדסה", icon: Building2, url: "/engineering" },
@@ -74,7 +76,7 @@ export default function Navigation() {
               .filter((item) => {
                 if (!role || role === 'mayor') return true;
                 // Always allow overview
-                if (item.id === 'overview') return true;
+                if (item.id === 'overview' || item.id === 'tasks') return true;
                 // Allow only permitted departments
                 return departments.includes(item.id as any);
               })

@@ -8,6 +8,7 @@ import EngineeringDashboard from "@/components/Dashboard/EngineeringDashboard";
 import WelfareDashboard from "@/components/Dashboard/WelfareDashboard";
 import NonFormalDashboard from "@/components/Dashboard/NonFormalDashboard";
 import BusinessDashboard from "@/components/Dashboard/BusinessDashboard";
+import TasksApp from "@/components/Tasks/TasksApp";
 import { useAuth } from "@/context/AuthContext";
 export default function Dashboard() {
   const location = useLocation();
@@ -23,6 +24,7 @@ export default function Dashboard() {
     "/welfare": "welfare",
     "/non-formal": "non-formal",
     "/business": "business",
+    "/tasks": "tasks",
   };
   const currentSection = sectionByPath[path] || "overview";
 
@@ -39,6 +41,7 @@ export default function Dashboard() {
       "welfare": "מחלקת רווחה - דאשבורד עירוני",
       "non-formal": "חינוך בלתי פורמאלי - דאשבורד עירוני",
       "business": "רישוי עסקים - דאשבורד עירוני",
+      "tasks": "משימות - דאשבורד עירוני",
     };
     const descriptions: Record<string, string> = {
       "overview": "סקירה כללית של מדדי העירייה וכל המחלקות במקום אחד.",
@@ -48,6 +51,7 @@ export default function Dashboard() {
       "welfare": "דאשבורד רווחה: מקבלי שירות, שירותים, מגמות ופילוחים.",
       "non-formal": "חינוך בלתי פורמאלי: תוכניות, משתתפים, מגמות והשתתפות.",
       "business": "רישוי עסקים: סטטוס רישיונות, סוגי עסקים והתראות.",
+      "tasks": "ניהול משימות בין ראש העיר לראשי מחלקות: תעדוף, סטטוס ודד-ליין.",
     };
 
     document.title = titles[currentSection] || "דאשבורד עירוני";
@@ -98,6 +102,8 @@ export default function Dashboard() {
         return <NonFormalDashboard />;
       case "business":
         return <BusinessDashboard />;
+      case "tasks":
+        return <TasksApp />;
       default:
         return <OverviewDashboard />;
     }

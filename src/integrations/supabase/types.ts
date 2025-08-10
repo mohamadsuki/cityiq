@@ -383,6 +383,54 @@ export type Database = {
         }
         Relationships: []
       }
+      tasks: {
+        Row: {
+          created_at: string
+          created_by: string
+          department_slug: Database["public"]["Enums"]["department_slug"]
+          description: string | null
+          due_at: string | null
+          id: string
+          priority: Database["public"]["Enums"]["task_priority"]
+          progress_notes: string | null
+          progress_percent: number | null
+          status: Database["public"]["Enums"]["task_status"]
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          department_slug: Database["public"]["Enums"]["department_slug"]
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          progress_notes?: string | null
+          progress_percent?: number | null
+          status?: Database["public"]["Enums"]["task_status"]
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          department_slug?: Database["public"]["Enums"]["department_slug"]
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          progress_notes?: string | null
+          progress_percent?: number | null
+          status?: Database["public"]["Enums"]["task_status"]
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_departments: {
         Row: {
           created_at: string
@@ -500,6 +548,8 @@ export type Database = {
         | "welfare"
         | "non-formal"
         | "business"
+      task_priority: "low" | "medium" | "high" | "urgent"
+      task_status: "todo" | "in_progress" | "blocked" | "done" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -636,6 +686,8 @@ export const Constants = {
         "non-formal",
         "business",
       ],
+      task_priority: ["low", "medium", "high", "urgent"],
+      task_status: ["todo", "in_progress", "blocked", "done", "cancelled"],
     },
   },
 } as const
