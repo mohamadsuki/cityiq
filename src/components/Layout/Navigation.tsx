@@ -15,6 +15,9 @@ import {
   Home
 } from "lucide-react";
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { DataUploader } from "@/components/shared/DataUploader";
+
 
 const navigationItems = [
   { id: "overview", name: "סקירה כללית", icon: Home, url: "/" },
@@ -28,6 +31,7 @@ const navigationItems = [
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const location = useLocation();
   const currentPath = location.pathname;
 
@@ -96,6 +100,12 @@ export default function Navigation() {
             })}
           </nav>
 
+          <div className="mt-4">
+            <Button className="w-full" onClick={() => setImportOpen(true)}>
+              ייבוא נתונים
+            </Button>
+          </div>
+
           {/* Footer Info */}
           <div className="mt-8 p-4 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground text-center">
@@ -107,6 +117,16 @@ export default function Navigation() {
           </div>
         </div>
       </Card>
+
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>ייבוא נתונים</DialogTitle>
+            <DialogDescription>טעינת CSV/XLSX עם זיהוי יעד אוטומטי</DialogDescription>
+          </DialogHeader>
+          <DataUploader context="global" />
+        </DialogContent>
+      </Dialog>
 
       {/* Overlay for mobile */}
       {isOpen && (
