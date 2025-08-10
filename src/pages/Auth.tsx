@@ -21,15 +21,16 @@ export default function AuthPage() {
     setBusy(true);
     try {
       // תמיכה בשם משתמש (למשל "mayor") או באימייל מלא
-      let loginEmail = email.trim();
-      if (loginEmail && !loginEmail.includes('@')) {
-        const mapped = emailForUsername(loginEmail);
-        if (!mapped) {
-          setBusy(false);
-          toast({ title: 'שגיאת אימות', description: 'שם המשתמש לא מוכר בדמו. בחר/י מרשימת הדמו למטה או הזן/י אימייל.', variant: 'destructive' });
-          return;
-        }
-        loginEmail = mapped;
+      let input = email.trim();
+      let usernameNorm = input;
+      let loginEmail = input;
+
+      if (input && !input.includes('@')) {
+        // שימוש באימייל פיקטיבי עבור משתמשי דמו כדי לעקוף ולידציית אימיילים
+        usernameNorm = simpleUsernameFromEmail(input);
+        loginEmail = `${usernameNorm}@example.com`;
+      } else if (input) {
+        usernameNorm = simpleUsernameFromEmail(input);
       }
 
       if (mode === 'login') {
@@ -42,14 +43,14 @@ export default function AuthPage() {
         }
 
         // אם מדובר בפרטי דמו שלא קיימים עדיין, נבצע הרשמה אוטומטית ואז התחברות
-        const demo = DEMO_USERS.find(u => u.email.toLowerCase() === loginEmail.toLowerCase());
+        const demo = DEMO_USERS.find(u => simpleUsernameFromEmail(u.email) === usernameNorm);
         const isInvalidCreds = typeof error?.message === 'string' && error.message.toLowerCase().includes('invalid login credentials');
         if (demo && password === demo.password && isInvalidCreds) {
           const { error: signUpErr } = await signUp(loginEmail, password);
           if (signUpErr) {
             toast({
               title: 'הרשמה נכשלה',
-              description: signUpErr.message + ' — אם אימות אימייל מופעל, כדאי לכבות אותו ב-Supabase לצורך בדיקות מהירות.',
+              description: `${signUpErr.message} — אם אימות אימייל מופעל, כדאי לכבות אותו ב-Supabase לצורך בדיקות מהירות.`,
               variant: 'destructive'
             });
             return;
