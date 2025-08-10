@@ -12,7 +12,9 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<{ error: any | null }>;
   signUp: (email: string, password: string) => Promise<{ error: any | null }>;
   signOut: () => Promise<void>;
+  demoSignIn: (identifier: string) => void;
 }
+
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -47,8 +49,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (s?.user?.email) {
         applyAccessForEmail(s.user.email);
       } else {
-        setRole(null);
-        setDepartments([]);
+        const demoEmail = localStorage.getItem('demo_user_email');
+        if (demoEmail) {
+          const uname = demoEmail.split('@')[0].toLowerCase();
+          setUser({ id: `demo-${uname}`, email: demoEmail } as unknown as User);
+          applyAccessForEmail(demoEmail);
+        } else {
+          setRole(null);
+          setDepartments([]);
+        }
       }
     });
 
@@ -66,12 +75,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           applyAccessForEmail(session.user.email);
         }
+      } else {
+        const demoEmail = localStorage.getItem('demo_user_email');
+        if (demoEmail) {
+          const uname = demoEmail.split('@')[0].toLowerCase();
+          setUser({ id: `demo-${uname}`, email: demoEmail } as unknown as User);
+          applyAccessForEmail(demoEmail);
+        }
       }
       setLoading(false);
     });
 
     return () => { subscription.unsubscribe(); };
   }, []);
+
+  const demoSignIn = (identifier: string) => {
+    const email = identifier.includes('@') ? identifier : `${identifier}@example.com`;
+    const uname = email.split('@')[0].toLowerCase();
+    const fakeUser = { id: `demo-${uname}`, email } as unknown as User;
+    setUser(fakeUser);
+    setSession(null);
+    applyAccessForEmail(email);
+    localStorage.setItem('demo_user_email', email);
+  };
 
   const signIn: AuthContextValue['signIn'] = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -96,13 +122,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
     setRole(null);
     setDepartments([]);
     localStorage.removeItem('app_role');
     localStorage.removeItem('app_departments');
+    localStorage.removeItem('demo_user_email');
   };
 
-  const value = useMemo(() => ({ user, session, role, departments, loading, signIn, signUp, signOut }), [user, session, role, departments, loading]);
+  const value = useMemo(() => ({ user, session, role, departments, loading, signIn, signUp, signOut, demoSignIn }), [user, session, role, departments, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

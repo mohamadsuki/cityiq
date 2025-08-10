@@ -9,7 +9,7 @@ import { DEMO_USERS, emailForUsername, simpleUsernameFromEmail } from '@/lib/dem
 import { useAuth } from '@/context/AuthContext';
 
 export default function AuthPage() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, demoSignIn } = useAuth();
   const { toast } = useToast();
   const nav = useNavigate();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -148,6 +148,20 @@ export default function AuthPage() {
             ) : (
               <button className="underline" onClick={() => setMode('login')}>יש משתמש? התחברות</button>
             )}
+          </div>
+
+          <div className="pt-2">
+            <p className="text-sm font-medium mb-2">כניסה מיידית כדמו (ללא Supabase)</p>
+            <div className="grid grid-cols-1 gap-2">
+              {DEMO_USERS.map(u => {
+                const uname = simpleUsernameFromEmail(u.email);
+                return (
+                  <Button key={u.email + '-instant'} onClick={() => { demoSignIn(uname); toast({ title: 'התחברת לדמו', description: u.displayName }); nav('/'); }}>
+                    כניסה כ־{u.displayName} ({uname})
+                  </Button>
+                );
+              })}
+            </div>
           </div>
 
           <div className="pt-2">
