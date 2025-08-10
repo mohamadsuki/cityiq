@@ -251,7 +251,7 @@ export default function FinanceDashboard() {
             <DateRangePicker value={dateRange} onChange={setDateRange} />
             <ExportButtons data={projectsData} fileBaseName="finance-projects" />
           </div>
-          <DataTable<ProjectRow, unknown>
+          <DataTable
             columns={projectColumns}
             data={projectsData as ProjectRow[]}
             searchPlaceholder="חיפוש פרויקטים..."
