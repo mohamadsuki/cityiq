@@ -31,12 +31,51 @@ export default function AuthPage() {
         }
         loginEmail = mapped;
       }
-      const action = mode === 'login' ? signIn : signUp;
-      const { error } = await action(loginEmail, password);
-      if (error) {
+
+      if (mode === 'login') {
+        // ניסיון התחברות רגיל
+        const { error } = await signIn(loginEmail, password);
+        if (!error) {
+          toast({ title: 'הצלחה', description: 'התחברת בהצלחה' });
+          nav('/');
+          return;
+        }
+
+        // אם מדובר בפרטי דמו שלא קיימים עדיין, נבצע הרשמה אוטומטית ואז התחברות
+        const demo = DEMO_USERS.find(u => u.email.toLowerCase() === loginEmail.toLowerCase());
+        const isInvalidCreds = typeof error?.message === 'string' && error.message.toLowerCase().includes('invalid login credentials');
+        if (demo && password === demo.password && isInvalidCreds) {
+          const { error: signUpErr } = await signUp(loginEmail, password);
+          if (signUpErr) {
+            toast({
+              title: 'הרשמה נכשלה',
+              description: signUpErr.message + ' — אם אימות אימייל מופעל, כדאי לכבות אותו ב-Supabase לצורך בדיקות מהירות.',
+              variant: 'destructive'
+            });
+            return;
+          }
+          // ניסיון התחברות חוזר לאחר הרשמה
+          const { error: signInAfter } = await signIn(loginEmail, password);
+          if (!signInAfter) {
+            toast({ title: 'הצלחה', description: 'נוצר משתמש דמו והתחברת בהצלחה' });
+            nav('/');
+            return;
+          }
+          toast({ title: 'שגיאת אימות', description: signInAfter.message, variant: 'destructive' });
+          return;
+        }
+
+        // שגיאה כללית
         toast({ title: 'שגיאת אימות', description: error.message, variant: 'destructive' });
+        return;
+      }
+
+      // מצב הרשמה רגיל
+      const { error } = await signUp(loginEmail, password);
+      if (error) {
+        toast({ title: 'שגיאת הרשמה', description: error.message, variant: 'destructive' });
       } else {
-        toast({ title: 'הצלחה', description: mode === 'login' ? 'התחברת בהצלחה' : 'נרשמת בהצלחה, בדוק/י אימייל לאימות' });
+        toast({ title: 'נרשמת בהצלחה', description: 'בדוק/י אימייל לאימות (מומלץ לכבות אימות למטרת בדיקות)' });
         nav('/');
       }
     } finally {
