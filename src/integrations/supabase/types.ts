@@ -341,6 +341,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_departments: {
+        Row: {
+          created_at: string
+          department: Database["public"]["Enums"]["department_slug"]
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          department: Database["public"]["Enums"]["department_slug"]
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          department?: Database["public"]["Enums"]["department_slug"]
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       welfare_services: {
         Row: {
           budget_allocated: number | null
@@ -385,10 +427,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_department: {
+        Args: {
+          _user_id: string
+          _department: Database["public"]["Enums"]["department_slug"]
+        }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "mayor" | "manager"
+      department_slug:
+        | "finance"
+        | "education"
+        | "engineering"
+        | "welfare"
+        | "non-formal"
+        | "business"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -515,6 +577,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["mayor", "manager"],
+      department_slug: [
+        "finance",
+        "education",
+        "engineering",
+        "welfare",
+        "non-formal",
+        "business",
+      ],
+    },
   },
 } as const
