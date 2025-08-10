@@ -540,7 +540,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "mayor" | "manager"
+      app_role: "mayor" | "manager" | "ceo"
       department_slug:
         | "finance"
         | "education"
@@ -548,6 +548,7 @@ export type Database = {
         | "welfare"
         | "non-formal"
         | "business"
+        | "ceo"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "todo" | "in_progress" | "blocked" | "done" | "cancelled"
     }
@@ -677,7 +678,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["mayor", "manager"],
+      app_role: ["mayor", "manager", "ceo"],
       department_slug: [
         "finance",
         "education",
@@ -685,6 +686,7 @@ export const Constants = {
         "welfare",
         "non-formal",
         "business",
+        "ceo",
       ],
       task_priority: ["low", "medium", "high", "urgent"],
       task_status: ["todo", "in_progress", "blocked", "done", "cancelled"],
