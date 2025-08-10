@@ -25,6 +25,12 @@ import {
   Clock,
   XCircle
 } from "lucide-react";
+import { DataTable } from "@/components/shared/DataTable";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
+import { ExportButtons } from "@/components/shared/ExportButtons";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DateRange } from "react-day-picker";
+import { useState } from "react";
 
 const budgetData = [
   { name: "חינוך", approved: 890, actual: 720, percentage: 81 },
@@ -69,6 +75,38 @@ const getStatusText = (status: string) => {
 };
 
 export default function FinanceDashboard() {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  type ProjectRow = {
+    name: string;
+    title: string;
+    budget: string;
+    spent: string;
+    progress: number;
+    status: string;
+  };
+
+  const projectColumns: ColumnDef<ProjectRow>[] = [
+    { accessorKey: "name", header: "מספר/שם תב\"ר" },
+    { accessorKey: "title", header: "כותרת" },
+    { accessorKey: "budget", header: "תקציב" },
+    { accessorKey: "spent", header: "בוצע" },
+    {
+      accessorKey: "progress",
+      header: "התקדמות",
+      cell: ({ row }) => {
+        const v = row.original.progress;
+        return (
+          <div className="flex items-center gap-2 w-[160px]">
+            <Progress value={v} className="flex-1" />
+            <span className="text-xs">{v}%</span>
+          </div>
+        );
+      },
+    },
+    { accessorKey: "status", header: "סטטוס" },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -206,45 +244,18 @@ export default function FinanceDashboard() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl">תב״רים ופרויקטים מיוחדים</CardTitle>
-            <Button variant="outline" size="sm">
-              <FileText className="h-4 w-4 mr-2" />
-              ייצוא דוח
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {projectsData.map((project, index) => (
-              <div key={index} className="p-4 bg-muted rounded-lg space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <h3 className="font-semibold text-foreground">{project.title}</h3>
-                    <p className="text-sm text-muted-foreground">{project.name}</p>
-                  </div>
-                  <Badge variant="outline">
-                    {project.status}
-                  </Badge>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">תקציב מאושר</p>
-                    <p className="font-semibold">₪{project.budget}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">בוצע עד כה</p>
-                    <p className="font-semibold">₪{project.spent}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">התקדמות</p>
-                    <div className="flex items-center space-x-2 space-x-reverse">
-                      <Progress value={project.progress} className="flex-1" />
-                      <span className="text-sm font-medium">{project.progress}%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="mb-3 flex items-center gap-3">
+            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <ExportButtons data={projectsData} fileBaseName="finance-projects" />
           </div>
+          <DataTable<ProjectRow, unknown>
+            columns={projectColumns}
+            data={projectsData as ProjectRow[]}
+            searchPlaceholder="חיפוש פרויקטים..."
+          />
         </CardContent>
       </Card>
 

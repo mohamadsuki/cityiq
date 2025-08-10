@@ -2,6 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { Building2, MapPin, Layers, CheckCircle2, Clock, Wrench } from "lucide-react";
+import { ColumnDef } from "@tanstack/react-table";
+import { DataTable } from "@/components/shared/DataTable";
+import { ExportButtons } from "@/components/shared/ExportButtons";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
+import MapboxMap from "@/components/shared/Map/MapboxMap";
+import { MapboxTokenField } from "@/components/shared/Map/MapboxTokenField";
+import { DateRange } from "react-day-picker";
+import { useState } from "react";
 
 const statusData = [
   { status: "בהכנה", value: 12 },
@@ -19,10 +27,37 @@ const landUseData = [
   { use: "שטח פתוח", area: 260 },
 ];
 
+type Plan = {
+  id: string;
+  name: string;
+  area: string;
+  status: string;
+  use: string;
+  updatedAt: string;
+};
+
+const plans: Plan[] = [
+  { id: "תב\"ע-101", name: "שכונת נווה צפון", area: "רמת גן", status: "בהליך אישור", use: "מגורים", updatedAt: "2025-06-21" },
+  { id: "תב\"ע-205", name: "פארק תעשייה מזרח", area: "אזור תעשייה", status: "בביצוע", use: "תעשייה", updatedAt: "2025-06-15" },
+  { id: "תב\"ע-317", name: "מרכז עירוני חדש", area: "מרכז", status: "אושרה", use: "מסחר", updatedAt: "2025-05-28" },
+  { id: "תב\"ע-402", name: "הרחבת שכונת גנים", area: "דרום", status: "בהכנה", use: "מגורים", updatedAt: "2025-05-02" },
+  { id: "תב\"ע-509", name: "קריית חינוך", area: "מערב", status: "הושלמה", use: "ציבור", updatedAt: "2025-04-19" },
+];
+
+const planColumns: ColumnDef<Plan>[] = [
+  { accessorKey: "id", header: "מספר תוכנית" },
+  { accessorKey: "name", header: "שם תוכנית" },
+  { accessorKey: "area", header: "אזור" },
+  { accessorKey: "use", header: "ייעוד" },
+  { accessorKey: "status", header: "סטטוס" },
+  { accessorKey: "updatedAt", header: "עודכן" },
+];
+
 const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted-foreground))", "hsl(var(--warning))"];
 
 export default function EngineeringDashboard() {
   const totalPlans = statusData.reduce((s, i) => s + i.value, 0);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   return (
     <div className="space-y-8">
@@ -122,15 +157,29 @@ export default function EngineeringDashboard() {
         </Card>
       </section>
 
-      <section>
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-xl flex items-center">מפת תוכניות <Badge variant="secondary" className="ml-2">דמו</Badge></CardTitle>
+            <CardTitle className="text-xl flex items-center">מפת תוכניות</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64 bg-muted rounded-lg flex items-center justify-center">
-              <div className="flex items-center gap-2 text-muted-foreground"><MapPin className="h-4 w-4" /> מפה תתווסף בהמשך</div>
+            <div className="space-y-3">
+              <MapboxTokenField />
+              <MapboxMap height={360} />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-xl">טבלת תוכניות מפורטת</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-3 flex items-center gap-3">
+              <DateRangePicker value={dateRange} onChange={setDateRange} />
+              <ExportButtons data={plans} fileBaseName="engineering-plans" />
+            </div>
+            <DataTable columns={planColumns} data={plans} searchPlaceholder="חיפוש תוכניות..." />
           </CardContent>
         </Card>
       </section>
