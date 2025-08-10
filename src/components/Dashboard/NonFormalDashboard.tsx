@@ -61,6 +61,17 @@ const activityColumns: ColumnDef<ActivityRow>[] = [
 
 export default function NonFormalDashboard() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [category, setCategory] = useState<string>("all");
+  const [ageGroup, setAgeGroup] = useState<string>("all");
+
+  const categories = Array.from(new Set(activityRows.map((r) => r.category)));
+  const ageGroups = Array.from(new Set(activityRows.map((r) => r.ageGroup)));
+
+  const filteredData = activityRows.filter(
+    (r) => (category === "all" || r.category === category) && (ageGroup === "all" || r.ageGroup === ageGroup)
+  );
+  const totalParticipants = filteredData.reduce((sum, r) => sum + r.participants, 0);
+
   return (
     <div className="space-y-8">
       <header className="space-y-2">
@@ -113,13 +124,39 @@ export default function NonFormalDashboard() {
             <CardTitle className="text-xl">רשימת פעילויות</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-3 flex items-center gap-3">
+            <div className="mb-3 flex items-center gap-3 flex-wrap">
+              <select
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus:outline-none"
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                aria-label="סינון לפי קטגוריה"
+              >
+                <option value="all">כל הקטגוריות</option>
+                {categories.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <select
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus:outline-none"
+                value={ageGroup}
+                onChange={(e) => setAgeGroup(e.target.value)}
+                aria-label="סינון לפי קבוצת גיל"
+              >
+                <option value="all">כל קבוצות הגיל</option>
+                {ageGroups.map((a) => (
+                  <option key={a} value={a}>{a}</option>
+                ))}
+              </select>
               <DateRangePicker value={dateRange} onChange={setDateRange} />
-              <ExportButtons data={activityRows} fileBaseName="nonformal-activities" />
+              <ExportButtons data={filteredData} fileBaseName="nonformal-activities" />
+              <div className="ml-auto flex items-center gap-2">
+                <Badge variant="secondary">סה״כ פעילויות: {filteredData.length}</Badge>
+                <Badge variant="secondary">סה״כ משתתפים: {totalParticipants}</Badge>
+              </div>
             </div>
             <DataTable
               columns={activityColumns}
-              data={activityRows}
+              data={filteredData}
               searchPlaceholder="חיפוש פעילויות..."
             />
           </CardContent>
