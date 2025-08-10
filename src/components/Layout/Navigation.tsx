@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,23 +15,21 @@ import {
   Home
 } from "lucide-react";
 
-interface NavigationProps {
-  currentSection: string;
-  onSectionChange: (section: string) => void;
-}
 
 const navigationItems = [
-  { id: "overview", name: "סקירה כללית", icon: Home },
-  { id: "finance", name: "מחלקת פיננסים", icon: BarChart3 },
-  { id: "education", name: "מחלקת חינוך", icon: GraduationCap },
-  { id: "engineering", name: "מחלקת הנדסה", icon: Building2 },
-  { id: "welfare", name: "מחלקת רווחה", icon: Users },
-  { id: "non-formal", name: "חינוך בלתי פורמאלי", icon: Activity },
-  { id: "business", name: "רישוי עסקים", icon: Store },
+  { id: "overview", name: "סקירה כללית", icon: Home, url: "/" },
+  { id: "finance", name: "מחלקת פיננסים", icon: BarChart3, url: "/finance" },
+  { id: "education", name: "מחלקת חינוך", icon: GraduationCap, url: "/education" },
+  { id: "engineering", name: "מחלקת הנדסה", icon: Building2, url: "/engineering" },
+  { id: "welfare", name: "מחלקת רווחה", icon: Users, url: "/welfare" },
+  { id: "non-formal", name: "חינוך בלתי פורמאלי", icon: Activity, url: "/non-formal" },
+  { id: "business", name: "רישוי עסקים", icon: Store, url: "/business" },
 ];
 
-export default function Navigation({ currentSection, onSectionChange }: NavigationProps) {
+export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+  const currentPath = location.pathname;
 
   return (
     <>
@@ -66,11 +65,12 @@ export default function Navigation({ currentSection, onSectionChange }: Navigati
           <nav className="space-y-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              const isActive = currentSection === item.id;
-              
+              const isActive = currentPath === item.url;
+
               return (
                 <Button
                   key={item.id}
+                  asChild
                   variant={isActive ? "default" : "ghost"}
                   className={`
                     w-full justify-start h-12 text-right
@@ -79,18 +79,18 @@ export default function Navigation({ currentSection, onSectionChange }: Navigati
                       : 'hover:bg-secondary/80'
                     }
                   `}
-                  onClick={() => {
-                    onSectionChange(item.id);
-                    setIsOpen(false);
-                  }}
                 >
-                  <Icon className="ml-3 h-5 w-5" />
-                  <span className="flex-1">{item.name}</span>
-                  {isActive && (
-                    <Badge variant="secondary" className="bg-white/20 text-primary-foreground">
-                      פעיל
-                    </Badge>
-                  )}
+                  <NavLink to={item.url} onClick={() => setIsOpen(false)}>
+                    <span className="flex items-center w-full">
+                      <Icon className="ml-3 h-5 w-5" />
+                      <span className="flex-1">{item.name}</span>
+                      {isActive && (
+                        <Badge variant="secondary" className="bg-white/20 text-primary-foreground">
+                          פעיל
+                        </Badge>
+                      )}
+                    </span>
+                  </NavLink>
                 </Button>
               );
             })}

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import Navigation from "@/components/Layout/Navigation";
 import OverviewDashboard from "@/components/Dashboard/OverviewDashboard";
 import FinanceDashboard from "@/components/Dashboard/FinanceDashboard";
@@ -8,7 +9,20 @@ import WelfareDashboard from "@/components/Dashboard/WelfareDashboard";
 import NonFormalDashboard from "@/components/Dashboard/NonFormalDashboard";
 import BusinessDashboard from "@/components/Dashboard/BusinessDashboard";
 export default function Dashboard() {
-  const [currentSection, setCurrentSection] = useState("overview");
+  const location = useLocation();
+  const path = location.pathname;
+
+  const sectionByPath: Record<string, string> = {
+    "/": "overview",
+    "/overview": "overview",
+    "/finance": "finance",
+    "/education": "education",
+    "/engineering": "engineering",
+    "/welfare": "welfare",
+    "/non-formal": "non-formal",
+    "/business": "business",
+  };
+  const currentSection = sectionByPath[path] || "overview";
 
   useEffect(() => {
     const titles: Record<string, string> = {
@@ -46,10 +60,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background flex" dir="rtl">
-      <Navigation 
-        currentSection={currentSection} 
-        onSectionChange={setCurrentSection} 
-      />
+      <Navigation />
       
       <main className="flex-1 p-6 mr-0 md:mr-80">
         <div className="max-w-7xl mx-auto">
