@@ -113,8 +113,8 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background flex" dir="rtl">
       <Navigation />
       
-      <main className="flex-1 p-6 mr-0 md:mr-80">
-        <div className="max-w-7xl mx-auto">
+      <main className="flex-1 p-6">
+        <div className="container">
           {renderDashboard()}
         </div>
       </main>
