@@ -2,6 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from "recharts";
 import { Store, Bell, FileSpreadsheet, Timer } from "lucide-react";
+import { DataTable } from "@/components/shared/DataTable";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
+import { ExportButtons } from "@/components/shared/ExportButtons";
+import type { ColumnDef } from "@tanstack/react-table";
+import { DateRange } from "react-day-picker";
+import { useState } from "react";
 
 const kpi = {
   registered: 1840,
@@ -29,6 +35,31 @@ const businessTypes = [
 const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--warning))", "hsl(var(--muted-foreground))"];
 
 export default function BusinessDashboard() {
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  type LicenseRow = {
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    expiresAt: string;
+  };
+
+  const licenses: LicenseRow[] = [
+    { id: "RL-1001", name: "קפה מרכזי", type: "מזון", status: "פעיל", expiresAt: "2025-12-31" },
+    { id: "RL-1023", name: "חנות ספרים השדרה", type: "מסחר", status: "מתחדש", expiresAt: "2025-09-15" },
+    { id: "RL-1077", name: "מכון כושר PRO", type: "שירותים", status: "זמני", expiresAt: "2025-10-01" },
+    { id: "RL-1112", name: "מאפיית האופה", type: "מזון", status: "פג תוקף", expiresAt: "2025-06-30" },
+  ];
+
+  const licenseColumns: ColumnDef<LicenseRow>[] = [
+    { accessorKey: "id", header: "מספר רישיון" },
+    { accessorKey: "name", header: "שם עסק" },
+    { accessorKey: "type", header: "סוג" },
+    { accessorKey: "status", header: "סטטוס" },
+    { accessorKey: "expiresAt", header: "תוקף עד" },
+  ];
+
   return (
     <div className="space-y-8">
       <header className="space-y-2">
@@ -83,6 +114,25 @@ export default function BusinessDashboard() {
             <div className="h-40 bg-muted rounded-lg flex items-center justify-center text-muted-foreground">
               לוח התראות יתווסף בהמשך
             </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-xl">רישיונות עסקים</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-3 flex items-center gap-3">
+              <DateRangePicker value={dateRange} onChange={setDateRange} />
+              <ExportButtons data={licenses} fileBaseName="business-licenses" />
+            </div>
+            <DataTable
+              columns={licenseColumns}
+              data={licenses}
+              searchPlaceholder="חיפוש עסקים..."
+            />
           </CardContent>
         </Card>
       </section>
