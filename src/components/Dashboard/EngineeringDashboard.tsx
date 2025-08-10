@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
-import { Building2, MapPin, Layers, CheckCircle2, Clock, Wrench } from "lucide-react";
+import { Building2, MapPin, Layers, CheckCircle2, Clock, Wrench, FileSpreadsheet } from "lucide-react";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/shared/DataTable";
 import { ExportButtons } from "@/components/shared/ExportButtons";
@@ -10,6 +10,9 @@ import MapboxMap from "@/components/shared/Map/MapboxMap";
 import { MapboxTokenField } from "@/components/shared/Map/MapboxTokenField";
 import { DateRange } from "react-day-picker";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DataUploader } from "@/components/shared/DataUploader";
+import { Button } from "@/components/ui/button";
 
 const statusData = [
   { status: "בהכנה", value: 12 },
@@ -61,9 +64,24 @@ export default function EngineeringDashboard() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-4xl font-bold text-foreground">מחלקת הנדסה</h1>
-        <p className="text-muted-foreground text-lg">תכנון, סטטוסים וייעודי קרקע</p>
+      <header className="flex items-start justify-between">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-foreground">מחלקת הנדסה</h1>
+          <p className="text-muted-foreground text-lg">תכנון, סטטוסים וייעודי קרקע</p>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>ייבוא נתונים למחלקת הנדסה</DialogTitle>
+            </DialogHeader>
+            <DataUploader context="engineering" />
+          </DialogContent>
+        </Dialog>
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

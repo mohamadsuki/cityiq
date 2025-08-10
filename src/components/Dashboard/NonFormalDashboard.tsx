@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar } from "recharts";
 import { Users, Calendar, Trophy, UserCircle2 } from "lucide-react";
 import { DataTable } from "@/components/shared/DataTable";
@@ -8,6 +9,9 @@ import { ExportButtons } from "@/components/shared/ExportButtons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DataUploader } from "@/components/shared/DataUploader";
+import { FileSpreadsheet } from "lucide-react";
 
 const kpi = {
   participants: 2140,
@@ -74,9 +78,24 @@ export default function NonFormalDashboard() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-4xl font-bold text-foreground">חינוך בלתי פורמאלי</h1>
-        <p className="text-muted-foreground text-lg">תוכניות, השתתפות וקידום נוער</p>
+      <header className="flex items-start justify-between">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-foreground">חינוך בלתי פורמאלי</h1>
+          <p className="text-muted-foreground text-lg">תוכניות, השתתפות וקידום נוער</p>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>ייבוא נתונים לחינוך בלתי פורמאלי</DialogTitle>
+            </DialogHeader>
+            <DataUploader context="non-formal" />
+          </DialogContent>
+        </Dialog>
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

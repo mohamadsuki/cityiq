@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { Users, AlertTriangle, HeartPulse, Baby } from "lucide-react";
 import { DataTable } from "@/components/shared/DataTable";
@@ -8,6 +9,9 @@ import { ExportButtons } from "@/components/shared/ExportButtons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DataUploader } from "@/components/shared/DataUploader";
+import { FileSpreadsheet } from "lucide-react";
 
 const kpi = {
   recipients: 3280,
@@ -63,9 +67,24 @@ export default function WelfareDashboard() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-4xl font-bold text-foreground">מחלקת רווחה</h1>
-        <p className="text-muted-foreground text-lg">מעקב מקבלי שירות, שירותים ומגמות</p>
+      <header className="flex items-start justify-between">
+        <div className="space-y-2">
+          <h1 className="text-4xl font-bold text-foreground">מחלקת רווחה</h1>
+          <p className="text-muted-foreground text-lg">מעקב מקבלי שירות, שירותים ומגמות</p>
+        </div>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" size="sm">
+              <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>ייבוא נתונים למחלקת רווחה</DialogTitle>
+            </DialogHeader>
+            <DataUploader context="welfare" />
+          </DialogContent>
+        </Dialog>
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
