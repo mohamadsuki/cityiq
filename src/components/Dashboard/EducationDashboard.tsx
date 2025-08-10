@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DataUploader } from "@/components/shared/DataUploader";
+import MapboxMap from "@/components/shared/Map/MapboxMap";
+import { MapboxTokenField } from "@/components/shared/Map/MapboxTokenField";
 
 const educationData = [
   { level: "יסודי", students: 8420, institutions: 24, ratio: 35.1 },
@@ -63,7 +65,8 @@ export default function EducationDashboard() {
   const totalStudents = educationData.reduce((sum, item) => sum + item.students, 0);
   const totalInstitutions = educationData.reduce((sum, item) => sum + item.institutions, 0);
   const totalClasses = institutionsData.reduce((sum, item) => sum + item.classes, 0);
-  const avgRatio = totalStudents / totalClasses;
+const avgRatio = totalStudents / totalClasses;
+const overCapacity = institutionsData.filter(i => i.occupancy >= 90);
 
   return (
     <div className="space-y-8">
@@ -228,7 +231,38 @@ export default function EducationDashboard() {
         ))}
       </div>
 
-      {/* Institutions Table */}
+{/* Institutions Map */}
+<Card className="shadow-card">
+  <CardHeader><CardTitle className="text-xl">מפת מוסדות</CardTitle></CardHeader>
+  <CardContent>
+    <div className="space-y-3">
+      <MapboxTokenField />
+      <MapboxMap height={360} />
+    </div>
+  </CardContent>
+</Card>
+
+{/* התראות תפוסת יתר */}
+{overCapacity.length > 0 && (
+  <Card className="shadow-card">
+    <CardHeader><CardTitle className="text-xl">אזהרות תפוסת יתר</CardTitle></CardHeader>
+    <CardContent>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {overCapacity.map((i, idx) => (
+          <div key={idx} className="p-3 rounded-md border bg-card">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{i.name}</span>
+              <Badge variant="destructive">{i.occupancy}%</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">מעל 90% תפוסה</p>
+          </div>
+        ))}
+      </div>
+    </CardContent>
+  </Card>
+)}
+
+{/* Institutions Table */}
       <Card className="shadow-card">
         <CardHeader>
           <div className="flex items-center justify-between">

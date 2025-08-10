@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, BarChart, Bar } from "recharts";
 import { Users, AlertTriangle, HeartPulse, Baby } from "lucide-react";
 import { DataTable } from "@/components/shared/DataTable";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
@@ -35,6 +35,17 @@ const trend = [
   { month: "7/24", recipients: 3210 },
   { month: "9/24", recipients: 3270 },
   { month: "11/24", recipients: 3280 },
+];
+
+const ageDist = [
+  { group: "0-17", value: 520 },
+  { group: "18-64", value: 2100 },
+  { group: "65+", value: 660 },
+];
+
+const genderDist = [
+  { name: "נשים", value: 1680 },
+  { name: "גברים", value: 1600 },
 ];
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--warning))", "hsl(var(--muted-foreground))"];
@@ -121,6 +132,33 @@ export default function WelfareDashboard() {
                 <Line type="monotone" dataKey="recipients" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card className="shadow-card">
+          <CardHeader><CardTitle className="text-xl">פילוח דמוגרפי</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={ageDist}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="group" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="hsl(var(--primary))" />
+                </BarChart>
+              </ResponsiveContainer>
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie data={genderDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
+                    {genderDist.map((e,i)=> <Cell key={i} fill={COLORS[i%COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
       </section>

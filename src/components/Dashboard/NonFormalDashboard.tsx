@@ -140,6 +140,30 @@ export default function NonFormalDashboard() {
       <section>
         <Card className="shadow-card">
           <CardHeader>
+            <CardTitle className="text-xl">קידום נוער</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <div className="p-4 rounded-lg border bg-card"><p className="text-sm text-muted-foreground">משתתפים</p><p className="text-2xl font-bold">640</p></div>
+              <div className="p-4 rounded-lg border bg-card"><p className="text-sm text-muted-foreground">מסלולים</p><p className="text-2xl font-bold">12</p></div>
+              <div className="p-4 rounded-lg border bg-card"><p className="text-sm text-muted-foreground">ישיבות צוות</p><p className="text-2xl font-bold">8</p></div>
+              <div className="p-4 rounded-lg border bg-card"><p className="text-sm text-muted-foreground">השתלמויות</p><p className="text-2xl font-bold">5</p></div>
+            </div>
+            <div className="p-4 rounded-lg bg-muted">
+              <p className="font-medium mb-2">פעילויות קרובות</p>
+              <ul className="list-disc pr-5 space-y-1 text-sm text-muted-foreground">
+                <li>12/09 · סדנת הכנה לבגרויות</li>
+                <li>20/09 · יום סיירות קהילתי</li>
+                <li>02/10 · ערב הורים בנושא מניעת נשירה</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card className="shadow-card">
+          <CardHeader>
             <CardTitle className="text-xl">רשימת פעילויות</CardTitle>
           </CardHeader>
           <CardContent>

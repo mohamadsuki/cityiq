@@ -57,6 +57,22 @@ const grantsData = [
   { ministry: "משרד התחבורה", amount: "67M", status: "approved" },
 ];
 
+const incomeSources = [
+  { name: "ארנונה", value: 980 },
+  { name: "אגרות", value: 240 },
+  { name: "קנסות", value: 120 },
+  { name: "אחר", value: 160 },
+];
+
+const collectionsTrend = [
+  { month: "1/24", collected: 180 },
+  { month: "3/24", collected: 195 },
+  { month: "5/24", collected: 205 },
+  { month: "7/24", collected: 215 },
+  { month: "9/24", collected: 228 },
+  { month: "11/24", collected: 236 },
+];
+
 const COLORS = ['#1e40af', '#3b82f6', '#60a5fa', '#93c5fd', '#dbeafe'];
 
 const getStatusColor = (status: string) => {
@@ -248,6 +264,37 @@ export default function FinanceDashboard() {
                   ))}
                 </Pie>
                 <Tooltip formatter={(value) => [`₪${value}M`, 'תקציב']} />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* גביה והכנסות */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="shadow-card">
+          <CardHeader><CardTitle className="text-xl">גביה לאורך זמן</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={collectionsTrend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(v)=>[`₪${v}M`, 'גובה']} />
+                <Line type="monotone" dataKey="collected" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+        <Card className="shadow-card">
+          <CardHeader><CardTitle className="text-xl">מקורות הכנסה</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie data={incomeSources} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
+                  {incomeSources.map((e,i)=> <Cell key={i} fill={COLORS[i%COLORS.length]} />)}
+                </Pie>
+                <Tooltip formatter={(v, n)=>[`₪${v}M`, n]} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
