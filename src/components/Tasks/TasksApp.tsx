@@ -201,7 +201,7 @@ export default function TasksApp() {
             <Label>סטטוס</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as any)}>
               <SelectTrigger><SelectValue placeholder="סטטוס" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                 <SelectItem value="all">הכל</SelectItem>
                 <SelectItem value="todo">לביצוע</SelectItem>
                 <SelectItem value="in_progress">בתהליך</SelectItem>
@@ -215,7 +215,7 @@ export default function TasksApp() {
             <Label>עדיפות</Label>
             <Select value={priority} onValueChange={(v) => setPriority(v as any)}>
               <SelectTrigger><SelectValue placeholder="עדיפות" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                 <SelectItem value="all">הכל</SelectItem>
                 <SelectItem value="low">נמוכה</SelectItem>
                 <SelectItem value="medium">בינונית</SelectItem>
@@ -228,7 +228,7 @@ export default function TasksApp() {
             <Label>מחלקה</Label>
             <Select value={department} onValueChange={(v) => setDepartment(v as any)}>
               <SelectTrigger><SelectValue placeholder="מחלקה" /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                 <SelectItem value="all">הכל</SelectItem>
                 {visibleDepartments.map((d) => (
                   <SelectItem key={d} value={d}>{d}</SelectItem>
@@ -281,11 +281,12 @@ export default function TasksApp() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
+
           <DialogHeader>
             <DialogTitle>{editing ? "עריכת משימה" : "משימה חדשה"}</DialogTitle>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20 md:pb-0">
             <div className="md:col-span-2">
               <Label>כותרת</Label>
               <Input
@@ -302,7 +303,7 @@ export default function TasksApp() {
                 onValueChange={(v) => setForm((f) => ({ ...f, department_slug: v as DepartmentSlug }))}
               >
                 <SelectTrigger disabled={isManager && !managerEditable("department_slug")}><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                   {visibleDepartments.map((d) => (
                     <SelectItem key={d} value={d}>{d}</SelectItem>
                   ))}
@@ -317,12 +318,12 @@ export default function TasksApp() {
                 onValueChange={(v) => setForm((f) => ({ ...f, priority: v as TaskPriority }))}
               >
                 <SelectTrigger disabled={isManager && !managerEditable("priority")}><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">נמוכה</SelectItem>
-                  <SelectItem value="medium">בינונית</SelectItem>
-                  <SelectItem value="high">גבוהה</SelectItem>
-                  <SelectItem value="urgent">דחוף</SelectItem>
-                </SelectContent>
+                 <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+                   <SelectItem value="low">נמוכה</SelectItem>
+                   <SelectItem value="medium">בינונית</SelectItem>
+                   <SelectItem value="high">גבוהה</SelectItem>
+                   <SelectItem value="urgent">דחוף</SelectItem>
+                 </SelectContent>
               </Select>
             </div>
 
@@ -333,7 +334,7 @@ export default function TasksApp() {
                 onValueChange={(v) => setForm((f) => ({ ...f, status: v as TaskStatus }))}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                   <SelectItem value="todo">לביצוע</SelectItem>
                   <SelectItem value="in_progress">בתהליך</SelectItem>
                   <SelectItem value="blocked">חסום</SelectItem>
@@ -382,7 +383,11 @@ export default function TasksApp() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-2">
+          <div className="hidden md:flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)}>ביטול</Button>
+            <Button onClick={saveTask}>{editing ? "עדכון" : "יצירה"}</Button>
+          </div>
+          <div className="md:hidden sticky bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 px-4 py-3 flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpen(false)}>ביטול</Button>
             <Button onClick={saveTask}>{editing ? "עדכון" : "יצירה"}</Button>
           </div>
