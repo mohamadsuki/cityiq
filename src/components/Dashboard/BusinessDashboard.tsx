@@ -11,6 +11,8 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { Button } from "@/components/ui/button";
+import MapboxMap from "@/components/shared/Map/MapboxMap";
+import { MapboxTokenField } from "@/components/shared/Map/MapboxTokenField";
 
 const kpi = {
   registered: 1840,
@@ -126,6 +128,21 @@ export default function BusinessDashboard() {
                 <Bar dataKey="count" fill="hsl(var(--primary))" />
               </BarChart>
             </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-xl">מפת עסקים</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="mb-3">
+              <p className="text-sm text-muted-foreground mb-2">הזן/י טוקן Mapbox ציבורי כדי להציג את המפה.</p>
+              <MapboxTokenField />
+            </div>
+            <MapboxMap height={360} />
           </CardContent>
         </Card>
       </section>
