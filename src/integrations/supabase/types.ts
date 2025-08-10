@@ -14,7 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_health: {
+        Row: {
+          created_at: string
+          id: number
+          message: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          message?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          message?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
