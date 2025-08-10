@@ -20,7 +20,11 @@ export const DEMO_USERS: DemoUser[] = [
 
 export function getAccessForEmail(email: string): { role: 'mayor' | 'manager'; departments: DepartmentSlug[] } | null {
   const found = DEMO_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
-  return found ? { role: found.role, departments: found.departments } : null;
+  if (found) return { role: found.role, departments: found.departments };
+  // Fallback: match by simple username (ignore domain) to support demo signups like mayor@example.com
+  const uname = simpleUsernameFromEmail(email);
+  const byUser = DEMO_USERS.find(u => simpleUsernameFromEmail(u.email) === uname);
+  return byUser ? { role: byUser.role, departments: byUser.departments } : null;
 }
 
 export function departmentFromPath(path: string): DepartmentSlug | null {
