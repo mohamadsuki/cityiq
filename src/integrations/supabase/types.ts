@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          age_group: string | null
+          category: string | null
+          created_at: string
+          id: string
+          location: string | null
+          name: string | null
+          participants: number | null
+          program: string | null
+          scheduled_at: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age_group?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          name?: string | null
+          participants?: number | null
+          program?: string | null
+          scheduled_at?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age_group?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          name?: string | null
+          participants?: number | null
+          program?: string | null
+          scheduled_at?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_health: {
         Row: {
           created_at: string
@@ -29,6 +74,309 @@ export type Database = {
           created_at?: string
           id?: number
           message?: string
+        }
+        Relationships: []
+      }
+      grants: {
+        Row: {
+          amount: number | null
+          created_at: string
+          decision_at: string | null
+          id: string
+          ministry: string | null
+          name: string | null
+          status: string | null
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          decision_at?: string | null
+          id?: string
+          ministry?: string | null
+          name?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          decision_at?: string | null
+          id?: string
+          ministry?: string | null
+          name?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ingestion_logs: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          rows: number | null
+          source_file: string | null
+          status: string | null
+          table_name: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          rows?: number | null
+          source_file?: string | null
+          status?: string | null
+          table_name?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          rows?: number | null
+          source_file?: string | null
+          status?: string | null
+          table_name?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      institutions: {
+        Row: {
+          address: string | null
+          classes: number | null
+          created_at: string
+          id: string
+          lat: number | null
+          level: string | null
+          lng: number | null
+          name: string | null
+          occupancy: number | null
+          students: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          classes?: number | null
+          created_at?: string
+          id?: string
+          lat?: number | null
+          level?: string | null
+          lng?: number | null
+          name?: string | null
+          occupancy?: number | null
+          students?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          classes?: number | null
+          created_at?: string
+          id?: string
+          lat?: number | null
+          level?: string | null
+          lng?: number | null
+          name?: string | null
+          occupancy?: number | null
+          students?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      licenses: {
+        Row: {
+          address: string | null
+          business_name: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          lat: number | null
+          license_number: string | null
+          lng: number | null
+          owner: string | null
+          status: string | null
+          type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          business_name?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          lat?: number | null
+          license_number?: string | null
+          lng?: number | null
+          owner?: string | null
+          status?: string | null
+          type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          business_name?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          lat?: number | null
+          license_number?: string | null
+          lng?: number | null
+          owner?: string | null
+          status?: string | null
+          type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      plans: {
+        Row: {
+          address: string | null
+          area: number | null
+          block: string | null
+          created_at: string
+          id: string
+          land_use: string | null
+          lat: number | null
+          lng: number | null
+          name: string | null
+          parcel: string | null
+          plan_number: string | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          area?: number | null
+          block?: string | null
+          created_at?: string
+          id?: string
+          land_use?: string | null
+          lat?: number | null
+          lng?: number | null
+          name?: string | null
+          parcel?: string | null
+          plan_number?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          area?: number | null
+          block?: string | null
+          created_at?: string
+          id?: string
+          land_use?: string | null
+          lat?: number | null
+          lng?: number | null
+          name?: string | null
+          parcel?: string | null
+          plan_number?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          budget_approved: number | null
+          budget_executed: number | null
+          code: string | null
+          created_at: string
+          department: string | null
+          domain: string | null
+          funding_source: string | null
+          id: string
+          name: string | null
+          progress: number | null
+          status: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          budget_approved?: number | null
+          budget_executed?: number | null
+          code?: string | null
+          created_at?: string
+          department?: string | null
+          domain?: string | null
+          funding_source?: string | null
+          id?: string
+          name?: string | null
+          progress?: number | null
+          status?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          budget_approved?: number | null
+          budget_executed?: number | null
+          code?: string | null
+          created_at?: string
+          department?: string | null
+          domain?: string | null
+          funding_source?: string | null
+          id?: string
+          name?: string | null
+          progress?: number | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      welfare_services: {
+        Row: {
+          budget_allocated: number | null
+          created_at: string
+          id: string
+          period: string | null
+          recipients: number | null
+          service_type: string | null
+          updated_at: string
+          user_id: string
+          utilization: number | null
+          waitlist: number | null
+        }
+        Insert: {
+          budget_allocated?: number | null
+          created_at?: string
+          id?: string
+          period?: string | null
+          recipients?: number | null
+          service_type?: string | null
+          updated_at?: string
+          user_id: string
+          utilization?: number | null
+          waitlist?: number | null
+        }
+        Update: {
+          budget_allocated?: number | null
+          created_at?: string
+          id?: string
+          period?: string | null
+          recipients?: number | null
+          service_type?: string | null
+          updated_at?: string
+          user_id?: string
+          utilization?: number | null
+          waitlist?: number | null
         }
         Relationships: []
       }
