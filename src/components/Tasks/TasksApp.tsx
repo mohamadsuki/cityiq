@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
@@ -41,7 +41,7 @@ const ALL_DEPARTMENTS: DepartmentSlug[] = [
 ];
 
 export default function TasksApp() {
-  const { role, departments, user } = useAuth();
+  const { role, departments, user, session } = useAuth();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(false);
@@ -71,6 +71,7 @@ export default function TasksApp() {
 
   const canCreate = role === "mayor";
   const canDelete = role === "mayor";
+  const isDemo = !session;
 
   const visibleDepartments: DepartmentSlug[] = role === "mayor" ? ALL_DEPARTMENTS : departments;
 
@@ -86,6 +87,19 @@ export default function TasksApp() {
 
   async function fetchTasks() {
     setLoading(true);
+    if (isDemo) {
+      try {
+        const raw = localStorage.getItem("demo_tasks");
+        const list = raw ? (JSON.parse(raw) as Task[]) : [];
+        setTasks(list);
+      } catch (e) {
+        console.error("Failed to parse demo tasks", e);
+        setTasks([]);
+      }
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase
       .from("tasks")
       .select("*")
@@ -125,10 +139,52 @@ export default function TasksApp() {
   }
 
   async function saveTask() {
+    if (isDemo) {
+      if (!(form.title && (form.department_slug as string))) {
+        toast({ title: "שדות חסרים", description: "כותרת ומחלקה חובה", variant: "destructive" });
+        return;
+      }
+      const now = new Date().toISOString();
+      const payload: Task = {
+        id: editing?.id ?? (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
+        title: form.title as string,
+        description: (form.description as string) ?? "",
+        created_by: "demo",
+        updated_at: now,
+        created_at: editing?.created_at ?? now,
+        due_at: form.due_at || null,
+        progress_percent: (form.progress_percent as number) ?? 0,
+        progress_notes: (form.progress_notes as string) ?? "",
+        department_slug: form.department_slug as DepartmentSlug,
+        priority: (form.priority as TaskPriority) ?? "medium",
+        status: (form.status as TaskStatus) ?? "todo",
+        tags: (form.tags as string[]) ?? [],
+      };
+
+      let next = [] as Task[];
+      try {
+        const raw = localStorage.getItem("demo_tasks");
+        const list = raw ? (JSON.parse(raw) as Task[]) : [];
+        if (editing) {
+          next = list.map((t) => (t.id === editing.id ? { ...payload } : t));
+        } else {
+          next = [{ ...payload }, ...list];
+        }
+      } catch {
+        next = [payload];
+      }
+      localStorage.setItem("demo_tasks", JSON.stringify(next));
+      setTasks(next);
+      toast({ title: editing ? "עודכן" : "נוצר", description: "המשימה נשמרה (מצב הדגמה)" });
+      setOpen(false);
+      return;
+    }
+
     if (!user?.id) {
       toast({ title: "נדרש להתחבר", description: "יש להתחבר כדי לבצע פעולה זו", variant: "destructive" });
       return;
     }
+
     const payload: any = {
       title: form.title,
       description: form.description,
@@ -165,6 +221,15 @@ export default function TasksApp() {
   async function deleteTask(task: Task) {
     if (!canDelete) return;
     if (!confirm("למחוק משימה זו?")) return;
+
+    if (isDemo) {
+      const next = tasks.filter((t) => t.id !== task.id);
+      localStorage.setItem("demo_tasks", JSON.stringify(next));
+      setTasks(next);
+      toast({ title: "נמחק", description: "המשימה נמחקה (מצב הדגמה)" });
+      return;
+    }
+
     const { error } = await supabase.from("tasks").delete().eq("id", task.id);
     if (error) {
       toast({ title: "מחיקה נכשלה", description: error.message, variant: "destructive" });
@@ -280,13 +345,14 @@ export default function TasksApp() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
 
           <DialogHeader>
             <DialogTitle>{editing ? "עריכת משימה" : "משימה חדשה"}</DialogTitle>
+            <DialogDescription className="sr-only">טופס יצירה/עריכת משימה</DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20 md:pb-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2">
             <div className="md:col-span-2">
               <Label>כותרת</Label>
               <Input
@@ -302,7 +368,7 @@ export default function TasksApp() {
                 value={(form.department_slug as DepartmentSlug) ?? "finance"}
                 onValueChange={(v) => setForm((f) => ({ ...f, department_slug: v as DepartmentSlug }))}
               >
-                <SelectTrigger disabled={isManager && !managerEditable("department_slug")}><SelectValue /></SelectTrigger>
+                <SelectTrigger disabled={isManager && !managerEditable("department_slug")}><SelectValue aria-label="מחלקה" /></SelectTrigger>
                 <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                   {visibleDepartments.map((d) => (
                     <SelectItem key={d} value={d}>{d}</SelectItem>
@@ -317,7 +383,7 @@ export default function TasksApp() {
                 value={(form.priority as TaskPriority) ?? "medium"}
                 onValueChange={(v) => setForm((f) => ({ ...f, priority: v as TaskPriority }))}
               >
-                <SelectTrigger disabled={isManager && !managerEditable("priority")}><SelectValue /></SelectTrigger>
+                <SelectTrigger disabled={isManager && !managerEditable("priority")}><SelectValue aria-label="עדיפות" /></SelectTrigger>
                  <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                    <SelectItem value="low">נמוכה</SelectItem>
                    <SelectItem value="medium">בינונית</SelectItem>
@@ -333,7 +399,7 @@ export default function TasksApp() {
                 value={(form.status as TaskStatus) ?? "todo"}
                 onValueChange={(v) => setForm((f) => ({ ...f, status: v as TaskStatus }))}
               >
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue aria-label="סטטוס" /></SelectTrigger>
                 <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                   <SelectItem value="todo">לביצוע</SelectItem>
                   <SelectItem value="in_progress">בתהליך</SelectItem>
@@ -383,11 +449,7 @@ export default function TasksApp() {
             </div>
           </div>
 
-          <div className="hidden md:flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>ביטול</Button>
-            <Button onClick={saveTask}>{editing ? "עדכון" : "יצירה"}</Button>
-          </div>
-          <div className="md:hidden sticky bottom-0 z-40 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 px-4 py-3 flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setOpen(false)}>ביטול</Button>
             <Button onClick={saveTask}>{editing ? "עדכון" : "יצירה"}</Button>
           </div>
