@@ -11,6 +11,7 @@ import {
   Store,
   AlertTriangle
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const KPICard = ({ 
   title, 
@@ -57,41 +58,45 @@ const DepartmentCard = ({
   status, 
   budget, 
   utilization, 
-  icon: Icon 
+  icon: Icon,
+  to
 }: { 
   name: string; 
   status: string; 
   budget: string; 
   utilization: number; 
   icon: any;
+  to: string;
 }) => (
-  <Card className="shadow-card hover:shadow-elevated transition-all duration-300">
-    <CardHeader className="pb-3">
-      <div className="flex items-center justify-between">
-        <CardTitle className="text-lg font-semibold">{name}</CardTitle>
-        <Icon className="h-5 w-5 text-muted-foreground" />
-      </div>
-    </CardHeader>
-    <CardContent className="space-y-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">סטטוס</span>
-        <Badge variant={status === 'פעיל' ? 'default' : 'secondary'}>
-          {status}
-        </Badge>
-      </div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">תקציב מנוצל</span>
-          <span className="font-medium">{utilization}%</span>
+  <Link to={to} aria-label={`נווט אל ${name}`} className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md">
+    <Card className="shadow-card hover:shadow-elevated transition-all duration-300 cursor-pointer">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg font-semibold">{name}</CardTitle>
+          <Icon className="h-5 w-5 text-muted-foreground" />
         </div>
-        <Progress value={utilization} className="h-2" />
-      </div>
-      <div className="text-sm">
-        <span className="text-muted-foreground">תקציב שנתי: </span>
-        <span className="font-semibold">{budget}</span>
-      </div>
-    </CardContent>
-  </Card>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">סטטוס</span>
+          <Badge variant={status === 'פעיל' ? 'default' : 'secondary'}>
+            {status}
+          </Badge>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">תקציב מנוצל</span>
+            <span className="font-medium">{utilization}%</span>
+          </div>
+          <Progress value={utilization} className="h-2" />
+        </div>
+        <div className="text-sm">
+          <span className="text-muted-foreground">תקציב שנתי: </span>
+          <span className="font-semibold">{budget}</span>
+        </div>
+      </CardContent>
+    </Card>
+  </Link>
 );
 
 export default function OverviewDashboard() {
@@ -154,6 +159,7 @@ export default function OverviewDashboard() {
             budget="₪2.4B"
             utilization={73}
             icon={BarChart3}
+            to="/finance"
           />
           <DepartmentCard
             name="מחלקת חינוך"
@@ -161,6 +167,7 @@ export default function OverviewDashboard() {
             budget="₪890M"
             utilization={81}
             icon={GraduationCap}
+            to="/education"
           />
           <DepartmentCard
             name="מחלקת הנדסה"
@@ -168,6 +175,7 @@ export default function OverviewDashboard() {
             budget="₪650M"
             utilization={67}
             icon={Building2}
+            to="/engineering"
           />
           <DepartmentCard
             name="מחלקת רווחה"
@@ -175,6 +183,7 @@ export default function OverviewDashboard() {
             budget="₪320M"
             utilization={89}
             icon={Users}
+            to="/welfare"
           />
           <DepartmentCard
             name="חינוך בלתי פורמאלי"
@@ -182,6 +191,7 @@ export default function OverviewDashboard() {
             budget="₪45M"
             utilization={76}
             icon={Activity}
+            to="/non-formal"
           />
           <DepartmentCard
             name="רישוי עסקים"
@@ -189,6 +199,7 @@ export default function OverviewDashboard() {
             budget="₪12M"
             utilization={92}
             icon={Store}
+            to="/business"
           />
         </div>
       </div>
