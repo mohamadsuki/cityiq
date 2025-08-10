@@ -8,9 +8,11 @@ import EngineeringDashboard from "@/components/Dashboard/EngineeringDashboard";
 import WelfareDashboard from "@/components/Dashboard/WelfareDashboard";
 import NonFormalDashboard from "@/components/Dashboard/NonFormalDashboard";
 import BusinessDashboard from "@/components/Dashboard/BusinessDashboard";
+import { useAuth } from "@/context/AuthContext";
 export default function Dashboard() {
   const location = useLocation();
   const path = location.pathname;
+  const { role, departments } = useAuth();
 
   const sectionByPath: Record<string, string> = {
     "/": "overview",
@@ -23,6 +25,10 @@ export default function Dashboard() {
     "/business": "business",
   };
   const currentSection = sectionByPath[path] || "overview";
+
+  // Basic client-side permission gate: if manager tries to access other department, fallback to overview
+  // Note: Full data-level enforcement remains via RLS (per-user rows)
+
 
   useEffect(() => {
     const titles: Record<string, string> = {
@@ -65,6 +71,18 @@ export default function Dashboard() {
   }, [currentSection, path]);
 
   const renderDashboard = () => {
+    // Access control: if not mayor and section is department not in permissions -> show overview
+    if (role !== 'mayor' && [
+      'finance','education','engineering','welfare','non-formal','business']
+      .includes(currentSection) && !departments.includes(currentSection as any)) {
+      return (
+        <div className="space-y-4">
+          <div className="p-4 bg-muted rounded-md">אין לך הרשאה לגשת למחלקה זו. הועברת לסקירה כללית.</div>
+          <OverviewDashboard />
+        </div>
+      );
+    }
+
     switch (currentSection) {
       case "overview":
         return <OverviewDashboard />;

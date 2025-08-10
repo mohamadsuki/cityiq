@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { AuthActions } from "./AuthActions";
 import {
   BarChart3,
   GraduationCap,
@@ -17,7 +18,7 @@ import {
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { DataUploader } from "@/components/shared/DataUploader";
-
+import { useAuth } from "@/context/AuthContext";
 
 const navigationItems = [
   { id: "overview", name: "סקירה כללית", icon: Home, url: "/" },
@@ -34,6 +35,7 @@ export default function Navigation() {
   const [importOpen, setImportOpen] = useState(false);
   const location = useLocation();
   const currentPath = location.pathname;
+  const { role, departments } = useAuth();
 
   return (
     <>
@@ -57,9 +59,10 @@ export default function Navigation() {
         <div className="p-6">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-foreground mb-2">
-              דאשבורד עירוני
-            </h1>
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-2xl font-bold text-foreground">דאשבורד עירוני</h1>
+              <AuthActions />
+            </div>
             <p className="text-muted-foreground">
               מערכת ניהול נתונים עירונית מתקדמת
             </p>
@@ -67,37 +70,45 @@ export default function Navigation() {
 
           {/* Navigation Items */}
           <nav className="space-y-2">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = currentPath === item.url;
+            {navigationItems
+              .filter((item) => {
+                if (!role || role === 'mayor') return true;
+                // Always allow overview
+                if (item.id === 'overview') return true;
+                // Allow only permitted departments
+                return departments.includes(item.id as any);
+              })
+              .map((item) => {
+                const Icon = item.icon;
+                const isActive = currentPath === item.url;
 
-              return (
-                <Button
-                  key={item.id}
-                  asChild
-                  variant={isActive ? "default" : "ghost"}
-                  className={`
+                return (
+                  <Button
+                    key={item.id}
+                    asChild
+                    variant={isActive ? "default" : "ghost"}
+                    className={`
                     w-full justify-start h-12 text-right
                     ${isActive 
                       ? 'bg-gradient-primary text-primary-foreground shadow-glow' 
                       : 'hover:bg-secondary/80'
                     }
                   `}
-                >
-                  <NavLink to={item.url} onClick={() => setIsOpen(false)}>
-                    <span className="flex items-center w-full">
-                      <Icon className="ml-3 h-5 w-5" />
-                      <span className="flex-1">{item.name}</span>
-                      {isActive && (
-                        <Badge variant="secondary" className="bg-white/20 text-primary-foreground">
-                          פעיל
-                        </Badge>
-                      )}
-                    </span>
-                  </NavLink>
-                </Button>
-              );
-            })}
+                  >
+                    <NavLink to={item.url} onClick={() => setIsOpen(false)}>
+                      <span className="flex items-center w-full">
+                        <Icon className="ml-3 h-5 w-5" />
+                        <span className="flex-1">{item.name}</span>
+                        {isActive && (
+                          <Badge variant="secondary" className="bg-white/20 text-primary-foreground">
+                            פעיל
+                          </Badge>
+                        )}
+                      </span>
+                    </NavLink>
+                  </Button>
+                );
+              })}
           </nav>
 
           <div className="mt-4">
@@ -115,7 +126,7 @@ export default function Navigation() {
               גרסה 1.0
             </p>
           </div>
-        </div>
+          </div>
       </Card>
 
       <Dialog open={importOpen} onOpenChange={setImportOpen}>

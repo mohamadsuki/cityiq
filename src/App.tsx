@@ -5,30 +5,36 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Auth from "./pages/Auth";
+import { Protected } from "./components/auth/Protected";
+import { AuthProvider } from "./context/AuthContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
+  <AuthProvider>
+    <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/overview" element={<Index />} />
-          <Route path="/finance" element={<Index />} />
-          <Route path="/education" element={<Index />} />
-          <Route path="/engineering" element={<Index />} />
-          <Route path="/welfare" element={<Index />} />
-          <Route path="/non-formal" element={<Index />} />
-          <Route path="/business" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/" element={<Protected><Index /></Protected>} />
+          <Route path="/overview" element={<Protected><Index /></Protected>} />
+          <Route path="/finance" element={<Protected><Index /></Protected>} />
+          <Route path="/education" element={<Protected><Index /></Protected>} />
+          <Route path="/engineering" element={<Protected><Index /></Protected>} />
+          <Route path="/welfare" element={<Protected><Index /></Protected>} />
+          <Route path="/non-formal" element={<Protected><Index /></Protected>} />
+          <Route path="/business" element={<Protected><Index /></Protected>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
-  </QueryClientProvider>
+    </QueryClientProvider>
+  </AuthProvider>
 );
 
 export default App;

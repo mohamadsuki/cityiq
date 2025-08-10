@@ -12,6 +12,8 @@ import {
   AlertTriangle
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { DEMO_USERS } from "@/lib/demoAccess";
 
 const KPICard = ({ 
   title, 
@@ -100,6 +102,7 @@ const DepartmentCard = ({
 );
 
 export default function OverviewDashboard() {
+  const { user } = useAuth();
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -109,6 +112,29 @@ export default function OverviewDashboard() {
           תמונת מצב כוללת של המערכות העירוניות
         </p>
       </div>
+
+      {!user && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-xl">משתמשי דמו להתחברות מהירה</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-3">התחבר/י עם אחד ממשתמשי הדמו הבאים (מומלץ להתחיל עם "ראש העיר"):</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {DEMO_USERS.map(u => (
+                <div key={u.email} className="text-sm p-3 rounded-md bg-muted">
+                  <div className="font-medium">{u.displayName}</div>
+                  <div className="text-muted-foreground">דוא"ל: {u.email}</div>
+                  <div className="text-muted-foreground">סיסמה: {u.password}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 text-sm">
+              עבור התחברות/הרשמה, נווט/י אל <Link to="/auth" className="underline">דף האימות</Link>.
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
