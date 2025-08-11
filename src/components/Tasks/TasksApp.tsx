@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import type { DepartmentSlug } from "@/lib/demoAccess";
+import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 
 // Task types as per DB
 type TaskPriority = "low" | "medium" | "high" | "urgent";
@@ -141,10 +142,11 @@ export default function TasksApp() {
       if (q && !(`${t.title} ${t.description ?? ""}`.toLowerCase().includes(q.toLowerCase()))) return false;
       if (status !== "all" && t.status !== status) return false;
       if (priority !== "all" && t.priority !== priority) return false;
+      if (role === "manager" && departments && !departments.includes(t.department_slug)) return false;
       if (department !== "all" && t.department_slug !== department) return false;
       return true;
     });
-  }, [tasks, q, status, priority, department]);
+  }, [tasks, q, status, priority, department, role, departments]);
 
   async function fetchTasks() {
     setLoading(true);
@@ -353,6 +355,14 @@ export default function TasksApp() {
           <Button onClick={openCreate}>משימה חדשה</Button>
         )}
       </header>
+
+      {/* Executive banners */}
+      {role === 'manager' && departments?.map((d) => (
+        <ExecutiveTasksBanner key={d} department={d} />
+      ))}
+      {role === 'ceo' && (
+        <ExecutiveTasksBanner department={'ceo' as DepartmentSlug} />
+      )}
 
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">

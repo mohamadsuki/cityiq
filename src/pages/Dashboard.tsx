@@ -8,7 +8,7 @@ import EngineeringDashboard from "@/components/Dashboard/EngineeringDashboard";
 import WelfareDashboard from "@/components/Dashboard/WelfareDashboard";
 import NonFormalDashboard from "@/components/Dashboard/NonFormalDashboard";
 import BusinessDashboard from "@/components/Dashboard/BusinessDashboard";
-import GrantsDashboard from "@/components/Dashboard/GrantsDashboard";
+import GrantsApp from "@/components/Grants/GrantsApp";
 import ProjectsApp from "@/components/Projects/ProjectsApp";
 import TasksApp from "@/components/Tasks/TasksApp";
 import { useAuth } from "@/context/AuthContext";
@@ -115,7 +115,7 @@ export default function Dashboard() {
       case "business":
         return <BusinessDashboard />;
       case "grants":
-        return <GrantsDashboard />;
+        return <GrantsApp />;
       case "projects":
         return <ProjectsApp />;
       case "tasks":

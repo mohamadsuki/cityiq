@@ -14,7 +14,10 @@ interface Props {
 export default function ExecutiveTasksBanner({ department }: Props) {
   const { role, user, session, departments } = useAuth();
   const isManager = role === 'manager';
-  const canSee = isManager && !!user?.id && !!session && departments?.includes(department);
+  const canSee = (
+    (isManager && !!user?.id && !!session && departments?.includes(department)) ||
+    (role === 'ceo' && !!user?.id && !!session && department === 'ceo')
+  );
 
   const [tasks, setTasks] = useState<any[]>([]);
   const [ackIds, setAckIds] = useState<string[]>([]);
