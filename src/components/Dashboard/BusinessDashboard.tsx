@@ -7,13 +7,16 @@ import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { ExportButtons } from "@/components/shared/ExportButtons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { Button } from "@/components/ui/button";
 import MapboxMap from "@/components/shared/Map/MapboxMap";
 import { MapboxTokenField } from "@/components/shared/Map/MapboxTokenField";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
+import { supabase } from "@/integrations/supabase/client";
+import AddLicenseDialog from "@/components/Business/AddLicenseDialog";
+
 
 const kpi = {
   registered: 1840,
@@ -42,6 +45,31 @@ const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accen
 
 export default function BusinessDashboard() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
+  // Reasons for no license (aggregated from DB, fallback to sample)
+  const [reasonData, setReasonData] = useState<{ name: string; value: number }[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadReasons() {
+      try {
+        const { data, error } = await supabase.from('licenses').select('reason_no_license');
+        if (error || !data) {
+          if (!cancelled) setReasonData([{ name: 'ממתין להשלמות', value: 12 }, { name: 'נדחה', value: 7 }, { name: 'אחר', value: 5 }]);
+          return;
+        }
+        const counts: Record<string, number> = {};
+        for (const row of data as any[]) {
+          const key = row.reason_no_license || 'לא צוין';
+          counts[key] = (counts[key] || 0) + 1;
+        }
+        if (!cancelled) setReasonData(Object.entries(counts).map(([name, value]) => ({ name, value: value as number })));
+      } catch {
+        if (!cancelled) setReasonData([{ name: 'ממתין להשלמות', value: 12 }, { name: 'נדחה', value: 7 }, { name: 'אחר', value: 5 }]);
+      }
+    }
+    loadReasons();
+    return () => { cancelled = true; };
+  }, []);
 
   type LicenseRow = {
     id: string;
@@ -80,19 +108,22 @@ export default function BusinessDashboard() {
           <h1 className="text-4xl font-bold text-foreground">רישוי עסקים</h1>
           <p className="text-muted-foreground text-lg">סטטוס רישיונות, סוגי עסקים והתראות</p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>ייבוא נתונים לרישוי עסקים</DialogTitle>
-            </DialogHeader>
-            <DataUploader context="business" />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <AddLicenseDialog />
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>ייבוא נתונים לרישוי עסקים</DialogTitle>
+              </DialogHeader>
+              <DataUploader context="business" />
+            </DialogContent>
+          </Dialog>
+        </div>
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -128,6 +159,22 @@ export default function BusinessDashboard() {
                 <Tooltip />
                 <Bar dataKey="count" fill="hsl(var(--primary))" />
               </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+        <Card className="shadow-card">
+          <CardHeader><CardTitle className="text-xl">סיבות ללא רישוי</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie data={reasonData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
+                  {reasonData.map((e,i)=> <Cell key={i} fill={COLORS[i%COLORS.length]} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>

@@ -15,7 +15,6 @@ import { FileSpreadsheet } from "lucide-react";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 import AddProjectDialog from "@/components/Finance/AddProjectDialog";
 
-
 const kpi = {
   recipients: 3280,
   families: 1120,
@@ -86,19 +85,22 @@ export default function WelfareDashboard() {
           <h1 className="text-4xl font-bold text-foreground">מחלקת רווחה</h1>
           <p className="text-muted-foreground text-lg">מעקב מקבלי שירות, שירותים ומגמות</p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>ייבוא נתונים למחלקת רווחה</DialogTitle>
-            </DialogHeader>
-            <DataUploader context="welfare" />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <AddProjectDialog defaultDepartment="welfare" hideDepartmentPicker />
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>ייבוא נתונים למחלקת רווחה</DialogTitle>
+              </DialogHeader>
+              <DataUploader context="welfare" />
+            </DialogContent>
+          </Dialog>
+        </div>
       </header>
 
       <ExecutiveTasksBanner department="welfare" />
