@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Image as ImageIcon, Trash2, Save, Edit3 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "global_logo_src";
 const CITY_NAME_KEY = "global_city_name";
@@ -17,12 +18,32 @@ export default function GlobalLogo({ inline = false }: { inline?: boolean }) {
   const [urlInput, setUrlInput] = useState("");
   const [cityName, setCityName] = useState<string>("שם העיר");
   const [cityInput, setCityInput] = useState<string>("");
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setSrc(saved);
-    const savedCity = localStorage.getItem(CITY_NAME_KEY);
-    if (savedCity) setCityName(savedCity);
-  }, []);
+useEffect(() => {
+  let active = true;
+  supabase
+    .from('city_settings')
+    .select('city_name, logo_url')
+    .eq('id', 'global')
+    .maybeSingle()
+    .then(({ data }) => {
+      if (!active) return;
+      if (data) {
+        setSrc(data.logo_url || null);
+        setCityName(data.city_name || "שם העיר");
+      }
+    });
+  const ch = supabase
+    .channel('rt-city-settings')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'city_settings' }, (payload) => {
+      const row: any = (payload.new as any) || (payload.old as any);
+      if (row) {
+        setSrc(row.logo_url || null);
+        setCityName(row.city_name || "שם העיר");
+      }
+    })
+    .subscribe();
+  return () => { active = false; supabase.removeChannel(ch); };
+}, []);
 
   useEffect(() => {
     if (open) {

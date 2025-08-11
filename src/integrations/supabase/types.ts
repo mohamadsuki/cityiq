@@ -127,6 +127,33 @@ export type Database = {
         }
         Relationships: []
       }
+      city_settings: {
+        Row: {
+          city_name: string | null
+          created_at: string
+          id: string
+          logo_url: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          city_name?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          city_name?: string | null
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       grants: {
         Row: {
           amount: number | null

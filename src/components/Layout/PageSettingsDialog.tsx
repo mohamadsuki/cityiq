@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Image as ImageIcon, Trash2, Save } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "global_logo_src";
 const CITY_NAME_KEY = "global_city_name";
@@ -15,15 +16,36 @@ interface PageSettingsDialogProps {
 export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogProps) {
   const [src, setSrc] = useState<string | null>(null);
   const [fileDataUrl, setFileDataUrl] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [urlInput, setUrlInput] = useState("");
   const [cityName, setCityName] = useState<string>("שם העיר");
   const [cityInput, setCityInput] = useState<string>("");
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) setSrc(saved);
-    const savedCity = localStorage.getItem(CITY_NAME_KEY);
-    if (savedCity) setCityName(savedCity);
+    let active = true;
+    supabase
+      .from('city_settings')
+      .select('city_name, logo_url')
+      .eq('id', 'global')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active) return;
+        if (data) {
+          setSrc(data.logo_url || null);
+          setCityName(data.city_name || "שם העיר");
+        }
+      });
+    const ch = supabase
+      .channel('rt-city-settings-dialog')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'city_settings' }, (payload) => {
+        const row: any = (payload.new as any) || (payload.old as any);
+        if (row) {
+          setSrc(row.logo_url || null);
+          setCityName(row.city_name || "שם העיר");
+        }
+      })
+      .subscribe();
+    return () => { active = false; supabase.removeChannel(ch); };
   }, []);
 
   useEffect(() => {
@@ -34,38 +56,63 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
 
   const displaySrc = useMemo(() => fileDataUrl || urlInput.trim() || src || "/placeholder.svg", [fileDataUrl, urlInput, src]);
 
-  const handleFile = async (file?: File | null) => {
-    if (!file) { setFileDataUrl(null); return; }
-    const toDataURL = (f: File) => new Promise<string>((resolve, reject) => {
+  const handleFile = async (f?: File | null) => {
+    if (!f) { setFileDataUrl(null); setFile(null); return; }
+    const toDataURL = (file: File) => new Promise<string>((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(String(r.result));
       r.onerror = reject;
-      r.readAsDataURL(f);
+      r.readAsDataURL(file);
     });
-    const dataUrl = await toDataURL(file);
+    const dataUrl = await toDataURL(f);
     setFileDataUrl(dataUrl);
+    setFile(f);
   };
 
-  const handleSave = () => {
-    const newSrc = fileDataUrl || (urlInput.trim() ? urlInput.trim() : src);
+  const handleSave = async () => {
     const newCity = cityInput.trim() ? cityInput.trim() : cityName;
-    if (newSrc) {
-      localStorage.setItem(STORAGE_KEY, newSrc);
-      setSrc(newSrc);
-    }
-    if (newCity) {
-      localStorage.setItem(CITY_NAME_KEY, newCity);
+    let logoUrl: string | null = null;
+
+    try {
+      if (file) {
+        const path = `logo/global-${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('branding')
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (uploadError) throw uploadError;
+        const { data: pub } = supabase.storage.from('branding').getPublicUrl(path);
+        logoUrl = pub.publicUrl;
+      } else if (urlInput.trim()) {
+        logoUrl = urlInput.trim();
+      } else {
+        logoUrl = src;
+      }
+
+      const { error } = await supabase
+        .from('city_settings')
+        .upsert({ id: 'global', city_name: newCity, logo_url: logoUrl ?? null }, { onConflict: 'id' });
+      if (error) throw error;
+
+      setSrc(logoUrl ?? null);
       setCityName(newCity);
+      onOpenChange(false);
+    } catch (e) {
+      console.error('Failed to save city settings', e);
     }
-    onOpenChange(false);
   };
 
-  const handleRemove = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setSrc(null);
-    setFileDataUrl(null);
-    setUrlInput("");
-    onOpenChange(false);
+  const handleRemove = async () => {
+    try {
+      await supabase
+        .from('city_settings')
+        .upsert({ id: 'global', city_name: cityName, logo_url: null }, { onConflict: 'id' });
+      setSrc(null);
+      setFileDataUrl(null);
+      setUrlInput("");
+      onOpenChange(false);
+    } catch (e) {
+      console.error('Failed to remove logo', e);
+    }
   };
 
   return (
