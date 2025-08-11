@@ -70,9 +70,6 @@ export default function Navigation() {
             <div className="mt-3">
               <AuthActions />
             </div>
-            <p className="text-muted-foreground">
-              מערכת ניהול נתונים עירונית מתקדמת
-            </p>
           </div>
 
           {/* Navigation Items */}

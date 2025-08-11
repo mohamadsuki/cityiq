@@ -219,6 +219,32 @@ export default function OverviewDashboard() {
         </p>
       </div>
 
+      {role === 'manager' && executiveTasks.length > 0 && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-xl">משימות מההנהלה</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {executiveTasks.map((t) => (
+              <div key={t.id} className="rounded-md border p-3" style={{ backgroundColor: 'hsl(var(--warning) / 0.12)', borderColor: 'hsl(var(--warning))' }}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-foreground truncate" title={t.title}>{t.title}</div>
+                    <div className="text-xs text-muted-foreground mt-1">דד-ליין: {t.due_at ? new Date(t.due_at).toLocaleDateString('he-IL') : '—'}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{DEPT_LABELS[t.department_slug] || t.department_slug}</Badge>
+                    <Button size="sm" variant="secondary" onClick={() => handleAcknowledge(t.id)} className="gap-1">
+                      <Eye className="h-4 w-4" /> אישור צפייה
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {user && (
         <Card className="shadow-card">
           <CardContent className="p-6 flex items-center gap-4">
@@ -418,32 +444,6 @@ export default function OverviewDashboard() {
           />
         </div>
       </div>
-
-      {role === 'manager' && executiveTasks.length > 0 && (
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-xl">משימות מההנהלה</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {executiveTasks.map((t) => (
-              <div key={t.id} className="rounded-md border p-3" style={{ backgroundColor: 'hsl(var(--warning) / 0.12)', borderColor: 'hsl(var(--warning))' }}>
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-medium text-foreground truncate" title={t.title}>{t.title}</div>
-                    <div className="text-xs text-muted-foreground mt-1">דד-ליין: {t.due_at ? new Date(t.due_at).toLocaleDateString('he-IL') : '—'}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{DEPT_LABELS[t.department_slug] || t.department_slug}</Badge>
-                    <Button size="sm" variant="secondary" onClick={() => handleAcknowledge(t.id)} className="gap-1">
-                      <Eye className="h-4 w-4" /> אישור צפייה
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
 
       <TasksOverviewCard tasks={tasksBasic} isLoading={tasksLoading} />
 
