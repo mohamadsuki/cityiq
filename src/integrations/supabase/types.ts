@@ -413,8 +413,41 @@ export type Database = {
         }
         Relationships: []
       }
+      task_acknowledgements: {
+        Row: {
+          created_at: string
+          id: string
+          manager_user_id: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          manager_user_id: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          manager_user_id?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_acknowledgements_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
+          assigned_by_role: Database["public"]["Enums"]["app_role"] | null
           created_at: string
           created_by: string
           department_slug: Database["public"]["Enums"]["department_slug"]
@@ -430,6 +463,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_by_role?: Database["public"]["Enums"]["app_role"] | null
           created_at?: string
           created_by: string
           department_slug: Database["public"]["Enums"]["department_slug"]
@@ -445,6 +479,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_by_role?: Database["public"]["Enums"]["app_role"] | null
           created_at?: string
           created_by?: string
           department_slug?: Database["public"]["Enums"]["department_slug"]
