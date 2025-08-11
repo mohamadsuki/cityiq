@@ -11,6 +11,7 @@ import { DateRange } from "react-day-picker";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DataUploader } from "@/components/shared/DataUploader";
+import ActivitiesSection from "@/components/NonFormal/ActivitiesSection";
 import { FileSpreadsheet } from "lucide-react";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 
@@ -164,50 +165,7 @@ export default function NonFormalDashboard() {
         </Card>
       </section>
 
-      <section>
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-xl">רשימת פעילויות</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-3 flex items-center gap-3 flex-wrap">
-              <select
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus:outline-none"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                aria-label="סינון לפי קטגוריה"
-              >
-                <option value="all">כל הקטגוריות</option>
-                {categories.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-              <select
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm focus:outline-none"
-                value={ageGroup}
-                onChange={(e) => setAgeGroup(e.target.value)}
-                aria-label="סינון לפי קבוצת גיל"
-              >
-                <option value="all">כל קבוצות הגיל</option>
-                {ageGroups.map((a) => (
-                  <option key={a} value={a}>{a}</option>
-                ))}
-              </select>
-              <DateRangePicker value={dateRange} onChange={setDateRange} />
-              <ExportButtons data={filteredData} fileBaseName="nonformal-activities" />
-              <div className="ml-auto flex items-center gap-2">
-                <Badge variant="secondary">סה״כ פעילויות: {filteredData.length}</Badge>
-                <Badge variant="secondary">סה״כ משתתפים: {totalParticipants}</Badge>
-              </div>
-            </div>
-            <DataTable
-              columns={activityColumns}
-              data={filteredData}
-              searchPlaceholder="חיפוש פעילויות..."
-            />
-          </CardContent>
-        </Card>
-      </section>
+      <ActivitiesSection />
     </div>
   );
 }
