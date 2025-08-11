@@ -22,18 +22,22 @@ function isUuid(v?: string | null) {
   return !!v && /^[0-9a-fA-F-]{36}$/.test(v);
 }
 
-export default function AddProjectDialog({ onSaved }: { onSaved?: () => void }) {
+export default function AddProjectDialog({ onSaved, defaultDepartment, hideDepartmentPicker }: { onSaved?: () => void; defaultDepartment?: DepartmentSlug; hideDepartmentPicker?: boolean }) {
   const { user, session, departments } = useAuth();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
-  const [department, setDepartment] = useState<DepartmentSlug>("finance");
+  const [department, setDepartment] = useState<DepartmentSlug>(defaultDepartment ?? "finance");
   const [status, setStatus] = useState<string>("בביצוע");
   const [domain, setDomain] = useState<string>("");
   const [budgetApproved, setBudgetApproved] = useState<string>("");
   const [budgetExecuted, setBudgetExecuted] = useState<string>("");
   const [progress, setProgress] = useState<string>("");
+  const [startAt, setStartAt] = useState("");
+  const [endAt, setEndAt] = useState("");
+  const [imageFiles, setImageFiles] = useState<FileList | null>(null);
+  const [docFiles, setDocFiles] = useState<FileList | null>(null);
 
   const canPickDept = (dep: DepartmentSlug) => departments.includes(dep) || departments.length === 0; // mayor/ceo
   const isDemo = !session || !isUuid(user?.id);
@@ -46,7 +50,14 @@ export default function AddProjectDialog({ onSaved }: { onSaved?: () => void }) 
 
     try {
       if (isDemo) {
-        const payload = {
+        // Convert images to data URLs
+        const toDataURL = (file: File) => new Promise<string>((resolve, reject) => {
+          const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(file);
+        });
+        const image_urls: string[] = imageFiles ? await Promise.all(Array.from(imageFiles).map(toDataURL)) : [];
+        const file_urls: string[] = docFiles ? Array.from(docFiles).map(f => `name:${f.name}`) : [];
+
+        const payload: any = {
           id: `demo-${Date.now()}`,
           user_id: user?.id || "",
           code: code || null,
@@ -57,13 +68,17 @@ export default function AddProjectDialog({ onSaved }: { onSaved?: () => void }) 
           budget_approved: budgetApproved ? Number(budgetApproved) : null,
           budget_executed: budgetExecuted ? Number(budgetExecuted) : null,
           progress: progress ? Number(progress) : 0,
+          start_at: startAt ? new Date(startAt).toISOString() : null,
+          end_at: endAt ? new Date(endAt).toISOString() : null,
+          image_urls,
+          file_urls,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        } as any;
+        };
         const raw = localStorage.getItem("demo_projects");
         const list = raw ? (JSON.parse(raw) as any[]) : [];
         localStorage.setItem("demo_projects", JSON.stringify([payload, ...list]));
-        toast({ title: "נשמר", description: "הפרויקט נשמר (מצב הדגמה)" });
+        toast({ title: "נשמר", description: "הפרויקט נשמר (מצב דמו)" });
         setOpen(false);
         onSaved?.();
         return;
@@ -74,7 +89,8 @@ export default function AddProjectDialog({ onSaved }: { onSaved?: () => void }) 
         return;
       }
 
-      const { error } = await supabase.from("projects").insert({
+      // Create project row
+      const created = await supabase.from("projects").insert({
         user_id: user.id,
         code: code || null,
         name,
@@ -84,8 +100,34 @@ export default function AddProjectDialog({ onSaved }: { onSaved?: () => void }) 
         budget_approved: budgetApproved ? Number(budgetApproved) : null,
         budget_executed: budgetExecuted ? Number(budgetExecuted) : null,
         progress: progress ? Number(progress) : 0,
-      });
-      if (error) throw error;
+        start_at: startAt ? new Date(startAt).toISOString() : null,
+        end_at: endAt ? new Date(endAt).toISOString() : null,
+      }).select('id').single();
+      if (created.error) throw created.error;
+      const projId = created.data.id as string;
+
+      // Upload media
+      const uploadedImages: string[] = [];
+      if (imageFiles) {
+        for (const file of Array.from(imageFiles)) {
+          const path = `projects/${projId}/images/${Date.now()}_${file.name}`;
+          const { error } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
+          if (!error) uploadedImages.push(path);
+        }
+      }
+      const uploadedFiles: string[] = [];
+      if (docFiles) {
+        for (const file of Array.from(docFiles)) {
+          const path = `projects/${projId}/files/${Date.now()}_${file.name}`;
+          const { error } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
+          if (!error) uploadedFiles.push(path);
+        }
+      }
+
+      if (uploadedImages.length || uploadedFiles.length) {
+        const { error } = await supabase.from('projects').update({ image_urls: uploadedImages.length ? uploadedImages : null, file_urls: uploadedFiles.length ? uploadedFiles : null }).eq('id', projId);
+        if (error) throw error;
+      }
 
       toast({ title: "נשמר", description: "הפרויקט נוסף בהצלחה" });
       setOpen(false);
@@ -114,19 +156,21 @@ export default function AddProjectDialog({ onSaved }: { onSaved?: () => void }) 
               <Label>שם פרויקט</Label>
               <Input value={name} onChange={(e)=>setName(e.target.value)} placeholder="למשל: שיפוץ בתי ספר" />
             </div>
-            <div>
-              <Label>מחלקה</Label>
-              <Select value={department} onValueChange={(v)=>setDepartment(v as DepartmentSlug)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="בחר מחלקה" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DEPARTMENTS.filter(canPickDept).map((d)=> (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!hideDepartmentPicker && (
+              <div>
+                <Label>מחלקה</Label>
+                <Select value={department} onValueChange={(v)=>setDepartment(v as DepartmentSlug)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="בחר מחלקה" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+                    {DEPARTMENTS.filter(canPickDept).map((d)=> (
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>סטטוס</Label>
               <Input value={status} onChange={(e)=>setStatus(e.target.value)} placeholder="למשל: בביצוע" />
