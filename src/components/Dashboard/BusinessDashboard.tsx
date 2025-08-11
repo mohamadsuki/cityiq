@@ -16,6 +16,7 @@ import { MapboxTokenField } from "@/components/shared/Map/MapboxTokenField";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 import { supabase } from "@/integrations/supabase/client";
 import AddLicenseDialog from "@/components/Business/AddLicenseDialog";
+import { useAuth } from "@/context/AuthContext";
 
 
 const kpi = {
@@ -43,8 +44,58 @@ const businessTypes = [
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--warning))", "hsl(var(--muted-foreground))"];
 
+type LicenseRow = {
+  id: string;
+  business_name: string | null;
+  type: string | null;
+  status: string | null;
+  license_number: string | null;
+  expires_at: string | null;
+};
+
 export default function BusinessDashboard() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const { user, session } = useAuth();
+  const isUuid = (v?: string | null) => !!v && /^[0-9a-fA-F-]{36}$/.test(v);
+  const isDemo = !session || !isUuid(user?.id);
+
+  // Licenses list (DB for auth users, localStorage for demo)
+  const [licenses, setLicenses] = useState<LicenseRow[]>([]);
+  const reloadLicenses = async () => {
+    try {
+      if (isDemo) {
+        const raw = localStorage.getItem('demo_licenses');
+        const list = raw ? JSON.parse(raw) as any[] : [];
+        setLicenses(list.map((r) => ({
+          id: r.id,
+          business_name: r.business_name ?? null,
+          type: r.type ?? null,
+          status: r.status ?? null,
+          license_number: r.license_number ?? null,
+          expires_at: r.expires_at ?? null,
+        })));
+      } else {
+        const { data } = await supabase
+          .from('licenses')
+          .select('id,business_name,type,status,license_number,expires_at')
+          .order('created_at', { ascending: false });
+        if (data) setLicenses(data as any);
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    reloadLicenses();
+    if (!isDemo) {
+      const channel = supabase
+        .channel('public:licenses')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'licenses' }, () => {
+          reloadLicenses();
+        })
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [isDemo]);
 
   // Reasons for no license (aggregated from DB, fallback to sample)
   const [reasonData, setReasonData] = useState<{ name: string; value: number }[]>([]);
@@ -71,27 +122,12 @@ export default function BusinessDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-  type LicenseRow = {
-    id: string;
-    name: string;
-    type: string;
-    status: string;
-    expiresAt: string;
-  };
-
-  const licenses: LicenseRow[] = [
-    { id: "RL-1001", name: "קפה מרכזי", type: "מזון", status: "פעיל", expiresAt: "2025-12-31" },
-    { id: "RL-1023", name: "חנות ספרים השדרה", type: "מסחר", status: "מתחדש", expiresAt: "2025-09-15" },
-    { id: "RL-1077", name: "מכון כושר PRO", type: "שירותים", status: "זמני", expiresAt: "2025-10-01" },
-    { id: "RL-1112", name: "מאפיית האופה", type: "מזון", status: "פג תוקף", expiresAt: "2025-06-30" },
-  ];
-
-  const licenseColumns: ColumnDef<LicenseRow>[] = [
-    { accessorKey: "id", header: "מספר רישיון" },
-    { accessorKey: "name", header: "שם עסק" },
+const licenseColumns: ColumnDef<LicenseRow>[] = [
+    { accessorKey: "license_number", header: "מספר רישיון" },
+    { accessorKey: "business_name", header: "שם עסק" },
     { accessorKey: "type", header: "סוג" },
     { accessorKey: "status", header: "סטטוס" },
-    { accessorKey: "expiresAt", header: "תוקף עד" },
+    { accessorKey: "expires_at", header: "תוקף עד" },
   ];
 
   const expiredCount = licenseStatus.find((s) => s.name === "פג תוקף")?.value ?? 0;
@@ -109,7 +145,7 @@ export default function BusinessDashboard() {
           <p className="text-muted-foreground text-lg">סטטוס רישיונות, סוגי עסקים והתראות</p>
         </div>
         <div className="flex items-center gap-2">
-          <AddLicenseDialog />
+          <AddLicenseDialog onSaved={reloadLicenses} />
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
