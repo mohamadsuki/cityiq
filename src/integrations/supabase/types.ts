@@ -266,10 +266,12 @@ export type Database = {
           department_slug: Database["public"]["Enums"]["department_slug"] | null
           expires_at: string | null
           id: string
+          image_urls: string[] | null
           lat: number | null
           license_number: string | null
           lng: number | null
           owner: string | null
+          reason_no_license: string | null
           status: string | null
           type: string | null
           updated_at: string
@@ -284,10 +286,12 @@ export type Database = {
             | null
           expires_at?: string | null
           id?: string
+          image_urls?: string[] | null
           lat?: number | null
           license_number?: string | null
           lng?: number | null
           owner?: string | null
+          reason_no_license?: string | null
           status?: string | null
           type?: string | null
           updated_at?: string
@@ -302,10 +306,12 @@ export type Database = {
             | null
           expires_at?: string | null
           id?: string
+          image_urls?: string[] | null
           lat?: number | null
           license_number?: string | null
           lng?: number | null
           owner?: string | null
+          reason_no_license?: string | null
           status?: string | null
           type?: string | null
           updated_at?: string
@@ -320,13 +326,17 @@ export type Database = {
           block: string | null
           created_at: string
           department_slug: Database["public"]["Enums"]["department_slug"] | null
+          end_at: string | null
+          file_urls: string[] | null
           id: string
+          image_urls: string[] | null
           land_use: string | null
           lat: number | null
           lng: number | null
           name: string | null
           parcel: string | null
           plan_number: string | null
+          start_at: string | null
           status: string | null
           updated_at: string
           user_id: string
@@ -339,13 +349,17 @@ export type Database = {
           department_slug?:
             | Database["public"]["Enums"]["department_slug"]
             | null
+          end_at?: string | null
+          file_urls?: string[] | null
           id?: string
+          image_urls?: string[] | null
           land_use?: string | null
           lat?: number | null
           lng?: number | null
           name?: string | null
           parcel?: string | null
           plan_number?: string | null
+          start_at?: string | null
           status?: string | null
           updated_at?: string
           user_id: string
@@ -358,13 +372,17 @@ export type Database = {
           department_slug?:
             | Database["public"]["Enums"]["department_slug"]
             | null
+          end_at?: string | null
+          file_urls?: string[] | null
           id?: string
+          image_urls?: string[] | null
           land_use?: string | null
           lat?: number | null
           lng?: number | null
           name?: string | null
           parcel?: string | null
           plan_number?: string | null
+          start_at?: string | null
           status?: string | null
           updated_at?: string
           user_id?: string
@@ -404,12 +422,15 @@ export type Database = {
           department: string | null
           department_slug: Database["public"]["Enums"]["department_slug"] | null
           domain: string | null
+          end_at: string | null
+          file_urls: string[] | null
           funding_source: string | null
           id: string
           image_urls: string[] | null
           name: string | null
           notes: string | null
           progress: number | null
+          start_at: string | null
           status: string | null
           updated_at: string
           user_id: string
@@ -424,12 +445,15 @@ export type Database = {
             | Database["public"]["Enums"]["department_slug"]
             | null
           domain?: string | null
+          end_at?: string | null
+          file_urls?: string[] | null
           funding_source?: string | null
           id?: string
           image_urls?: string[] | null
           name?: string | null
           notes?: string | null
           progress?: number | null
+          start_at?: string | null
           status?: string | null
           updated_at?: string
           user_id: string
@@ -444,12 +468,15 @@ export type Database = {
             | Database["public"]["Enums"]["department_slug"]
             | null
           domain?: string | null
+          end_at?: string | null
+          file_urls?: string[] | null
           funding_source?: string | null
           id?: string
           image_urls?: string[] | null
           name?: string | null
           notes?: string | null
           progress?: number | null
+          start_at?: string | null
           status?: string | null
           updated_at?: string
           user_id?: string

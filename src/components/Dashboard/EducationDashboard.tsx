@@ -32,6 +32,8 @@ import { Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 import InstitutionsSection from "@/components/Education/InstitutionsSection";
+import AddProjectDialog from "@/components/Finance/AddProjectDialog";
+
 
 const educationData = [
   { level: "יסודי", students: 8420, institutions: 24, ratio: 35.1 },
@@ -270,9 +272,12 @@ export default function EducationDashboard() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl">פרויקטים במחלקת חינוך</CardTitle>
-            <Button asChild>
-              <Link to="/projects?department=education">ניהול פרויקטים</Link>
-            </Button>
+            <div className="flex items-center gap-2">
+              <AddProjectDialog />
+              <Button asChild>
+                <Link to="/projects?department=education">ניהול פרויקטים</Link>
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

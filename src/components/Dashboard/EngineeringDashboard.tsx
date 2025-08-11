@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DataUploader } from "@/components/shared/DataUploader";
 import { Button } from "@/components/ui/button";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
+import AddPlanDialog from "@/components/Engineering/AddPlanDialog";
+
 
 const statusData = [
   { status: "בהכנה", value: 12 },
@@ -70,19 +72,22 @@ export default function EngineeringDashboard() {
           <h1 className="text-4xl font-bold text-foreground">מחלקת הנדסה</h1>
           <p className="text-muted-foreground text-lg">תכנון, סטטוסים וייעודי קרקע</p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>ייבוא נתונים למחלקת הנדסה</DialogTitle>
-            </DialogHeader>
-            <DataUploader context="engineering" />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <AddPlanDialog />
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>ייבוא נתונים למחלקת הנדסה</DialogTitle>
+              </DialogHeader>
+              <DataUploader context="engineering" />
+            </DialogContent>
+          </Dialog>
+        </div>
       </header>
 
       <ExecutiveTasksBanner department="engineering" />

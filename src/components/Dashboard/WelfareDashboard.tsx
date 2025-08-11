@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DataUploader } from "@/components/shared/DataUploader";
 import { FileSpreadsheet } from "lucide-react";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
+import AddProjectDialog from "@/components/Finance/AddProjectDialog";
+
 
 const kpi = {
   recipients: 3280,
