@@ -54,7 +54,7 @@ export default function GlobalLogo() {
         <img
           src={displaySrc}
           alt="לוגו העיר - דאשבורד עירוני"
-          className="h-16 w-auto drop-shadow-sm"
+          className="h-20 w-auto drop-shadow-sm"
           loading="lazy"
         />
       </a>
