@@ -75,6 +75,44 @@ export default function GrantsApp() {
     });
   }, [grants, q, status, department, role, departments]);
 
+  type SortKey = 'name' | 'ministry' | 'amount' | 'status' | 'submitted_at' | 'decision_at';
+  const [sortBy, setSortBy] = useState<SortKey>('decision_at');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const sorted = useMemo(() => {
+    const arr = [...filtered];
+    const compare = (a: any, b: any) => {
+      const getVal = (obj: any, key: SortKey) => obj?.[key];
+      if (sortBy.includes('_at')) {
+        const ta = getVal(a, sortBy) ? new Date(getVal(a, sortBy)).getTime() : 0;
+        const tb = getVal(b, sortBy) ? new Date(getVal(b, sortBy)).getTime() : 0;
+        return sortDir === 'asc' ? ta - tb : tb - ta;
+      }
+      const va = getVal(a, sortBy);
+      const vb = getVal(b, sortBy);
+      if (typeof va === 'number' || typeof vb === 'number') {
+        const diff = Number(va || 0) - Number(vb || 0);
+        return sortDir === 'asc' ? diff : -diff;
+      }
+      const diff = String(va || '').localeCompare(String(vb || ''), 'he');
+      return sortDir === 'asc' ? diff : -diff;
+    };
+    arr.sort(compare);
+    return arr;
+  }, [filtered, sortBy, sortDir]);
+
+  const toggleSort = (key: SortKey) => {
+    setSortBy((prev) => {
+      if (prev === key) {
+        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        return prev;
+      } else {
+        setSortDir('asc');
+        return key;
+      }
+    });
+  };
+
   async function fetchGrants() {
     setLoading(true);
     if (isDemo) {
@@ -265,20 +303,32 @@ export default function GrantsApp() {
         <table className="w-full text-right">
           <thead>
             <tr className="text-muted-foreground">
-              <th className="py-2">שם</th>
-              <th className="py-2">משרד</th>
-              <th className="py-2">סכום</th>
-              <th className="py-2">סטטוס</th>
-              <th className="py-2">הוגש</th>
-              <th className="py-2">החלטה</th>
+              <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('name')}>
+                שם {sortBy === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+              </th>
+              <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('ministry')}>
+                משרד {sortBy === 'ministry' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+              </th>
+              <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('amount')}>
+                סכום {sortBy === 'amount' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+              </th>
+              <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('status')}>
+                סטטוס {sortBy === 'status' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+              </th>
+              <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('submitted_at')}>
+                הוגש {sortBy === 'submitted_at' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+              </th>
+              <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('decision_at')}>
+                החלטה {sortBy === 'decision_at' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+              </th>
               <th className="py-2">לו"ז</th>
               <th className="py-2">פעולות</th>
             </tr>
           </thead>
           <tbody>
             {loading && (<tr><td className="py-6" colSpan={8}>טוען…</td></tr>)}
-            {!loading && filtered.length === 0 && (<tr><td className="py-6" colSpan={8}>אין נתונים</td></tr>)}
-            {!loading && filtered.map((g) => (
+            {!loading && sorted.length === 0 && (<tr><td className="py-6" colSpan={8}>אין נתונים</td></tr>)}
+            {!loading && sorted.map((g) => (
               <tr key={g.id} className="border-b border-border">
                 <td className="py-3 font-medium">{g.name}</td>
                 <td className="py-3">{g.ministry || '—'}</td>
