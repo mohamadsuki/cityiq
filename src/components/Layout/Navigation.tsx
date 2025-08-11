@@ -64,10 +64,10 @@ export default function Navigation() {
         <div className="p-6">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-2">
-              <NavLink to="/" onClick={() => setIsOpen(false)} className="text-2xl font-bold text-foreground hover:underline focus:outline-none">
-                דאשבורד עירוני
-              </NavLink>
+            <NavLink to="/" onClick={() => setIsOpen(false)} className="text-2xl font-bold text-foreground hover:underline focus:outline-none">
+              דאשבורד עירוני
+            </NavLink>
+            <div className="mt-3">
               <AuthActions />
             </div>
             <p className="text-muted-foreground">

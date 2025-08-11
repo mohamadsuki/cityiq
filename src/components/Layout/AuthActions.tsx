@@ -5,7 +5,7 @@ import { useAuth } from "@/context/AuthContext";
 import { DEMO_USERS } from "@/lib/demoAccess";
 import type { DepartmentSlug } from "@/lib/demoAccess";
 import { useNavigate } from "react-router-dom";
-import { Home } from "lucide-react";
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -57,10 +57,6 @@ export function AuthActions() {
   if (!user) {
     return (
       <div className="flex items-center gap-2">
-        <Button size="sm" variant="ghost" onClick={() => nav('/')}
-          aria-label="דף הבית">
-          <Home className="h-4 w-4" />
-        </Button>
         <Button size="sm" variant="outline" onClick={() => nav('/auth')}>
           התחברות
         </Button>
@@ -78,9 +74,6 @@ export function AuthActions() {
 
   return (
     <div className="flex items-center gap-2 flex-nowrap">
-      <Button size="sm" variant="ghost" onClick={() => nav('/')} aria-label="דף הבית">
-        <Home className="h-4 w-4" />
-      </Button>
 
       {role && <Badge variant="secondary" className="whitespace-nowrap">{heRole}</Badge>}
 
