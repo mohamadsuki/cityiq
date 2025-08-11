@@ -27,8 +27,20 @@ export function AuthActions() {
   const [profileAvatar, setProfileAvatar] = useState<string>("");
 
   useEffect(() => {
-    const isUuid = (v: string) => /[0-9a-fA-F-]{36}/.test(v);
-    if (!session || !user?.id || !isUuid(user.id)) { setProfileName(""); setProfileAvatar(""); return; }
+    const isUuid = (v: string) => /^[0-9a-fA-F-]{36}$/.test(v);
+    // Demo mode or non-UUID ids: load from localStorage (keeps uploaded avatar in demo)
+    if (!session || !user?.id || !isUuid(user.id)) {
+      try {
+        const raw = localStorage.getItem("demo_profile");
+        const p = raw ? (JSON.parse(raw) as { display_name?: string; avatar_url?: string }) : null;
+        setProfileName(p?.display_name || "");
+        setProfileAvatar(p?.avatar_url || "");
+      } catch {
+        setProfileName("");
+        setProfileAvatar("");
+      }
+      return;
+    }
     supabase
       .from("profiles")
       .select("display_name, avatar_url")
@@ -76,7 +88,7 @@ export function AuthActions() {
         <DropdownMenuTrigger asChild>
           <Button size="sm" variant="ghost" className="flex items-center gap-2 max-w-[12rem] overflow-hidden">
             <Avatar className="h-8 w-8 shrink-0">
-              <AvatarImage src={avatarUrl} alt={`תמונת ${displayName}`} />
+              <AvatarImage src={avatarUrl || undefined} alt={`תמונת ${displayName}`} />
               <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
             </Avatar>
             <span className="truncate text-sm" title={displayName}>{displayName}</span>
