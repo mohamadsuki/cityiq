@@ -12,6 +12,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { FileSpreadsheet } from "lucide-react";
+import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 
 const kpi = {
   participants: 2140,
@@ -97,6 +98,8 @@ export default function NonFormalDashboard() {
           </DialogContent>
         </Dialog>
       </header>
+
+      <ExecutiveTasksBanner department="non-formal" />
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">משתתפים פעילים</p><p className="text-3xl font-bold">{kpi.participants.toLocaleString()}</p></div><Users className="h-6 w-6 text-muted-foreground"/></CardContent></Card>

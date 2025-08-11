@@ -30,6 +30,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
+import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 
 const educationData = [
   { level: "יסודי", students: 8420, institutions: 24, ratio: 35.1 },
@@ -119,6 +120,8 @@ export default function EducationDashboard() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <ExecutiveTasksBanner department="education" />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

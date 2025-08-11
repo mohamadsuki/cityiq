@@ -12,6 +12,7 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { FileSpreadsheet } from "lucide-react";
+import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 
 const kpi = {
   recipients: 3280,
@@ -97,6 +98,8 @@ export default function WelfareDashboard() {
           </DialogContent>
         </Dialog>
       </header>
+
+      <ExecutiveTasksBanner department="welfare" />
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">סה"כ מקבלי שירות</p><p className="text-3xl font-bold">{kpi.recipients.toLocaleString()}</p></div><Users className="h-6 w-6 text-muted-foreground"/></CardContent></Card>

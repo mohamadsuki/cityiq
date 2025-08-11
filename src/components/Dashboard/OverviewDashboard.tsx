@@ -23,6 +23,8 @@ import { supabase } from "@/integrations/supabase/client";
 import TasksOverviewCard from "@/components/Tasks/TasksOverviewCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useMemo, useState } from "react";
+import { DateRangePicker } from "@/components/shared/DateRangePicker";
+import { DateRange } from "react-day-picker";
 const KPICard = ({ 
   title, 
   value, 
@@ -115,6 +117,9 @@ export default function OverviewDashboard() {
   type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
   type TaskRow = { id: string; status: TaskStatus; due_at: string | null; progress_percent: number | null };
 
+  const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year' | 'custom'>('day');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
   // Load tasks with creator role marker for filtering
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ['tasks-overview'],
@@ -164,16 +169,29 @@ export default function OverviewDashboard() {
   const DEPT_LABELS: Record<string, string> = { finance: 'כספים', education: 'חינוך', engineering: 'הנדסה', welfare: 'רווחה', 'non-formal': 'חינוך בלתי פורמאלי', business: 'עסקים', ceo: 'מנכ"ל' };
 
   const { data: execStats } = useQuery({
-    queryKey: ['exec-daily'],
+    queryKey: ['exec-new', period, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
     enabled: role === 'mayor' || role === 'ceo',
     queryFn: async () => {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const now = new Date();
+      const from = (() => {
+        if (period === 'custom' && dateRange?.from) return dateRange.from;
+        if (period === 'week') return new Date(now.getTime() - 7*24*60*60*1000);
+        if (period === 'month') return new Date(now.getTime() - 30*24*60*60*1000);
+        if (period === 'year') return new Date(now.getTime() - 365*24*60*60*1000);
+        return new Date(now.getTime() - 24*60*60*1000);
+      })();
+      const to = (period === 'custom' && dateRange?.to) ? dateRange.to : now;
+      const fromIso = from.toISOString();
+      const toIso = to.toISOString();
+
+      const bounded = (q: any, col: string) => q.gte(col, fromIso).lte(col, toIso);
+
       const [pNew, pUpd, tDone, gNew, tAck] = await Promise.all([
-        supabase.from('projects').select('id', { count: 'exact', head: true }).gte('created_at', since),
-        supabase.from('projects').select('id', { count: 'exact', head: true }).gte('updated_at', since),
-        supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'done').gte('updated_at', since),
-        supabase.from('grants').select('id', { count: 'exact', head: true }).gte('created_at', since),
-        supabase.from('task_acknowledgements').select('id', { count: 'exact', head: true }).gte('created_at', since),
+        bounded(supabase.from('projects').select('id', { count: 'exact', head: true }), 'created_at'),
+        bounded(supabase.from('projects').select('id', { count: 'exact', head: true }), 'updated_at'),
+        bounded(supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'done'), 'updated_at'),
+        bounded(supabase.from('grants').select('id', { count: 'exact', head: true }), 'created_at'),
+        bounded(supabase.from('task_acknowledgements').select('id', { count: 'exact', head: true }), 'created_at'),
       ]);
       return {
         projectsNew: pNew.count || 0,
@@ -219,30 +237,42 @@ export default function OverviewDashboard() {
       { (role === 'mayor' || role === 'ceo') && execStats && (
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-xl">התראות יומיות למנהלים</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl">מה חדש?</CardTitle>
+              <div className="flex items-center gap-2">
+                {(['day','week','month','year','custom'] as const).map((p) => (
+                  <Button key={p} size="sm" variant={period === p ? 'default' : 'outline'} onClick={() => setPeriod(p)}>
+                    {p === 'day' ? 'יום' : p === 'week' ? 'שבוע' : p === 'month' ? 'חודש' : p === 'year' ? 'שנה' : 'טווח'}
+                  </Button>
+                ))}
+                {period === 'custom' && (
+                  <DateRangePicker value={dateRange} onChange={setDateRange} />
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="p-4 rounded-lg bg-muted">
+              <Link to="/projects" className="p-4 rounded-lg bg-muted block">
                 <div className="text-sm text-muted-foreground">פרויקטים חדשים</div>
                 <div className="text-2xl font-bold">{execStats.projectsNew}</div>
-              </div>
-              <div className="p-4 rounded-lg bg-muted">
+              </Link>
+              <Link to="/projects" className="p-4 rounded-lg bg-muted block">
                 <div className="text-sm text-muted-foreground">פרויקטים שהתעדכנו</div>
                 <div className="text-2xl font-bold">{execStats.projectsUpdated}</div>
-              </div>
-              <div className="p-4 rounded-lg bg-muted">
+              </Link>
+              <Link to="/tasks" className="p-4 rounded-lg bg-muted block">
                 <div className="text-sm text-muted-foreground">משימות שהושלמו</div>
                 <div className="text-2xl font-bold">{execStats.tasksDone}</div>
-              </div>
-              <div className="p-4 rounded-lg bg-muted">
+              </Link>
+              <Link to="/grants" className="p-4 rounded-lg bg-muted block">
                 <div className="text-sm text-muted-foreground">קולות קוראים חדשים</div>
                 <div className="text-2xl font-bold">{execStats.grantsNew}</div>
-              </div>
-              <div className="p-4 rounded-lg bg-muted">
-                <div className="text-sm text-muted-foreground">אישורי צפייה ממשתמשים</div>
+              </Link>
+              <Link to="/tasks" className="p-4 rounded-lg bg-muted block">
+                <div className="text-sm text-muted-foreground">אישורי צפייה (מנהלים)</div>
                 <div className="text-2xl font-bold">{execStats.acknowledgements}</div>
-              </div>
+              </Link>
             </div>
           </CardContent>
         </Card>

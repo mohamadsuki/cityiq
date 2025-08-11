@@ -34,6 +34,7 @@ import { DateRange } from "react-day-picker";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DataUploader } from "@/components/shared/DataUploader";
+import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 
 const budgetData = [
   { name: "חינוך", approved: 890, actual: 720, percentage: 81 },
@@ -147,6 +148,8 @@ export default function FinanceDashboard() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <ExecutiveTasksBanner department="finance" />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

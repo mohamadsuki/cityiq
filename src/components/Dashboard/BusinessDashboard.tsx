@@ -13,6 +13,7 @@ import { DataUploader } from "@/components/shared/DataUploader";
 import { Button } from "@/components/ui/button";
 import MapboxMap from "@/components/shared/Map/MapboxMap";
 import { MapboxTokenField } from "@/components/shared/Map/MapboxTokenField";
+import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 
 const kpi = {
   registered: 1840,
