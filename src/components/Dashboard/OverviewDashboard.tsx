@@ -108,7 +108,7 @@ const DepartmentCard = ({
 );
 
 export default function OverviewDashboard() {
-  const { user, role } = useAuth();
+  const { user, role, departments } = useAuth();
 
   type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
   type TaskRow = { id: string; status: TaskStatus; due_at: string | null; progress_percent: number | null };
@@ -118,13 +118,19 @@ export default function OverviewDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tasks')
-        .select('id,status,due_at,progress_percent');
+        .select('id,title,department_slug,status,due_at,progress_percent');
       if (error) return [] as TaskRow[];
       return (data || []) as TaskRow[];
     },
   });
 
-  // Task metrics moved into TasksOverviewCard
+  type TaskRowFull = TaskRow & { title: string; department_slug: string };
+  const tasksFull = tasks as unknown as TaskRowFull[];
+  const tasksBasic: TaskRow[] = tasksFull.map((t) => ({ id: t.id, status: t.status, due_at: t.due_at, progress_percent: t.progress_percent }));
+  const executiveTasks = tasksFull
+    .filter((t) => t.status !== 'done' && t.status !== 'cancelled' && (role !== 'manager' || departments.includes(t.department_slug as any)))
+    .slice(0, 5);
+  const DEPT_LABELS: Record<string, string> = { finance: 'כספים', education: 'חינוך', engineering: 'הנדסה', welfare: 'רווחה', 'non-formal': 'חינוך בלתי פורמאלי', business: 'עסקים', ceo: 'מנכ"ל' };
 
   return (
     <div className="space-y-8">
@@ -292,7 +298,26 @@ export default function OverviewDashboard() {
         </div>
       </div>
 
-      <TasksOverviewCard tasks={tasks} isLoading={tasksLoading} />
+      {role === 'manager' && executiveTasks.length > 0 && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-xl">משימות מההנהלה</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {executiveTasks.map((t) => (
+              <div key={t.id} className="rounded-md border p-3" style={{ backgroundColor: 'hsl(var(--warning) / 0.12)', borderColor: 'hsl(var(--warning))' }}>
+                <div className="flex items-center justify-between">
+                  <div className="font-medium text-foreground">{t.title}</div>
+                  <Badge variant="outline">{DEPT_LABELS[t.department_slug] || t.department_slug}</Badge>
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">דד-ליין: {t.due_at ? new Date(t.due_at).toLocaleDateString('he-IL') : '—'}</div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      <TasksOverviewCard tasks={tasksBasic} isLoading={tasksLoading} />
 
       {/* Quick Actions */}
       <Card className="shadow-card">
