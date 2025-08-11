@@ -17,6 +17,7 @@ import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 import { supabase } from "@/integrations/supabase/client";
 import AddLicenseDialog from "@/components/Business/AddLicenseDialog";
 import { useAuth } from "@/context/AuthContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 const kpi = {
@@ -26,21 +27,7 @@ const kpi = {
   newRequests: 28,
 };
 
-const licenseStatus = [
-  { name: "פעיל", value: 1630 },
-  { name: "מבוטל", value: 60 },
-  { name: "זמני", value: 80 },
-  { name: "מתחדש", value: 50 },
-  { name: "פג תוקף", value: 20 },
-];
-
-const businessTypes = [
-  { type: "מסחר", count: 620 },
-  { type: "שירותים", count: 480 },
-  { type: "מזון", count: 260 },
-  { type: "תעשייה קלה", count: 140 },
-  { type: "אחר", count: 340 },
-];
+// נתוני תרשימים יחושבו דינמית לפי סינון הרשימה
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--warning))", "hsl(var(--muted-foreground))"];
 
@@ -130,7 +117,42 @@ const licenseColumns: ColumnDef<LicenseRow>[] = [
     { accessorKey: "expires_at", header: "תוקף עד" },
   ];
 
-  const expiredCount = licenseStatus.find((s) => s.name === "פג תוקף")?.value ?? 0;
+  // Filters and derived datasets
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [soonFilter, setSoonFilter] = useState<number>(0); // 0 = no filter, else days
+
+  const daysUntil = (dateStr: string | null) => {
+    if (!dateStr) return Infinity;
+    const today = new Date();
+    const target = new Date(dateStr);
+    return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  const filteredLicenses = licenses.filter((l) => {
+    const sOk = statusFilter === 'all' || l.status === statusFilter;
+    const tOk = typeFilter === 'all' || l.type === typeFilter;
+    const soonOk = soonFilter === 0 || (() => { const d = daysUntil(l.expires_at); return d >= 0 && d <= soonFilter; })();
+    return sOk && tOk && soonOk;
+  });
+
+  const licenseStatusData = Object.entries(
+    filteredLicenses.reduce((acc, l) => {
+      const key = l.status || 'לא צוין';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([name, value]) => ({ name, value }));
+
+  const businessTypesData = Object.entries(
+    filteredLicenses.reduce((acc, l) => {
+      const key = l.type || 'אחר';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([type, count]) => ({ type, count }));
+
+  const expiredCount = licenses.reduce((acc, l) => acc + (l.status === 'פג תוקף' ? 1 : 0), 0);
   const alerts = [
     { id: "AL-001", title: "רישיונות שפוקעים בחודש הקרוב", count: kpi.expiringThisMonth, severity: "warning" as const, icon: Timer },
     { id: "AL-002", title: "בקשות הממתינות לטיפול", count: 12, severity: "default" as const, icon: Bell },
@@ -175,8 +197,8 @@ const licenseColumns: ColumnDef<LicenseRow>[] = [
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie data={licenseStatus} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
-                  {licenseStatus.map((e,i)=> <Cell key={i} fill={COLORS[i%COLORS.length]} />)}
+                <Pie data={licenseStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
+                  {licenseStatusData.map((e,i)=> <Cell key={i} fill={COLORS[i%COLORS.length]} />)}
                 </Pie>
                 <Tooltip />
               </PieChart>
@@ -188,7 +210,7 @@ const licenseColumns: ColumnDef<LicenseRow>[] = [
           <CardHeader><CardTitle className="text-xl">סוגי עסקים</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={businessTypes}>
+              <BarChart data={businessTypesData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="type" />
                 <YAxis />
@@ -266,13 +288,49 @@ const licenseColumns: ColumnDef<LicenseRow>[] = [
             <CardTitle className="text-xl">רישיונות עסקים</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="mb-3 flex items-center gap-3">
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <Select value={statusFilter} onValueChange={(v)=>setStatusFilter(v)}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="סטטוס" /></SelectTrigger>
+                <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+                  <SelectItem value="all">כל הסטטוסים</SelectItem>
+                  <SelectItem value="פעיל">פעיל</SelectItem>
+                  <SelectItem value="מבוטל">מבוטל</SelectItem>
+                  <SelectItem value="זמני">זמני</SelectItem>
+                  <SelectItem value="מתחדש">מתחדש</SelectItem>
+                  <SelectItem value="פג תוקף">פג תוקף</SelectItem>
+                  <SelectItem value="ללא רישוי">ללא רישוי</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={typeFilter} onValueChange={(v)=>setTypeFilter(v)}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="סוג עסק" /></SelectTrigger>
+                <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+                  <SelectItem value="all">כל הסוגים</SelectItem>
+                  <SelectItem value="מסחר">מסחר</SelectItem>
+                  <SelectItem value="שירותים">שירותים</SelectItem>
+                  <SelectItem value="מזון">מזון</SelectItem>
+                  <SelectItem value="תעשייה קלה">תעשייה קלה</SelectItem>
+                  <SelectItem value="אחר">אחר</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={String(soonFilter)} onValueChange={(v)=>setSoonFilter(Number(v))}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="פג תוקף בקרוב" /></SelectTrigger>
+                <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+                  <SelectItem value="0">ללא סינון תוקף</SelectItem>
+                  <SelectItem value="30">פחות מ-30 יום</SelectItem>
+                  <SelectItem value="60">פחות מ-60 יום</SelectItem>
+                  <SelectItem value="90">פחות מ-90 יום</SelectItem>
+                </SelectContent>
+              </Select>
+
               <DateRangePicker value={dateRange} onChange={setDateRange} />
-              <ExportButtons data={licenses} fileBaseName="business-licenses" />
+              <Button variant="outline" size="sm" onClick={()=>{setStatusFilter('all'); setTypeFilter('all'); setSoonFilter(0);}}>איפוס</Button>
+              <ExportButtons data={filteredLicenses} fileBaseName="business-licenses" />
             </div>
             <DataTable
               columns={licenseColumns}
-              data={licenses}
+              data={filteredLicenses}
               searchPlaceholder="חיפוש עסקים..."
             />
           </CardContent>
