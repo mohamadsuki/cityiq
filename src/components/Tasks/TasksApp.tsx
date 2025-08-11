@@ -185,6 +185,36 @@ export default function TasksApp() {
     fetchTasks();
   }, []);
 
+  // Realtime updates for tasks
+  useEffect(() => {
+    const ch = supabase
+      .channel('rt-tasks-app')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        fetchTasks();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  // Acknowledgements for exec visibility (mayor/ceo)
+  const [ackIds, setAckIds] = useState<string[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAcks() {
+      if (!(role === 'mayor' || role === 'ceo')) return;
+      const { data, error } = await supabase.from('task_acknowledgements').select('task_id');
+      if (!error && !cancelled) setAckIds((data || []).map((d: any) => d.task_id));
+    }
+    loadAcks();
+    const ch = supabase
+      .channel('rt-task-acks-app')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_acknowledgements' }, () => {
+        loadAcks();
+      })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [role]);
+
   function openCreate() {
     setEditing(null);
     setForm({
@@ -394,7 +424,12 @@ export default function TasksApp() {
             )}
             {!loading && filtered.map((t) => (
               <tr key={t.id} className="border-b border-border">
-                <td className="py-3 font-medium">{t.title}</td>
+                <td className="py-3 font-medium">
+                  {t.title}
+                  {(role === 'mayor' || role === 'ceo') && ackIds.includes(t.id) && (
+                    <Badge variant="outline" className="ml-2">נצפה</Badge>
+                  )}
+                </td>
                 <td className="py-3">{DEPARTMENT_LABELS[t.department_slug]}</td>
                 <td className="py-3">
                   <Badge variant={priorityBadgeVariant(t.priority)}>{PRIORITY_LABELS[t.priority]}</Badge>

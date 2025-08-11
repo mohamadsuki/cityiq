@@ -18,7 +18,7 @@ import {
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { DEMO_USERS } from "@/lib/demoAccess";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import TasksOverviewCard from "@/components/Tasks/TasksOverviewCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -149,6 +149,28 @@ export default function OverviewDashboard() {
   useEffect(() => {
     setAckIds((acks as { task_id: string }[]).map((a) => a.task_id));
   }, [acks]);
+
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const ch1 = supabase
+      .channel('rt-tasks-overview')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['tasks-overview'] });
+      })
+      .subscribe();
+
+    const ch2 = supabase
+      .channel('rt-task-acks')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_acknowledgements' }, () => {
+        if (user?.id) queryClient.invalidateQueries({ queryKey: ['task-acks', user.id] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ch1);
+      supabase.removeChannel(ch2);
+    };
+  }, [queryClient, user?.id]);
 
   type TaskRowFull = TaskRow & { title: string; department_slug: string; assigned_by_role?: 'mayor' | 'ceo' | 'manager' | null; created_at?: string };
   const tasksFull = tasks as unknown as TaskRowFull[];

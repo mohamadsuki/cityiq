@@ -22,6 +22,8 @@ export type Institution = {
   occupancy: number | null;
   lat: number | null;
   lng: number | null;
+  principal: string | null;
+  teachers: number | null;
 };
 
 const DEFAULT_FORM: Partial<Institution> = {
@@ -33,6 +35,8 @@ const DEFAULT_FORM: Partial<Institution> = {
   occupancy: 0,
   lat: null,
   lng: null,
+  principal: "",
+  teachers: 0,
 };
 
 export default function InstitutionsSection() {
@@ -86,6 +90,8 @@ export default function InstitutionsSection() {
       name: form.name || null,
       level: form.level || null,
       address: form.address || null,
+      principal: (form.principal as string) || null,
+      teachers: typeof form.teachers === 'number' ? form.teachers : Number(form.teachers) || null,
       students: typeof form.students === 'number' ? form.students : Number(form.students) || null,
       classes: typeof form.classes === 'number' ? form.classes : Number(form.classes) || null,
       occupancy: typeof form.occupancy === 'number' ? form.occupancy : Number(form.occupancy) || null,
@@ -139,6 +145,8 @@ export default function InstitutionsSection() {
                   <th className="py-2">שם</th>
                   <th className="py-2">שלב</th>
                   <th className="py-2">כתובת</th>
+                  <th className="py-2">מנהל/ת</th>
+                  <th className="py-2">מורים</th>
                   <th className="py-2">תלמידים</th>
                   <th className="py-2">כיתות</th>
                   <th className="py-2">תפוסה</th>
@@ -155,6 +163,8 @@ export default function InstitutionsSection() {
                     <td className="py-3 font-medium">{i.name || '—'}</td>
                     <td className="py-3">{i.level || '—'}</td>
                     <td className="py-3">{i.address || '—'}</td>
+                    <td className="py-3">{i.principal || '—'}</td>
+                    <td className="py-3">{i.teachers ?? '—'}</td>
                     <td className="py-3">{i.students ?? '—'}</td>
                     <td className="py-3">{i.classes ?? '—'}</td>
                     <td className="py-3">{i.occupancy ?? '—'}%</td>
@@ -191,6 +201,14 @@ export default function InstitutionsSection() {
             <div className="md:col-span-2">
               <Label>כתובת</Label>
               <Input value={form.address as string} onChange={(e)=>setForm(f=>({...f, address: e.target.value}))} />
+            </div>
+            <div>
+              <Label>מנהל/ת</Label>
+              <Input value={(form.principal as string) ?? ''} onChange={(e)=>setForm(f=>({...f, principal: e.target.value}))} />
+            </div>
+            <div>
+              <Label>מספר מורים</Label>
+              <Input type="number" value={String(form.teachers ?? 0)} onChange={(e)=>setForm(f=>({...f, teachers: Number(e.target.value)}))} />
             </div>
             <div>
               <Label>תלמידים</Label>

@@ -218,7 +218,9 @@ export type Database = {
           lng: number | null
           name: string | null
           occupancy: number | null
+          principal: string | null
           students: number | null
+          teachers: number | null
           updated_at: string
           user_id: string
         }
@@ -235,7 +237,9 @@ export type Database = {
           lng?: number | null
           name?: string | null
           occupancy?: number | null
+          principal?: string | null
           students?: number | null
+          teachers?: number | null
           updated_at?: string
           user_id: string
         }
@@ -252,7 +256,9 @@ export type Database = {
           lng?: number | null
           name?: string | null
           occupancy?: number | null
+          principal?: string | null
           students?: number | null
+          teachers?: number | null
           updated_at?: string
           user_id?: string
         }
