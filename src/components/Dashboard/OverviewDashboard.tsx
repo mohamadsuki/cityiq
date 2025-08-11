@@ -245,20 +245,6 @@ export default function OverviewDashboard() {
         </Card>
       )}
 
-      {user && (
-        <Card className="shadow-card">
-          <CardContent className="p-6 flex items-center gap-4">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={"/placeholder.svg"} alt="תמונת משתמש" />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
-            <div>
-              <div className="text-lg font-semibold text-foreground">{user.email}</div>
-              <div className="text-sm text-muted-foreground">תפקיד: <span className="font-medium">{role === 'mayor' ? 'ראש העיר' : role === 'ceo' ? 'מנכ״ל' : role === 'manager' ? 'מנהל/ת מחלקה' : 'משתמש'}</span></div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       { (role === 'mayor' || role === 'ceo') && execStats && (
         <Card className="shadow-card">
