@@ -124,7 +124,14 @@ export default function ProfilePage() {
             </Avatar>
             <div>
               <Label htmlFor="avatar">תמונת פרופיל</Label>
-              <Input id="avatar" type="file" accept="image/*" onChange={onFileChange} />
+              <div className="flex items-center gap-2">
+                <Input id="avatar" type="file" accept="image/*" onChange={onFileChange} />
+                {avatarUrl && (
+                  <Button type="button" variant="destructive" size="sm" onClick={() => { setAvatarUrl(""); setFile(null); }}>
+                    מחיקת תמונה
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
