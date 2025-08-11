@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { Home } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const DEPT_LABELS: Record<DepartmentSlug, string> = {
   finance: "כספים",
@@ -20,13 +21,14 @@ const DEPT_LABELS: Record<DepartmentSlug, string> = {
 };
 
 export function AuthActions() {
-  const { user, role, departments, signOut } = useAuth();
+  const { user, role, departments, signOut, session } = useAuth();
   const nav = useNavigate();
   const [profileName, setProfileName] = useState("");
   const [profileAvatar, setProfileAvatar] = useState<string>("");
 
   useEffect(() => {
-    if (!user?.id) { setProfileName(""); setProfileAvatar(""); return; }
+    const isUuid = (v: string) => /[0-9a-fA-F-]{36}/.test(v);
+    if (!session || !user?.id || !isUuid(user.id)) { setProfileName(""); setProfileAvatar(""); return; }
     supabase
       .from("profiles")
       .select("display_name, avatar_url")
@@ -38,7 +40,7 @@ export function AuthActions() {
           setProfileAvatar(data.avatar_url || "");
         }
       });
-  }, [user?.id]);
+  }, [user?.id, session]);
 
   if (!user) {
     return (
@@ -70,19 +72,21 @@ export function AuthActions() {
 
       {role && <Badge variant="secondary" className="whitespace-nowrap">{heRole}</Badge>}
 
-      {hebDepartments && (
-        <Badge variant="outline" className="hidden md:inline-flex max-w-[12rem] truncate" title={hebDepartments}>
-          {hebDepartments}
-        </Badge>
-      )}
-
-      <Avatar className="h-8 w-8">
-        <AvatarImage src={avatarUrl} alt={`תמונת ${displayName}`} />
-        <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
-      </Avatar>
-
-      <Button size="sm" variant="ghost" onClick={() => nav('/profile')}>עריכת פרופיל</Button>
-      <Button size="sm" variant="outline" onClick={signOut}>התנתקות</Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="ghost" className="flex items-center gap-2 max-w-[12rem] overflow-hidden">
+            <Avatar className="h-8 w-8 shrink-0">
+              <AvatarImage src={avatarUrl} alt={`תמונת ${displayName}`} />
+              <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
+            </Avatar>
+            <span className="truncate text-sm" title={displayName}>{displayName}</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => nav('/profile')}>עריכת פרופיל</DropdownMenuItem>
+          <DropdownMenuItem onClick={signOut}>התנתקות</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
