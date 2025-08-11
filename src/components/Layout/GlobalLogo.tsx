@@ -80,7 +80,7 @@ export default function GlobalLogo({ inline = false }: { inline?: boolean }) {
         <span className="text-xl md:text-2xl font-bold text-foreground">{cityName}</span>
       </a>
       <Dialog open={open} onOpenChange={setOpen}>
-        {canEdit && (
+        {false && (
           <DialogTrigger asChild>
             <Button size="icon" variant="secondary" className={inline ? "ml-2" : "absolute -bottom-2 left-0 translate-y-full"} aria-label="עריכת לוגו ושם העיר">
               <Edit3 className="h-4 w-4" />

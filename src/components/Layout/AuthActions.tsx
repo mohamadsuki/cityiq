@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import PageSettingsDialog from "@/components/Layout/PageSettingsDialog";
 
 const DEPT_LABELS: Record<DepartmentSlug, string> = {
   finance: "כספים",
@@ -25,6 +26,7 @@ export function AuthActions() {
   const nav = useNavigate();
   const [profileName, setProfileName] = useState("");
   const [profileAvatar, setProfileAvatar] = useState<string>("");
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     const isUuid = (v: string) => /^[0-9a-fA-F-]{36}$/.test(v);
@@ -91,9 +93,15 @@ export function AuthActions() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => nav('/profile')}>עריכת פרופיל</DropdownMenuItem>
+          {(role === 'mayor' || role === 'ceo') && (
+            <DropdownMenuItem onClick={() => setEditOpen(true)}>עריכת דף</DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={signOut}>התנתקות</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {(role === 'mayor' || role === 'ceo') && (
+        <PageSettingsDialog open={editOpen} onOpenChange={setEditOpen} />
+      )}
     </div>
   );
 }
