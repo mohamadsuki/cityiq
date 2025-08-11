@@ -134,6 +134,9 @@ export default function ProjectsApp() {
 
   // Modal state
   const [open, setOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewing, setViewing] = useState<Project | null>(null);
+  const [resolvedImages, setResolvedImages] = useState<string[]>([]);
   const [editing, setEditing] = useState<Project | null>(null);
 const [form, setForm] = useState<Partial<Project>>({
   name: "",
@@ -177,7 +180,24 @@ function openEdit(p: Project) {
   setOpen(true);
 }
 
-async function saveProject() {
+  function openView(p: Project) {
+    setViewing(p);
+    setResolvedImages([]);
+    setViewOpen(true);
+    const paths = p.image_urls || [];
+    if (!paths.length) return;
+    if (isDemo) {
+      setResolvedImages(paths);
+      return;
+    }
+    Promise.all(paths.map(async (path) => {
+      const { data, error } = await supabase.storage.from('uploads').createSignedUrl(path, 3600);
+      if (error) return null;
+      return data?.signedUrl || null;
+    })).then((urls) => setResolvedImages(urls.filter(Boolean) as string[]));
+  }
+
+  async function saveProject() {
   if (!form.name || !form.department_slug) {
     toast({ title: "שדות חסרים", description: "שם ומחלקה הינם שדות חובה", variant: "destructive" });
     return;
@@ -423,6 +443,7 @@ async function saveProject() {
                   </div>
                 </td>
                 <td className="py-3 space-x-2 space-x-reverse">
+                  <Button variant="secondary" size="sm" onClick={() => openView(p)}>צפייה</Button>
                   <Button variant="outline" size="sm" onClick={() => openEdit(p)}>עריכה</Button>
                   {canDelete && (
                     <Button variant="destructive" size="sm" onClick={() => deleteProject(p)}>מחיקה</Button>
@@ -433,6 +454,70 @@ async function saveProject() {
           </tbody>
         </table>
       </Card>
+
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>פרטי פרויקט</DialogTitle>
+          </DialogHeader>
+          {viewing && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>שם</Label>
+                  <div>{viewing.name || "—"}</div>
+                </div>
+                <div>
+                  <Label>קוד</Label>
+                  <div>{viewing.code || "—"}</div>
+                </div>
+                <div>
+                  <Label>מחלקה</Label>
+                  <div>{viewing.department_slug ? DEPARTMENT_LABELS[viewing.department_slug] : "—"}</div>
+                </div>
+                <div>
+                  <Label>סטטוס</Label>
+                  <div>{viewing.status || "—"}</div>
+                </div>
+                <div>
+                  <Label>תחום</Label>
+                  <div>{viewing.domain || "—"}</div>
+                </div>
+                <div>
+                  <Label>מקור מימון</Label>
+                  <div>{viewing.funding_source || "—"}</div>
+                </div>
+                <div>
+                  <Label>תקציב מאושר</Label>
+                  <div>{viewing.budget_approved != null ? `₪${Number(viewing.budget_approved).toLocaleString()}` : "—"}</div>
+                </div>
+                <div>
+                  <Label>תקציב מבוצע</Label>
+                  <div>{viewing.budget_executed != null ? `₪${Number(viewing.budget_executed).toLocaleString()}` : "—"}</div>
+                </div>
+                <div className="md:col-span-2">
+                  <Label>הערות</Label>
+                  <div className="text-sm text-muted-foreground whitespace-pre-wrap">{viewing.notes || "—"}</div>
+                </div>
+              </div>
+              <div>
+                <Label>תמונות</Label>
+                {resolvedImages.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    {resolvedImages.map((url, idx) => (
+                      <a key={idx} href={url} target="_blank" rel="noreferrer">
+                        <img src={url} alt={`תמונה לפרויקט ${viewing.name || ""}`} className="w-full h-40 object-cover rounded-md border border-border" loading="lazy" />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">אין תמונות</div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
