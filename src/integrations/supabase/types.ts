@@ -84,6 +84,49 @@ export type Database = {
         }
         Relationships: []
       }
+      budgets: {
+        Row: {
+          amount_approved: number | null
+          amount_spent: number | null
+          created_at: string
+          department_slug: Database["public"]["Enums"]["department_slug"] | null
+          id: string
+          item_name: string | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          amount_approved?: number | null
+          amount_spent?: number | null
+          created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
+          id?: string
+          item_name?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+          year?: number
+        }
+        Update: {
+          amount_approved?: number | null
+          amount_spent?: number | null
+          created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
+          id?: string
+          item_name?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       grants: {
         Row: {
           amount: number | null

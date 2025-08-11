@@ -31,10 +31,14 @@ import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { ExportButtons } from "@/components/shared/ExportButtons";
 import type { ColumnDef } from "@tanstack/react-table";
 import { DateRange } from "react-day-picker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DataUploader } from "@/components/shared/DataUploader";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import AddBudgetDialog from "@/components/Finance/AddBudgetDialog";
+import AddProjectDialog from "@/components/Finance/AddProjectDialog";
 
 const budgetData = [
   { name: "חינוך", approved: 890, actual: 720, percentage: 81 },
@@ -44,12 +48,8 @@ const budgetData = [
   { name: "ביטחון", approved: 240, actual: 221, percentage: 92 },
 ];
 
-const projectsData = [
-  { name: "תב״ר 2024-001", title: "שיפוץ בתי ספר", budget: "12M", spent: "8.5M", progress: 71, status: "בביצוע" },
-  { name: "תב״ר 2024-002", title: "פארק עירוני חדש", budget: "25M", spent: "15.2M", progress: 61, status: "בביצוע" },
-  { name: "תב״ר 2024-003", title: "מרכז קהילתי", budget: "8M", spent: "7.9M", progress: 99, status: "כמעט הושלם" },
-  { name: "תב״ר 2024-004", title: "תשתיות דיגיטליות", budget: "18M", spent: "4.2M", progress: 23, status: "התחלה" },
-];
+// Projects data will be loaded dynamically from Supabase or demo storage
+
 
 const grantsData = [
   { ministry: "משרד החינוך", amount: "45M", status: "approved" },
@@ -96,6 +96,7 @@ const getStatusText = (status: string) => {
 
 export default function FinanceDashboard() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const { user, session } = useAuth();
 
   type ProjectRow = {
     name: string;
@@ -105,6 +106,44 @@ export default function FinanceDashboard() {
     progress: number;
     status: string;
   };
+
+  const [projectsRows, setProjectsRows] = useState<ProjectRow[]>([]);
+
+  const isUuid = (v?: string | null) => !!v && /^[0-9a-fA-F-]{36}$/.test(v);
+  const isDemo = !session || !isUuid(user?.id);
+
+  const formatCurrency = (v: number | null | undefined) =>
+    v != null && !Number.isNaN(Number(v)) ? `₪${Number(v).toLocaleString('he-IL')}` : "—";
+
+  const mapProjectToRow = (p: any): ProjectRow => ({
+    name: p.code || p.name || '—',
+    title: p.name || '—',
+    budget: formatCurrency(p.budget_approved),
+    spent: formatCurrency(p.budget_executed),
+    progress: Math.round(Number(p.progress || 0)),
+    status: p.status || '—',
+  });
+
+  async function loadProjects() {
+    if (isDemo) {
+      try {
+        const raw = localStorage.getItem('demo_projects');
+        const list = raw ? JSON.parse(raw) : [];
+        setProjectsRows((list as any[]).map(mapProjectToRow));
+      } catch {
+        setProjectsRows([]);
+      }
+      return;
+    }
+    const { data, error } = await supabase
+      .from('projects')
+      .select('id, code, name, budget_approved, budget_executed, progress, status')
+      .order('created_at', { ascending: false });
+    if (!error && data) setProjectsRows(data.map(mapProjectToRow));
+  }
+
+  useEffect(() => { loadProjects(); }, [session, user?.id]);
+
 
   const projectColumns: ColumnDef<ProjectRow>[] = [
     { accessorKey: "name", header: "מספר/שם תב\"ר" },
@@ -134,19 +173,23 @@ export default function FinanceDashboard() {
           <h1 className="text-4xl font-bold text-foreground">מחלקת פיננסים</h1>
           <p className="text-muted-foreground text-lg">ניהול תקציב ומעקב פיננסי עירוני</p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
-              <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>ייבוא נתונים למחלקת פיננסים</DialogTitle>
-            </DialogHeader>
-            <DataUploader context="finance" />
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <AddBudgetDialog />
+          <AddProjectDialog onSaved={loadProjects} />
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>ייבוא נתונים למחלקת פיננסים</DialogTitle>
+              </DialogHeader>
+              <DataUploader context="finance" />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <ExecutiveTasksBanner department="finance" />
@@ -314,11 +357,11 @@ export default function FinanceDashboard() {
         <CardContent>
           <div className="mb-3 flex items-center gap-3">
             <DateRangePicker value={dateRange} onChange={setDateRange} />
-            <ExportButtons data={projectsData} fileBaseName="finance-projects" />
+            <ExportButtons data={projectsRows} fileBaseName="finance-projects" />
           </div>
           <DataTable
             columns={projectColumns}
-            data={projectsData as ProjectRow[]}
+            data={projectsRows}
             searchPlaceholder="חיפוש פרויקטים..."
           />
         </CardContent>
