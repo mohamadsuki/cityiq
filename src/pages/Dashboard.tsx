@@ -13,6 +13,7 @@ import ProjectsApp from "@/components/Projects/ProjectsApp";
 import TasksApp from "@/components/Tasks/TasksApp";
 import { useAuth } from "@/context/AuthContext";
 import ProfilePage from "@/components/Profile/ProfilePage";
+import GlobalLogo from "@/components/Layout/GlobalLogo";
 export default function Dashboard() {
   const location = useLocation();
   const path = location.pathname;
@@ -129,10 +130,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background flex" dir="rtl">
-      {/* Global logo fixed top-left */}
-      <a href="/" className="fixed top-3 left-3 z-50 inline-flex items-center gap-2" aria-label="כניסה לדף הבית">
-        <img src="/placeholder.svg" alt="לוגו העיר - דאשבורד עירוני" className="h-8 w-8" loading="lazy" />
-      </a>
+      <GlobalLogo />
       <Navigation />
       
       <main className="flex-1 p-6">
