@@ -156,22 +156,9 @@ export default function AuthPage() {
             )}
           </div>
 
-          <div className="pt-2">
-            <p className="text-sm font-medium mb-2">כניסה מיידית כדמו (ללא Supabase)</p>
-            <div className="grid grid-cols-1 gap-2">
-              {DEMO_USERS.map(u => {
-                const uname = simpleUsernameFromEmail(u.email);
-                return (
-                  <Button key={u.email + '-instant'} onClick={() => { demoSignIn(uname); toast({ title: 'התחברת לדמו', description: u.displayName }); nav('/'); }}>
-                    כניסה כ־{u.displayName} ({uname})
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
 
           <div className="pt-2">
-            <p className="text-sm font-medium mb-2">בחר/י משתמש דמו למילוי אוטומטי</p>
+            <p className="text-sm font-medium mb-2">בחר/י משתמש למילוי אוטומטי</p>
             <div className="grid grid-cols-1 gap-2">
               {DEMO_USERS.map(u => {
                 const uname = simpleUsernameFromEmail(u.email);
