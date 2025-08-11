@@ -11,7 +11,8 @@ import {
   Activity,
   Store,
   AlertTriangle,
-  ListTodo
+  ListTodo,
+  Megaphone
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -19,6 +20,7 @@ import { DEMO_USERS } from "@/lib/demoAccess";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import TasksOverviewCard from "@/components/Tasks/TasksOverviewCard";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 const KPICard = ({ 
   title, 
   value, 
@@ -106,7 +108,7 @@ const DepartmentCard = ({
 );
 
 export default function OverviewDashboard() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
 
   type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
   type TaskRow = { id: string; status: TaskStatus; due_at: string | null; progress_percent: number | null };
@@ -133,6 +135,21 @@ export default function OverviewDashboard() {
           תמונת מצב כוללת של המערכות העירוניות
         </p>
       </div>
+
+      {user && (
+        <Card className="shadow-card">
+          <CardContent className="p-6 flex items-center gap-4">
+            <Avatar className="h-12 w-12">
+              <AvatarImage src={"/placeholder.svg"} alt="תמונת משתמש" />
+              <AvatarFallback>U</AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="text-lg font-semibold text-foreground">{user.email}</div>
+              <div className="text-sm text-muted-foreground">תפקיד: <span className="font-medium">{role === 'mayor' ? 'ראש העיר' : role === 'ceo' ? 'מנכ״ל' : role === 'manager' ? 'מנהל/ת מחלקה' : 'משתמש'}</span></div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {!user && (
         <Card className="shadow-card">
@@ -247,6 +264,30 @@ export default function OverviewDashboard() {
             utilization={92}
             icon={Store}
             to="/business"
+          />
+          <DepartmentCard
+            name="קולות קוראים"
+            status="פעיל"
+            budget="₪35M"
+            utilization={58}
+            icon={Megaphone}
+            to="/grants"
+          />
+          <DepartmentCard
+            name="ניהול משימות"
+            status="פעיל"
+            budget="—"
+            utilization={70}
+            icon={ListTodo}
+            to="/tasks"
+          />
+          <DepartmentCard
+            name="פרויקטים"
+            status="פעיל"
+            budget="—"
+            utilization={64}
+            icon={Building2}
+            to="/projects"
           />
         </div>
       </div>

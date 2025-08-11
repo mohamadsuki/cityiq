@@ -8,6 +8,8 @@ import EngineeringDashboard from "@/components/Dashboard/EngineeringDashboard";
 import WelfareDashboard from "@/components/Dashboard/WelfareDashboard";
 import NonFormalDashboard from "@/components/Dashboard/NonFormalDashboard";
 import BusinessDashboard from "@/components/Dashboard/BusinessDashboard";
+import GrantsDashboard from "@/components/Dashboard/GrantsDashboard";
+import ProjectsDashboard from "@/components/Dashboard/ProjectsDashboard";
 import TasksApp from "@/components/Tasks/TasksApp";
 import { useAuth } from "@/context/AuthContext";
 export default function Dashboard() {
@@ -24,6 +26,8 @@ export default function Dashboard() {
     "/welfare": "welfare",
     "/non-formal": "non-formal",
     "/business": "business",
+    "/grants": "grants",
+    "/projects": "projects",
     "/tasks": "tasks",
   };
   const currentSection = sectionByPath[path] || "overview";
@@ -41,6 +45,8 @@ export default function Dashboard() {
       "welfare": "מחלקת רווחה - דאשבורד עירוני",
       "non-formal": "חינוך בלתי פורמאלי - דאשבורד עירוני",
       "business": "רישוי עסקים - דאשבורד עירוני",
+      "grants": "קולות קוראים - דאשבורד עירוני",
+      "projects": "פרויקטים - דאשבורד עירוני",
       "tasks": "משימות - דאשבורד עירוני",
     };
     const descriptions: Record<string, string> = {
@@ -51,6 +57,8 @@ export default function Dashboard() {
       "welfare": "דאשבורד רווחה: מקבלי שירות, שירותים, מגמות ופילוחים.",
       "non-formal": "חינוך בלתי פורמאלי: תוכניות, משתתפים, מגמות והשתתפות.",
       "business": "רישוי עסקים: סטטוס רישיונות, סוגי עסקים והתראות.",
+      "grants": "קולות קוראים: סטטוס בקשות, החלטות ומשרדים.",
+      "projects": "פרויקטים עירוניים: סטטוס, התקדמות ועלויות.",
       "tasks": "ניהול משימות בין ראש העיר לראשי מחלקות: תעדוף, סטטוס ודד-ליין.",
     };
 
@@ -102,6 +110,10 @@ export default function Dashboard() {
         return <NonFormalDashboard />;
       case "business":
         return <BusinessDashboard />;
+      case "grants":
+        return <GrantsDashboard />;
+      case "projects":
+        return <ProjectsDashboard />;
       case "tasks":
         return <TasksApp />;
       default:

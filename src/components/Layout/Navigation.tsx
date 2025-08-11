@@ -14,7 +14,8 @@ import {
   ClipboardList,
   Menu,
   X,
-  Home
+  Home,
+  Megaphone
 } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -24,6 +25,8 @@ import { useAuth } from "@/context/AuthContext";
 const navigationItems = [
   { id: "overview", name: "סקירה כללית", icon: Home, url: "/" },
   { id: "tasks", name: "משימות", icon: ClipboardList, url: "/tasks" },
+  { id: "projects", name: "פרויקטים", icon: Building2, url: "/projects" },
+  { id: "grants", name: "קולות קוראים", icon: Megaphone, url: "/grants" },
   { id: "finance", name: "מחלקת פיננסים", icon: BarChart3, url: "/finance" },
   { id: "education", name: "מחלקת חינוך", icon: GraduationCap, url: "/education" },
   { id: "engineering", name: "מחלקת הנדסה", icon: Building2, url: "/engineering" },
@@ -75,9 +78,9 @@ export default function Navigation() {
             {navigationItems
               .filter((item) => {
                 if (!role || role === 'mayor' || role === 'ceo') return true;
-                // Always allow overview
-                if (item.id === 'overview' || item.id === 'tasks') return true;
-                // Allow only permitted departments
+                // Always allow overview and global modules
+                if (['overview','tasks','grants','projects'].includes(item.id)) return true;
+                // Allow only permitted departments for managers
                 return departments.includes(item.id as any);
               })
               .map((item) => {
