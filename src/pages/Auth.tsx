@@ -29,18 +29,30 @@ export default function AuthPage() {
         // מיפוי שם משתמש לאימייל הדמו האמיתי (למשל mayor -> mayor@city.gov.il)
         usernameNorm = simpleUsernameFromEmail(input);
         const mapped = emailForUsername(usernameNorm);
-        if (!mapped) {
-          toast({ title: 'שגיאת אימות', description: 'שם המשתמש לא מוכר בדמו. בחר/י מרשימת הדמו למטה או הזן/י אימייל.', variant: 'destructive' });
-          setBusy(false);
-          return;
-        }
-        loginEmail = mapped;
+        // נשתמש במיפוי אם קיים, אחרת נשאיר מייל דמה לזרימה קיימת (לא קריטי כי נבצע דמו)
+        loginEmail = mapped || `${usernameNorm}@example.com`;
       } else if (input) {
         usernameNorm = simpleUsernameFromEmail(input);
       }
 
+      const findDemoByCreds = (uname: string, pass: string) => {
+        const demo = DEMO_USERS.find(u => simpleUsernameFromEmail(u.email) === uname);
+        return demo && pass === demo.password ? demo : null;
+      };
+
       if (mode === 'login') {
-        // ניסיון התחברות רגיל
+        // מסלול מהיר: אם הוזן שם משתמש ללא אימייל ותואם לדמו — כניסה מיידית ללא Supabase
+        if (input && !input.includes('@')) {
+          const demo = findDemoByCreds(usernameNorm, password);
+          if (demo) {
+            demoSignIn(usernameNorm);
+            toast({ title: 'הצלחה', description: `התחברת כ־${demo.displayName}` });
+            nav('/');
+            return;
+          }
+        }
+
+        // ניסיון התחברות ב-Supabase (אם ספק האימייל מושבת יטופל מטה)
         const { error } = await signIn(loginEmail, password);
         if (!error) {
           toast({ title: 'הצלחה', description: 'התחברת בהצלחה' });
@@ -48,47 +60,35 @@ export default function AuthPage() {
           return;
         }
 
-        // אם מדובר בפרטי דמו שלא קיימים עדיין, נבצע הרשמה אוטומטית ואז התחברות
-        const demo = DEMO_USERS.find(u => simpleUsernameFromEmail(u.email) === usernameNorm);
-        const isInvalidCreds = typeof error?.message === 'string' && error.message.toLowerCase().includes('invalid login credentials');
-        if (demo && password === demo.password && isInvalidCreds) {
-          const { error: signUpErr } = await signUp(loginEmail, password);
-          if (signUpErr) {
-            const msg = String(signUpErr.message || '').toLowerCase();
-            // Fallback: try example.com if domain restrictions or provider issues
-            if (
-              (msg.includes('email address') && msg.includes('invalid')) ||
-              msg.includes('domain') ||
-              msg.includes('not allowed') ||
-              msg.includes('disabled')
-            ) {
-              const fallbackEmail = `${usernameNorm}@example.com`;
-              const { error: signUpFallbackErr } = await signUp(fallbackEmail, password);
-              if (!signUpFallbackErr) {
-                const { error: signInAfterFallback } = await signIn(fallbackEmail, password);
-                if (!signInAfterFallback) {
-                  toast({ title: 'הצלחה', description: 'נוצר משתמש דמו (example.com) והתחברת בהצלחה' });
-                  nav('/');
-                  return;
-                }
-              }
-            }
-            toast({
-              title: 'הרשמה נכשלה',
-              description: signUpErr.message,
-              variant: 'destructive'
-            });
-            return;
-          }
-          // ניסיון התחברות חוזר לאחר הרשמה
-          const { error: signInAfter } = await signIn(loginEmail, password);
-          if (!signInAfter) {
-            toast({ title: 'הצלחה', description: 'נוצר משתמש דמו והתחברת בהצלחה' });
+        const msg = String(error?.message || '').toLowerCase();
+        const providerDisabled = msg.includes('email logins are disabled') || msg.includes('email_provider_disabled');
+
+        // אם ספק האימייל מושבת או שמדובר בשם משתמש — ננסה דמו לפי שם משתמש/סיסמה
+        if (providerDisabled || (input && !input.includes('@'))) {
+          const demo = findDemoByCreds(usernameNorm, password);
+          if (demo) {
+            demoSignIn(usernameNorm);
+            toast({ title: 'הצלחה', description: `התחברת כ־${demo.displayName} (מצב דמו)` });
             nav('/');
             return;
           }
-          toast({ title: 'שגיאת אימות', description: signInAfter.message, variant: 'destructive' });
+          toast({
+            title: 'שגיאת אימות',
+            description: 'כניסה באימייל מושבתת. השתמש/י בשם המשתמש והסיסמה של הדמו מהרשימה למטה.',
+            variant: 'destructive'
+          });
           return;
+        }
+
+        // אם זו שגיאת פרטים שגויים, עדיין ננסה לאפשר דמו לפי שם משתמש/סיסמה
+        if (msg.includes('invalid login credentials')) {
+          const demo = findDemoByCreds(usernameNorm, password);
+          if (demo) {
+            demoSignIn(usernameNorm);
+            toast({ title: 'הצלחה', description: `התחברת כ־${demo.displayName} (דמו)` });
+            nav('/');
+            return;
+          }
         }
 
         // שגיאה כללית
@@ -100,6 +100,12 @@ export default function AuthPage() {
       const { error } = await signUp(loginEmail, password);
       if (error) {
         const msg = String(error.message || '').toLowerCase();
+
+        if (msg.includes('email logins are disabled') || msg.includes('email_provider_disabled')) {
+          toast({ title: 'הרשמה באימייל מושבתת', description: 'להדגמה השתמש/י במשתמשי הדמו (שם וסיסמה).', variant: 'destructive' });
+          return;
+        }
+
         if (
           (msg.includes('email address') && msg.includes('invalid')) ||
           msg.includes('domain') ||
@@ -116,7 +122,7 @@ export default function AuthPage() {
         }
         toast({ title: 'שגיאת הרשמה', description: error.message, variant: 'destructive' });
       } else {
-        toast({ title: 'נרשמת בהצלחה', description: 'בדוק/י אימייל לאימות (מומלץ לכבות אימות למטרת בדיקות)' });
+        toast({ title: 'נרשמת בהצלחה', description: 'בדוק/י אימייל לאימות (אם מאופשר)' });
         nav('/');
       }
     } finally {
