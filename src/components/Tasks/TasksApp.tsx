@@ -64,6 +64,7 @@ const DEPARTMENT_LABELS: Record<DepartmentSlug, string> = {
   welfare: "רווחה",
   "non-formal": "חינוך בלתי פורמלי",
   business: "עסקים",
+  ceo: "מנכ\"ל",
 };
 
 function statusBadgeVariant(status: TaskStatus): "default" | "secondary" | "destructive" | "outline" {
@@ -434,14 +435,14 @@ export default function TasksApp() {
             </div>
 
             <div>
-              <Label>מחלקה</Label>
+              <Label>{role === "mayor" ? "יעד" : "מחלקה"}</Label>
               <Select
                 value={(form.department_slug as DepartmentSlug) ?? "finance"}
                 onValueChange={(v) => setForm((f) => ({ ...f, department_slug: v as DepartmentSlug }))}
               >
-                <SelectTrigger disabled={isManager && !managerEditable("department_slug")}><SelectValue aria-label="מחלקה" /></SelectTrigger>
+                <SelectTrigger disabled={isManager && !managerEditable("department_slug")}><SelectValue aria-label={role === "mayor" ? "יעד" : "מחלקה"} /></SelectTrigger>
                 <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
-                  {visibleDepartments.map((d) => (
+                  {(role === "mayor" ? (["ceo", ...ALL_DEPARTMENTS] as DepartmentSlug[]) : visibleDepartments).map((d) => (
                     <SelectItem key={d} value={d}>{DEPARTMENT_LABELS[d]}</SelectItem>
                   ))}
                 </SelectContent>

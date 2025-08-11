@@ -1,4 +1,4 @@
-export type DepartmentSlug = 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business';
+export type DepartmentSlug = 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'ceo';
 
 export type DemoUser = {
   email: string;
