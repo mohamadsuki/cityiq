@@ -15,6 +15,7 @@ export default function GlobalLogo({ inline = false }: { inline?: boolean }) {
   const [open, setOpen] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
   const [fileDataUrl, setFileDataUrl] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [urlInput, setUrlInput] = useState("");
   const [cityName, setCityName] = useState<string>("שם העיר");
   const [cityInput, setCityInput] = useState<string>("");
@@ -30,6 +31,19 @@ useEffect(() => {
       if (data) {
         setSrc(data.logo_url || null);
         setCityName(data.city_name || "שם העיר");
+      } else {
+        // Migrate from localStorage if exists
+        const lsLogo = localStorage.getItem(STORAGE_KEY);
+        const lsCity = localStorage.getItem(CITY_NAME_KEY);
+        if (lsLogo || lsCity) {
+          supabase
+            .from('city_settings')
+            .upsert({ id: 'global', city_name: lsCity || null, logo_url: lsLogo || null }, { onConflict: 'id' })
+            .then(() => {
+              setSrc(lsLogo || null);
+              setCityName(lsCity || "שם העיר");
+            });
+        }
       }
     });
   const ch = supabase
@@ -54,7 +68,7 @@ useEffect(() => {
   const displaySrc = useMemo(() => src || "/placeholder.svg", [src]);
 
   const handleFile = async (file?: File | null) => {
-    if (!file) { setFileDataUrl(null); return; }
+    if (!file) { setFileDataUrl(null); setFile(null); return; }
     const toDataURL = (f: File) => new Promise<string>((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(String(r.result));
@@ -63,30 +77,52 @@ useEffect(() => {
     });
     const dataUrl = await toDataURL(file);
     setFileDataUrl(dataUrl);
+    setFile(file);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canEdit) return;
-    const newSrc = fileDataUrl || (urlInput.trim() ? urlInput.trim() : src);
     const newCity = cityInput.trim() ? cityInput.trim() : cityName;
-    if (newSrc) {
-      localStorage.setItem(STORAGE_KEY, newSrc);
-      setSrc(newSrc);
-    }
-    if (newCity) {
-      localStorage.setItem(CITY_NAME_KEY, newCity);
+    let logoUrl: string | null = null;
+    try {
+      if (file) {
+        const path = `logo/global-${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('branding')
+          .upload(path, file, { upsert: true, contentType: file.type });
+        if (uploadError) throw uploadError;
+        const { data: pub } = supabase.storage.from('branding').getPublicUrl(path);
+        logoUrl = pub.publicUrl;
+      } else if (urlInput.trim()) {
+        logoUrl = urlInput.trim();
+      } else {
+        logoUrl = src;
+      }
+      const { error } = await supabase
+        .from('city_settings')
+        .upsert({ id: 'global', city_name: newCity, logo_url: logoUrl ?? null }, { onConflict: 'id' });
+      if (error) throw error;
+      setSrc(logoUrl ?? null);
       setCityName(newCity);
+      setOpen(false);
+    } catch (e) {
+      console.error('Failed to save city settings', e);
     }
-    setOpen(false);
   };
 
-  const handleRemove = () => {
+  const handleRemove = async () => {
     if (!canEdit) return;
-    localStorage.removeItem(STORAGE_KEY);
-    setSrc(null);
-    setFileDataUrl(null);
-    setUrlInput("");
-    setOpen(false);
+    try {
+      await supabase
+        .from('city_settings')
+        .upsert({ id: 'global', city_name: cityName, logo_url: null }, { onConflict: 'id' });
+      setSrc(null);
+      setFileDataUrl(null);
+      setUrlInput("");
+      setOpen(false);
+    } catch (e) {
+      console.error('Failed to remove logo', e);
+    }
   };
 
   return (
