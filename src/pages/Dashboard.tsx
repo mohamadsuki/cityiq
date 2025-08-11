@@ -13,7 +13,6 @@ import ProjectsApp from "@/components/Projects/ProjectsApp";
 import TasksApp from "@/components/Tasks/TasksApp";
 import { useAuth } from "@/context/AuthContext";
 import ProfilePage from "@/components/Profile/ProfilePage";
-import GlobalLogo from "@/components/Layout/GlobalLogo";
 export default function Dashboard() {
   const location = useLocation();
   const path = location.pathname;
@@ -130,7 +129,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background flex" dir="rtl">
-      <GlobalLogo />
+      
       <Navigation />
       
       <main className="flex-1 p-6">

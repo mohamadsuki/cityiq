@@ -6,7 +6,7 @@ import { Image as ImageIcon, Trash2, Save, Edit3 } from "lucide-react";
 
 const STORAGE_KEY = "global_logo_src";
 
-export default function GlobalLogo() {
+export default function GlobalLogo({ inline = false }: { inline?: boolean }) {
   const [open, setOpen] = useState(false);
   const [src, setSrc] = useState<string | null>(null);
   const [fileDataUrl, setFileDataUrl] = useState<string | null>(null);
@@ -49,18 +49,18 @@ export default function GlobalLogo() {
   };
 
   return (
-    <div className="fixed top-3 left-3 z-50">
+    <div className={inline ? "" : "fixed top-3 left-3 z-50"}>
       <a href="/" aria-label="דף הבית - לוגו העיר" className="group inline-flex items-center gap-2">
         <img
           src={displaySrc}
           alt="לוגו העיר - דאשבורד עירוני"
-          className="h-20 w-auto drop-shadow-sm"
+          className={inline ? "h-8 w-auto drop-shadow-sm" : "h-20 w-auto drop-shadow-sm"}
           loading="lazy"
         />
       </a>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button size="icon" variant="secondary" className="absolute -bottom-2 left-0 translate-y-full" aria-label="עריכת לוגו">
+          <Button size="icon" variant="secondary" className={inline ? "ml-2" : "absolute -bottom-2 left-0 translate-y-full"} aria-label="עריכת לוגו">
             <Edit3 className="h-4 w-4" />
           </Button>
         </DialogTrigger>
