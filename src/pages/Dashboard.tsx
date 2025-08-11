@@ -9,7 +9,7 @@ import WelfareDashboard from "@/components/Dashboard/WelfareDashboard";
 import NonFormalDashboard from "@/components/Dashboard/NonFormalDashboard";
 import BusinessDashboard from "@/components/Dashboard/BusinessDashboard";
 import GrantsDashboard from "@/components/Dashboard/GrantsDashboard";
-import ProjectsDashboard from "@/components/Dashboard/ProjectsDashboard";
+import ProjectsApp from "@/components/Projects/ProjectsApp";
 import TasksApp from "@/components/Tasks/TasksApp";
 import { useAuth } from "@/context/AuthContext";
 export default function Dashboard() {
@@ -113,7 +113,7 @@ export default function Dashboard() {
       case "grants":
         return <GrantsDashboard />;
       case "projects":
-        return <ProjectsDashboard />;
+        return <ProjectsApp />;
       case "tasks":
         return <TasksApp />;
       default:

@@ -26,6 +26,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DataUploader } from "@/components/shared/DataUploader";
 import MapboxMap from "@/components/shared/Map/MapboxMap";
 import { MapboxTokenField } from "@/components/shared/Map/MapboxTokenField";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
+import { Progress } from "@/components/ui/progress";
 
 const educationData = [
   { level: "יסודי", students: 8420, institutions: 24, ratio: 35.1 },
@@ -65,8 +69,34 @@ export default function EducationDashboard() {
   const totalStudents = educationData.reduce((sum, item) => sum + item.students, 0);
   const totalInstitutions = educationData.reduce((sum, item) => sum + item.institutions, 0);
   const totalClasses = institutionsData.reduce((sum, item) => sum + item.classes, 0);
-const avgRatio = totalStudents / totalClasses;
-const overCapacity = institutionsData.filter(i => i.occupancy >= 90);
+  const avgRatio = totalStudents / totalClasses;
+  const overCapacity = institutionsData.filter(i => i.occupancy >= 90);
+
+  type EduProject = { id: string; name: string | null; status: string | null; progress: number | null };
+  const [eduProjects, setEduProjects] = useState<EduProject[]>([]);
+  const [projLoading, setProjLoading] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    async function load() {
+      setProjLoading(true);
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id,name,status,progress,department_slug')
+        .eq('department_slug', 'education')
+        .limit(6);
+      if (isMounted) {
+        if (!error && data) {
+          setEduProjects(data as any);
+        } else {
+          setEduProjects([]);
+        }
+        setProjLoading(false);
+      }
+    }
+    load();
+    return () => { isMounted = false; };
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -230,6 +260,61 @@ const overCapacity = institutionsData.filter(i => i.occupancy >= 90);
           </Card>
         ))}
       </div>
+
+      {/* Projects Preview (Education) */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl">פרויקטים במחלקת חינוך</CardTitle>
+            <Button asChild>
+              <Link to="/projects?department=education">ניהול פרויקטים</Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {projLoading && (
+              <div className="p-4 rounded-md bg-muted">טוען פרויקטים…</div>
+            )}
+            {!projLoading && eduProjects.length === 0 && (
+              <>
+                <div className="p-4 rounded-md bg-muted">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-medium">פתיחת שנת לימודים 2025</div>
+                    <Badge>בתהליך</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-40"><Progress value={48} /></div>
+                    <span className="text-sm text-muted-foreground">48%</span>
+                  </div>
+                </div>
+                <div className="p-4 rounded-md bg-muted">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="font-medium">קייטנת קיץ אלחוארנה</div>
+                    <Badge variant="secondary">הושלם</Badge>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-40"><Progress value={100} /></div>
+                    <span className="text-sm text-muted-foreground">100%</span>
+                  </div>
+                </div>
+              </>
+            )}
+            {!projLoading && eduProjects.map((p) => (
+              <div key={p.id} className="p-4 rounded-md bg-muted">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-medium">{p.name}</div>
+                  {p.status ? <Badge>{p.status}</Badge> : <span className="text-muted-foreground text-sm">—</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-40"><Progress value={p.progress ?? 0} /></div>
+                  <span className="text-sm text-muted-foreground">{p.progress ?? 0}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
 {/* Institutions Map */}
 <Card className="shadow-card">
