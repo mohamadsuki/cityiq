@@ -12,7 +12,8 @@ import {
   Store,
   AlertTriangle,
   ListTodo,
-  Megaphone
+  Megaphone,
+  Eye
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -21,6 +22,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import TasksOverviewCard from "@/components/Tasks/TasksOverviewCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useMemo, useState } from "react";
 const KPICard = ({ 
   title, 
   value, 
@@ -113,24 +115,81 @@ export default function OverviewDashboard() {
   type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
   type TaskRow = { id: string; status: TaskStatus; due_at: string | null; progress_percent: number | null };
 
+  // Load tasks with creator role marker for filtering
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ['tasks-overview'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tasks')
-        .select('id,title,department_slug,status,due_at,progress_percent');
+        .select('id,title,department_slug,status,due_at,progress_percent,assigned_by_role,created_at');
       if (error) return [] as TaskRow[];
-      return (data || []) as TaskRow[];
+      return (data || []) as any[];
     },
   });
 
-  type TaskRowFull = TaskRow & { title: string; department_slug: string };
+  // Manager acknowledgements (which tasks already viewed)
+  const { data: acks = [] } = useQuery({
+    queryKey: ['task-acks', user?.id],
+    enabled: !!user && role === 'manager',
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('task_acknowledgements')
+        .select('task_id')
+        .eq('manager_user_id', user!.id);
+      if (error) return [] as { task_id: string }[];
+      return (data || []) as { task_id: string }[];
+    }
+  });
+  const [ackIds, setAckIds] = useState<string[]>([]);
+  useEffect(() => {
+    setAckIds((acks as { task_id: string }[]).map((a) => a.task_id));
+  }, [acks]);
+
+  type TaskRowFull = TaskRow & { title: string; department_slug: string; assigned_by_role?: 'mayor' | 'ceo' | 'manager' | null; created_at?: string };
   const tasksFull = tasks as unknown as TaskRowFull[];
   const tasksBasic: TaskRow[] = tasksFull.map((t) => ({ id: t.id, status: t.status, due_at: t.due_at, progress_percent: t.progress_percent }));
-  const executiveTasks = tasksFull
-    .filter((t) => t.status !== 'done' && t.status !== 'cancelled' && (role !== 'manager' || departments.includes(t.department_slug as any)))
-    .slice(0, 5);
+
+  const executiveTasks = (role === 'manager')
+    ? tasksFull
+        .filter((t) =>
+          (t.assigned_by_role === 'mayor' || t.assigned_by_role === 'ceo') &&
+          t.status !== 'done' && t.status !== 'cancelled' &&
+          departments.includes(t.department_slug as any) &&
+          !ackIds.includes(t.id)
+        )
+        .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())
+        .slice(0, 5)
+    : [];
+
   const DEPT_LABELS: Record<string, string> = { finance: 'כספים', education: 'חינוך', engineering: 'הנדסה', welfare: 'רווחה', 'non-formal': 'חינוך בלתי פורמאלי', business: 'עסקים', ceo: 'מנכ"ל' };
+
+  const { data: execStats } = useQuery({
+    queryKey: ['exec-daily'],
+    enabled: role === 'mayor' || role === 'ceo',
+    queryFn: async () => {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const [pNew, pUpd, tDone, gNew, tAck] = await Promise.all([
+        supabase.from('projects').select('id', { count: 'exact', head: true }).gte('created_at', since),
+        supabase.from('projects').select('id', { count: 'exact', head: true }).gte('updated_at', since),
+        supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'done').gte('updated_at', since),
+        supabase.from('grants').select('id', { count: 'exact', head: true }).gte('created_at', since),
+        supabase.from('task_acknowledgements').select('id', { count: 'exact', head: true }).gte('created_at', since),
+      ]);
+      return {
+        projectsNew: pNew.count || 0,
+        projectsUpdated: pUpd.count || 0,
+        tasksDone: tDone.count || 0,
+        grantsNew: gNew.count || 0,
+        acknowledgements: tAck.count || 0,
+      };
+    }
+  });
+
+  const handleAcknowledge = async (taskId: string) => {
+    if (!user?.id) return;
+    const { error } = await supabase.from('task_acknowledgements').insert({ task_id: taskId, manager_user_id: user.id });
+    if (!error) setAckIds((prev) => [...prev, taskId]);
+  };
 
   return (
     <div className="space-y-8">
@@ -152,6 +211,38 @@ export default function OverviewDashboard() {
             <div>
               <div className="text-lg font-semibold text-foreground">{user.email}</div>
               <div className="text-sm text-muted-foreground">תפקיד: <span className="font-medium">{role === 'mayor' ? 'ראש העיר' : role === 'ceo' ? 'מנכ״ל' : role === 'manager' ? 'מנהל/ת מחלקה' : 'משתמש'}</span></div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      { (role === 'mayor' || role === 'ceo') && execStats && (
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-xl">התראות יומיות למנהלים</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="text-sm text-muted-foreground">פרויקטים חדשים</div>
+                <div className="text-2xl font-bold">{execStats.projectsNew}</div>
+              </div>
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="text-sm text-muted-foreground">פרויקטים שהתעדכנו</div>
+                <div className="text-2xl font-bold">{execStats.projectsUpdated}</div>
+              </div>
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="text-sm text-muted-foreground">משימות שהושלמו</div>
+                <div className="text-2xl font-bold">{execStats.tasksDone}</div>
+              </div>
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="text-sm text-muted-foreground">קולות קוראים חדשים</div>
+                <div className="text-2xl font-bold">{execStats.grantsNew}</div>
+              </div>
+              <div className="p-4 rounded-lg bg-muted">
+                <div className="text-sm text-muted-foreground">אישורי צפייה ממשתמשים</div>
+                <div className="text-2xl font-bold">{execStats.acknowledgements}</div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -306,11 +397,18 @@ export default function OverviewDashboard() {
           <CardContent className="space-y-2">
             {executiveTasks.map((t) => (
               <div key={t.id} className="rounded-md border p-3" style={{ backgroundColor: 'hsl(var(--warning) / 0.12)', borderColor: 'hsl(var(--warning))' }}>
-                <div className="flex items-center justify-between">
-                  <div className="font-medium text-foreground">{t.title}</div>
-                  <Badge variant="outline">{DEPT_LABELS[t.department_slug] || t.department_slug}</Badge>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="font-medium text-foreground truncate" title={t.title}>{t.title}</div>
+                    <div className="text-xs text-muted-foreground mt-1">דד-ליין: {t.due_at ? new Date(t.due_at).toLocaleDateString('he-IL') : '—'}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">{DEPT_LABELS[t.department_slug] || t.department_slug}</Badge>
+                    <Button size="sm" variant="secondary" onClick={() => handleAcknowledge(t.id)} className="gap-1">
+                      <Eye className="h-4 w-4" /> אישור צפייה
+                    </Button>
+                  </div>
                 </div>
-                <div className="text-sm text-muted-foreground mt-1">דד-ליין: {t.due_at ? new Date(t.due_at).toLocaleDateString('he-IL') : '—'}</div>
               </div>
             ))}
           </CardContent>

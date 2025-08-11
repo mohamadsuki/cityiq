@@ -93,6 +93,7 @@ export default function ProfilePage() {
         display_name: displayName || null,
       };
       if (publicUrl) payload.avatar_url = publicUrl;
+      else if (avatarUrl === "") payload.avatar_url = null;
 
       const { error } = await supabase
         .from("profiles")
