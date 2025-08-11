@@ -5,11 +5,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
+  const isDemo = !session;
   const { toast } = useToast();
 
   const [displayName, setDisplayName] = useState("");
@@ -23,6 +24,15 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const loadProfile = async () => {
+      if (isDemo) {
+        try {
+          const raw = localStorage.getItem("demo_profile");
+          const p = raw ? (JSON.parse(raw) as { display_name?: string; avatar_url?: string }) : null;
+          setDisplayName(p?.display_name ?? "");
+          setAvatarUrl(p?.avatar_url ?? "");
+        } catch {}
+        return;
+      }
       if (!user?.id) return;
       const { data, error } = await supabase
         .from("profiles")
@@ -36,12 +46,10 @@ export default function ProfilePage() {
       if (data) {
         setDisplayName(data.display_name ?? "");
         setAvatarUrl(data.avatar_url ?? "");
-      } else {
-        // no profile yet; keep defaults
       }
     };
     loadProfile();
-  }, [user?.id]);
+  }, [user?.id, isDemo]);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
@@ -54,6 +62,18 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    if (isDemo) {
+      try {
+        const payload = { display_name: displayName || "", avatar_url: avatarUrl || "" };
+        localStorage.setItem("demo_profile", JSON.stringify(payload));
+        toast({ title: "נשמר", description: "פרופיל עודכן (מצב הדגמה)" });
+      } catch (e: any) {
+        console.error(e);
+        toast({ title: "שגיאה", description: e.message || "שמירת הפרופיל נכשלה", variant: "destructive" });
+      }
+      return;
+    }
+
     if (!user?.id) return;
     setSaving(true);
     try {
