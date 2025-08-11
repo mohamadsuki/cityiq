@@ -31,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
+import InstitutionsSection from "@/components/Education/InstitutionsSection";
 
 const educationData = [
   { level: "יסודי", students: 8420, institutions: 24, ratio: 35.1 },
@@ -350,53 +351,7 @@ export default function EducationDashboard() {
   </Card>
 )}
 
-{/* Institutions Table */}
-      <Card className="shadow-card">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl">מוסדות חינוך</CardTitle>
-            <div className="flex space-x-2 space-x-reverse">
-              <Button variant="outline" size="sm">
-                <MapPin className="h-4 w-4 mr-2" />
-                מפה
-              </Button>
-              <Button variant="outline" size="sm">
-                ייצוא
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {institutionsData.map((institution, index) => (
-              <div key={index} className="p-4 bg-muted rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center">
-                  <div className="md:col-span-2">
-                    <h3 className="font-semibold text-foreground">{institution.name}</h3>
-                    <Badge variant={getLevelBadgeVariant(institution.level)} className="mt-1">
-                      {institution.level}
-                    </Badge>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">{institution.students}</p>
-                    <p className="text-sm text-muted-foreground">תלמידים</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-2xl font-bold">{institution.classes}</p>
-                    <p className="text-sm text-muted-foreground">כיתות</p>
-                  </div>
-                  <div className="text-center">
-                    <p className={`text-2xl font-bold ${getOccupancyColor(institution.occupancy)}`}>
-                      {institution.occupancy}%
-                    </p>
-                    <p className="text-sm text-muted-foreground">תפוסה</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <InstitutionsSection />
     </div>
   );
 }
