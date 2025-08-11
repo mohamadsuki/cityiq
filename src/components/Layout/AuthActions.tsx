@@ -37,6 +37,7 @@ export function AuthActions() {
         </div>
       </div>
       {role && <Badge variant="secondary">{heRole}</Badge>}
+      <Button size="sm" variant="ghost" onClick={() => nav('/profile')}>עריכת פרופיל</Button>
       <Button size="sm" variant="outline" onClick={signOut}>התנתקות</Button>
     </div>
   );

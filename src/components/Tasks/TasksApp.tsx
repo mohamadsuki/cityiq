@@ -152,7 +152,10 @@ export default function TasksApp() {
       try {
         const raw = localStorage.getItem("demo_tasks");
         const list = raw ? (JSON.parse(raw) as Task[]) : [];
-        setTasks(list);
+        const sorted = isManager
+          ? [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          : list;
+        setTasks(sorted);
       } catch (e) {
         console.error("Failed to parse demo tasks", e);
         setTasks([]);
@@ -161,10 +164,14 @@ export default function TasksApp() {
       return;
     }
 
-    const { data, error } = await supabase
+    const query = supabase
       .from("tasks")
-      .select("*")
-      .order("due_at", { ascending: true });
+      .select("*");
+    const { data, error } = await (
+      role === "manager"
+        ? query.order("created_at", { ascending: false })
+        : query.order("due_at", { ascending: true })
+    );
     if (error) {
       console.error("Failed to load tasks", error);
       toast({ title: "שגיאה בטעינת משימות", description: error.message, variant: "destructive" });
