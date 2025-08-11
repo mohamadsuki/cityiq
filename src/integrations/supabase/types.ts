@@ -339,7 +339,9 @@ export type Database = {
           domain: string | null
           funding_source: string | null
           id: string
+          image_urls: string[] | null
           name: string | null
+          notes: string | null
           progress: number | null
           status: string | null
           updated_at: string
@@ -357,7 +359,9 @@ export type Database = {
           domain?: string | null
           funding_source?: string | null
           id?: string
+          image_urls?: string[] | null
           name?: string | null
+          notes?: string | null
           progress?: number | null
           status?: string | null
           updated_at?: string
@@ -375,7 +379,9 @@ export type Database = {
           domain?: string | null
           funding_source?: string | null
           id?: string
+          image_urls?: string[] | null
           name?: string | null
+          notes?: string | null
           progress?: number | null
           status?: string | null
           updated_at?: string

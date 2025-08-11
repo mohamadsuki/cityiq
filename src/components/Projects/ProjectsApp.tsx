@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,8 @@ type Project = {
   budget_approved: number | null;
   budget_executed: number | null;
   progress: number | null; // 0-100
+  notes: string | null;
+  image_urls: string[] | null; // storage paths or data URLs in demo
 };
 
 const DEPARTMENT_LABELS: Record<DepartmentSlug, string> = {
@@ -132,115 +135,174 @@ export default function ProjectsApp() {
   // Modal state
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
-  const [form, setForm] = useState<Partial<Project>>({
+const [form, setForm] = useState<Partial<Project>>({
+  name: "",
+  code: "",
+  department_slug: (department !== "all" ? department : (visibleDepartments?.[0] ?? "finance")) as DepartmentSlug,
+  domain: "",
+  status: "תכנון",
+  funding_source: "",
+  budget_approved: null,
+  budget_executed: null,
+  progress: 0,
+  notes: "",
+  image_urls: [],
+});
+
+  const [files, setFiles] = useState<File[]>([]);
+
+function openCreate() {
+  setEditing(null);
+  setForm({
     name: "",
     code: "",
     department_slug: (department !== "all" ? department : (visibleDepartments?.[0] ?? "finance")) as DepartmentSlug,
     domain: "",
-    status: "בתהליך",
+    status: "תכנון",
     funding_source: "",
     budget_approved: null,
     budget_executed: null,
     progress: 0,
+    notes: "",
+    image_urls: [],
   });
+  setFiles([]);
+  setOpen(true);
+}
 
-  function openCreate() {
-    setEditing(null);
-    setForm({
-      name: "",
-      code: "",
-      department_slug: (department !== "all" ? department : (visibleDepartments?.[0] ?? "finance")) as DepartmentSlug,
-      domain: "",
-      status: "בתהליך",
-      funding_source: "",
-      budget_approved: null,
-      budget_executed: null,
-      progress: 0,
+function openEdit(p: Project) {
+  setEditing(p);
+  setForm({ ...p });
+  setFiles([]);
+  setOpen(true);
+}
+
+async function saveProject() {
+  if (!form.name || !form.department_slug) {
+    toast({ title: "שדות חסרים", description: "שם ומחלקה הינם שדות חובה", variant: "destructive" });
+    return;
+  }
+
+  if (isDemo) {
+    const now = new Date().toISOString();
+    const toDataURL = (file: File) => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
-    setOpen(true);
-  }
-
-  function openEdit(p: Project) {
-    setEditing(p);
-    setForm({ ...p });
-    setOpen(true);
-  }
-
-  async function saveProject() {
-    if (!form.name || !form.department_slug) {
-      toast({ title: "שדות חסרים", description: "שם ומחלקה הינם שדות חובה", variant: "destructive" });
-      return;
-    }
-
-    if (isDemo) {
-      const now = new Date().toISOString();
-      const payload: Project = {
-        id: editing?.id ?? (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
-        created_at: editing?.created_at ?? now,
-        updated_at: now,
-        user_id: "demo",
-        department_slug: form.department_slug ?? null,
-        code: (form.code as string) || null,
-        name: (form.name as string) || null,
-        department: null,
-        domain: (form.domain as string) || null,
-        funding_source: (form.funding_source as string) || null,
-        status: (form.status as string) || null,
-        budget_approved: form.budget_approved ?? null,
-        budget_executed: form.budget_executed ?? null,
-        progress: form.progress ?? 0,
-      };
-
-      let next: Project[] = [];
-      try {
-        const raw = localStorage.getItem("demo_projects");
-        const list = raw ? (JSON.parse(raw) as Project[]) : [];
-        next = editing ? list.map((x) => (x.id === editing.id ? payload : x)) : [payload, ...list];
-      } catch {
-        next = [payload];
-      }
-      localStorage.setItem("demo_projects", JSON.stringify(next));
-      setProjects(next);
-      toast({ title: editing ? "עודכן" : "נוצר", description: "הפרויקט נשמר (מצב הדגמה)" });
-      setOpen(false);
-      return;
-    }
-
-    if (!user?.id) {
-      toast({ title: "נדרש להתחבר", description: "יש להתחבר כדי לבצע פעולה זו", variant: "destructive" });
-      return;
-    }
-
-    const payload: any = {
-      department_slug: form.department_slug,
-      code: form.code ?? null,
-      name: form.name ?? null,
-      domain: form.domain ?? null,
-      status: form.status ?? null,
-      funding_source: form.funding_source ?? null,
+    const newImageUrls = files.length ? await Promise.all(files.map(toDataURL)) : [];
+    const payload: Project = {
+      id: editing?.id ?? (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
+      created_at: editing?.created_at ?? now,
+      updated_at: now,
+      user_id: "demo",
+      department_slug: form.department_slug ?? null,
+      code: (form.code as string) || null,
+      name: (form.name as string) || null,
+      department: null,
+      domain: (form.domain as string) || null,
+      funding_source: (form.funding_source as string) || null,
+      status: (form.status as string) || null,
       budget_approved: form.budget_approved ?? null,
       budget_executed: form.budget_executed ?? null,
-      progress: form.progress ?? null,
+      progress: form.progress ?? 0,
+      notes: (form.notes as string) || null,
+      image_urls: [ ...(editing?.image_urls || []), ...newImageUrls ],
     };
 
-    let error;
-    if (editing) {
-      const resp = await supabase.from("projects").update(payload).eq("id", editing.id);
-      error = resp.error as any;
-    } else {
-      const resp = await supabase.from("projects").insert([{ ...payload, user_id: user.id }]);
-      error = resp.error as any;
+    let next: Project[] = [];
+    try {
+      const raw = localStorage.getItem("demo_projects");
+      const list = raw ? (JSON.parse(raw) as Project[]) : [];
+      next = editing ? list.map((x) => (x.id === editing.id ? payload : x)) : [payload, ...list];
+    } catch {
+      next = [payload];
     }
+    localStorage.setItem("demo_projects", JSON.stringify(next));
+    setProjects(next);
+    toast({ title: editing ? "עודכן" : "נוצר", description: "הפרויקט נשמר (מצב הדגמה)" });
+    setFiles([]);
+    setOpen(false);
+    return;
+  }
 
+  if (!user?.id) {
+    toast({ title: "נדרש להתחבר", description: "יש להתחבר כדי לבצע פעולה זו", variant: "destructive" });
+    return;
+  }
+
+  const basePayload: any = {
+    department_slug: form.department_slug,
+    code: form.code ?? null,
+    name: form.name ?? null,
+    domain: form.domain ?? null,
+    status: form.status ?? null,
+    funding_source: form.funding_source ?? null,
+    budget_approved: form.budget_approved ?? null,
+    budget_executed: form.budget_executed ?? null,
+    progress: form.progress ?? null,
+    notes: form.notes ?? null,
+  };
+
+  if (editing) {
+    // Upload any new images for existing project
+    const uploadedPaths: string[] = [];
+    for (const file of files) {
+      const path = `projects/${editing.id}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
+      if (upErr) {
+        console.error('Upload failed', upErr);
+      } else {
+        uploadedPaths.push(path);
+      }
+    }
+    const combined = [ ...(editing.image_urls || []), ...uploadedPaths ];
+    const resp = await supabase.from("projects").update({ ...basePayload, image_urls: combined }).eq("id", editing.id);
+    const error = resp.error as any;
     if (error) {
       console.error("Failed to save project", error);
       toast({ title: "שמירת פרויקט נכשלה", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "הצלחה", description: "הפרויקט נשמר בהצלחה" });
+      setFiles([]);
       setOpen(false);
       fetchProjects();
     }
+  } else {
+    // Create project first to get ID
+    const createResp = await supabase.from("projects").insert([{ ...basePayload, user_id: user.id }]).select().single();
+    if (createResp.error) {
+      console.error("Failed to create project", createResp.error);
+      toast({ title: "שמירת פרויקט נכשלה", description: createResp.error.message, variant: "destructive" });
+      return;
+    }
+    const created = createResp.data as Project;
+
+    // Upload images if any
+    const uploadedPaths: string[] = [];
+    for (const file of files) {
+      const path = `projects/${created.id}/${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
+      if (upErr) {
+        console.error('Upload failed', upErr);
+      } else {
+        uploadedPaths.push(path);
+      }
+    }
+    if (uploadedPaths.length > 0) {
+      const updResp = await supabase.from("projects").update({ image_urls: uploadedPaths }).eq("id", created.id);
+      if (updResp.error) {
+        console.error("Failed to attach images", updResp.error);
+        toast({ title: "שגיאה בהעלאת תמונות", description: updResp.error.message, variant: "destructive" });
+      }
+    }
+    toast({ title: "הצלחה", description: "הפרויקט נשמר בהצלחה" });
+    setFiles([]);
+    setOpen(false);
+    fetchProjects();
   }
+}
 
   async function deleteProject(p: Project) {
     if (!canDelete) return;
@@ -295,15 +357,16 @@ export default function ProjectsApp() {
           </div>
           <div>
             <Label>סטטוס</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v)}>
-              <SelectTrigger><SelectValue placeholder="סטטוס" /></SelectTrigger>
-              <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
-                <SelectItem value="all">הכל</SelectItem>
-                <SelectItem value="מתוכנן">מתוכנן</SelectItem>
-                <SelectItem value="בתהליך">בתהליך</SelectItem>
-                <SelectItem value="הושלם">הושלם</SelectItem>
-              </SelectContent>
-            </Select>
+<Select value={status} onValueChange={(v) => setStatus(v)}>
+  <SelectTrigger><SelectValue placeholder="סטטוס" /></SelectTrigger>
+  <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+    <SelectItem value="all">הכל</SelectItem>
+    <SelectItem value="תכנון">תכנון</SelectItem>
+    <SelectItem value="ביצוע">ביצוע</SelectItem>
+    <SelectItem value="סיום">סיום</SelectItem>
+    <SelectItem value="תקוע">תקוע</SelectItem>
+  </SelectContent>
+</Select>
           </div>
           <div>
             <Label>תחום</Label>
@@ -406,15 +469,28 @@ export default function ProjectsApp() {
               <Input value={(form.domain as string) || ""} onChange={(e) => setForm((f) => ({ ...f, domain: e.target.value }))} placeholder="לדוגמה: מבני ציבור / תשתיות / חינוך" />
             </div>
 
-            <div>
-              <Label>סטטוס</Label>
-              <Input value={(form.status as string) || ""} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} placeholder="מתוכנן / בתהליך / הושלם" />
-            </div>
+<div>
+  <Label>סטטוס</Label>
+  <Select value={(form.status as string) || "תכנון"} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
+    <SelectTrigger><SelectValue placeholder="סטטוס" /></SelectTrigger>
+    <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+      <SelectItem value="תכנון">תכנון</SelectItem>
+      <SelectItem value="ביצוע">ביצוע</SelectItem>
+      <SelectItem value="סיום">סיום</SelectItem>
+      <SelectItem value="תקוע">תקוע</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
 
-            <div>
-              <Label>מקור מימון</Label>
-              <Input value={(form.funding_source as string) || ""} onChange={(e) => setForm((f) => ({ ...f, funding_source: e.target.value }))} />
-            </div>
+<div>
+  <Label>מקור מימון</Label>
+  <Input value={(form.funding_source as string) || ""} onChange={(e) => setForm((f) => ({ ...f, funding_source: e.target.value }))} />
+</div>
+
+<div className="md:col-span-2">
+  <Label>הערות</Label>
+  <Textarea value={(form.notes as string) || ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="הוספת הערות כלליות על הפרויקט" />
+</div>
 
             <div>
               <Label>תקציב מאושר (₪)</Label>
@@ -426,11 +502,19 @@ export default function ProjectsApp() {
               <Input type="number" value={(form.budget_executed as number | null) ?? ""} onChange={(e) => setForm((f) => ({ ...f, budget_executed: e.target.value ? Number(e.target.value) : null }))} />
             </div>
 
-            <div>
-              <Label>התקדמות (%)</Label>
-              <Input type="number" min={0} max={100} value={(form.progress as number | null) ?? 0} onChange={(e) => setForm((f) => ({ ...f, progress: Math.max(0, Math.min(100, Number(e.target.value) || 0)) }))} />
-            </div>
-          </div>
+<div>
+  <Label>התקדמות (%)</Label>
+  <Input type="number" min={0} max={100} value={(form.progress as number | null) ?? 0} onChange={(e) => setForm((f) => ({ ...f, progress: Math.max(0, Math.min(100, Number(e.target.value) || 0)) }))} />
+</div>
+
+<div className="md:col-span-2">
+  <Label>תמונות פרויקט</Label>
+  <Input type="file" accept="image/*" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} />
+  <p className="text-xs text-muted-foreground mt-1">
+    נבחרו {files.length} קבצים. {editing?.image_urls?.length ? `(${editing.image_urls.length} תמונות קיימות)` : ""}
+  </p>
+</div>
+</div>
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setOpen(false)}>ביטול</Button>
