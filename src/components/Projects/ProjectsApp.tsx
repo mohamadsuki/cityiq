@@ -435,7 +435,7 @@ async function saveProject() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "עריכת פרויקט" : "פרויקט חדש"}</DialogTitle>
             <DialogDescription className="sr-only">טופס יצירה/עריכת פרויקט</DialogDescription>
