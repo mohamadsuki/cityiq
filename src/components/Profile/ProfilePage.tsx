@@ -26,7 +26,8 @@ export default function ProfilePage() {
     const loadProfile = async () => {
       if (isDemo) {
         try {
-          const raw = localStorage.getItem("demo_profile");
+          const key = user?.email ? `demo_profile:${user.email.toLowerCase()}` : "demo_profile";
+          const raw = localStorage.getItem(key);
           const p = raw ? (JSON.parse(raw) as { display_name?: string; avatar_url?: string }) : null;
           setDisplayName(p?.display_name ?? "");
           setAvatarUrl(p?.avatar_url ?? "");
@@ -49,7 +50,7 @@ export default function ProfilePage() {
       }
     };
     loadProfile();
-  }, [user?.id, isDemo]);
+  }, [user?.id, user?.email, isDemo]);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
@@ -65,7 +66,8 @@ export default function ProfilePage() {
     if (isDemo) {
       try {
         const payload = { display_name: displayName || "", avatar_url: avatarUrl || "" };
-        localStorage.setItem("demo_profile", JSON.stringify(payload));
+        const key = user?.email ? `demo_profile:${user.email.toLowerCase()}` : "demo_profile";
+        localStorage.setItem(key, JSON.stringify(payload));
         toast({ title: "נשמר", description: "פרופיל עודכן (מצב הדגמה)" });
       } catch (e: any) {
         console.error(e);

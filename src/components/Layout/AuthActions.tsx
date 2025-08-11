@@ -28,10 +28,12 @@ export function AuthActions() {
 
   useEffect(() => {
     const isUuid = (v: string) => /^[0-9a-fA-F-]{36}$/.test(v);
-    // Demo mode or non-UUID ids: load from localStorage (keeps uploaded avatar in demo)
+    // Demo mode or non-UUID ids: load from per-user localStorage key
     if (!session || !user?.id || !isUuid(user.id)) {
       try {
-        const raw = localStorage.getItem("demo_profile");
+        const emailKey = user?.email?.toLowerCase();
+        const key = emailKey ? `demo_profile:${emailKey}` : "demo_profile";
+        const raw = localStorage.getItem(key);
         const p = raw ? (JSON.parse(raw) as { display_name?: string; avatar_url?: string }) : null;
         setProfileName(p?.display_name || "");
         setProfileAvatar(p?.avatar_url || "");
@@ -52,7 +54,7 @@ export function AuthActions() {
           setProfileAvatar(data.avatar_url || "");
         }
       });
-  }, [user?.id, session]);
+  }, [user?.id, user?.email, session]);
 
   if (!user) {
     return (
