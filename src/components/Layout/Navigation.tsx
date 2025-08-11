@@ -67,9 +67,6 @@ export default function Navigation() {
           <div className="mb-8">
             <div className="flex items-center gap-2">
               <GlobalLogo inline />
-              <NavLink to="/" onClick={() => setIsOpen(false)} className="text-2xl font-bold text-foreground hover:underline focus:outline-none">
-                דאשבורד עירוני
-              </NavLink>
             </div>
             <div className="mt-3">
               <AuthActions />
