@@ -155,37 +155,6 @@ export default function ProjectsDashboard() {
         </CardContent>
       </Card>
 
-      {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard
-          title="סה״כ פרויקטים בחתם"
-          value="10%"
-          description="התקדמות היניה פתוח מ10% כבר יותר רחוק - פרויקטים ביצוב"
-          icon={BarChart3}
-          variant="outlined"
-        />
-        <StatCard
-          title="סך פרויקטים בשלבי ביצוע"
-          value="600"
-          description="ופרויקטים בשלבי תכנון..."
-          icon={Target}
-          variant="default"
-        />
-        <StatCard
-          title="תרבחש/עמודים או עונת - סך"
-          value="58,000,000"
-          description="פרויקטים פעילים לפי התחלקות עם סך הצגיב"
-          icon={Calendar}
-          variant="active"
-        />
-        <StatCard
-          title="סה״כ פרויקטים פעילים"
-          value="7%"
-          description="פרויקטים לאותה המחלקה"
-          icon={CheckCircle}
-          variant="default"
-        />
-      </div>
 
       {/* Projects Table */}
       <Card className="shadow-card">
