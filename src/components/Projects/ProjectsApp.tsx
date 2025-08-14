@@ -12,7 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
-import { Target, ListChecks, BarChart3, CheckCircle } from "lucide-react";
+import { Target, ListChecks, BarChart3, CheckCircle, X } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import type { DepartmentSlug } from "@/lib/demoAccess";
 
 // Project row type aligned with DB
@@ -76,6 +77,7 @@ export default function ProjectsApp() {
   );
   const [status, setStatus] = useState<string>("all");
   const [domain, setDomain] = useState<string>("all");
+  const [showDepartmentChart, setShowDepartmentChart] = useState(false);
 
   const visibleDepartments: DepartmentSlug[] = (role === "mayor" || role === "ceo") ? ALL_DEPARTMENTS : departments;
 
@@ -216,6 +218,9 @@ const [form, setForm] = useState<Partial<Project>>({
         setStatus('תכנון');
         setDomain('all');
         break;
+      case 'departments':
+        setShowDepartmentChart(true);
+        break;
       case 'all-active':
         setQ('');
         setStatus('all');
@@ -223,6 +228,19 @@ const [form, setForm] = useState<Partial<Project>>({
         break;
     }
   };
+
+  // Prepare data for pie chart
+  const departmentChartData = useMemo(() => {
+    return ALL_DEPARTMENTS
+      .map(dept => ({
+        name: DEPARTMENT_LABELS[dept],
+        value: kpiData.departmentBudgets[dept]?.budget || 0,
+        count: kpiData.departmentBudgets[dept]?.count || 0
+      }))
+      .filter(item => item.value > 0);
+  }, [kpiData.departmentBudgets]);
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 function openCreate() {
   setEditing(null);
@@ -463,7 +481,7 @@ function openEdit(p: Project) {
 
         <Card 
           className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-          onClick={() => handleKpiClick('all-active')}
+          onClick={() => handleKpiClick('departments')}
         >
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -497,6 +515,52 @@ function openEdit(p: Project) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Department Distribution Chart Modal */}
+      {showDepartmentChart && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowDepartmentChart(false)}>
+          <div className="bg-background p-6 rounded-lg shadow-xl max-w-2xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-foreground">התפלגות תקציבים לפי מחלקות</h2>
+              <Button variant="ghost" size="sm" onClick={() => setShowDepartmentChart(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {departmentChartData.length > 0 ? (
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={departmentChartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({name, value}) => `${name}: ₪${(value / 1000000).toFixed(1)}M`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {departmentChartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number) => [`₪${(value / 1000000).toFixed(1)}M`, 'תקציב']}
+                      labelFormatter={(label) => label}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-80 flex items-center justify-center text-muted-foreground">
+                אין נתונים להציג
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
