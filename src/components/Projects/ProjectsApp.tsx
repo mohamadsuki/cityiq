@@ -37,6 +37,8 @@ type Project = {
   progress: number | null; // 0-100
   notes: string | null;
   image_urls: string[] | null; // storage paths or data URLs in demo
+  file_urls: string[] | null; // PDF files
+  logo_url: string | null; // project logo
 };
 
 const DEPARTMENT_LABELS: Record<DepartmentSlug, string> = {
@@ -195,9 +197,13 @@ const [form, setForm] = useState<Partial<Project>>({
   progress: 0,
   notes: "",
   image_urls: [],
+  file_urls: [],
+  logo_url: null,
 });
 
   const [files, setFiles] = useState<File[]>([]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
 
   // Function to handle KPI card clicks
   const handleKpiClick = (filterType: string) => {
@@ -256,8 +262,12 @@ function openCreate() {
     progress: 0,
     notes: "",
     image_urls: [],
+    file_urls: [],
+    logo_url: null,
   });
   setFiles([]);
+  setLogoFile(null);
+  setPdfFiles([]);
   setOpen(true);
 }
 
@@ -265,6 +275,8 @@ function openEdit(p: Project) {
   setEditing(p);
   setForm({ ...p });
   setFiles([]);
+  setLogoFile(null);
+  setPdfFiles([]);
   setOpen(true);
 }
 
@@ -300,6 +312,9 @@ function openEdit(p: Project) {
       reader.readAsDataURL(file);
     });
     const newImageUrls = files.length ? await Promise.all(files.map(toDataURL)) : [];
+    const newLogoUrl = logoFile ? await toDataURL(logoFile) : null;
+    const newPdfUrls = pdfFiles.length ? await Promise.all(pdfFiles.map(toDataURL)) : [];
+    
     const payload: Project = {
       id: editing?.id ?? (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
       created_at: editing?.created_at ?? now,
@@ -317,6 +332,8 @@ function openEdit(p: Project) {
       progress: form.progress ?? 0,
       notes: (form.notes as string) || null,
       image_urls: [ ...(editing?.image_urls || []), ...newImageUrls ],
+      file_urls: [ ...(editing?.file_urls || []), ...newPdfUrls ],
+      logo_url: newLogoUrl || editing?.logo_url || null,
     };
 
     let next: Project[] = [];
@@ -331,6 +348,8 @@ function openEdit(p: Project) {
     setProjects(next);
     toast({ title: editing ? "עודכן" : "נוצר", description: "הפרויקט נשמר (מצב הדגמה)" });
     setFiles([]);
+    setLogoFile(null);
+    setPdfFiles([]);
     setOpen(false);
     return;
   }
@@ -365,8 +384,37 @@ function openEdit(p: Project) {
         uploadedPaths.push(path);
       }
     }
-    const combined = [ ...(editing.image_urls || []), ...uploadedPaths ];
-    const resp = await supabase.from("projects").update({ ...basePayload, image_urls: combined }).eq("id", editing.id);
+
+    // Upload logo if provided
+    let logoPath = editing.logo_url;
+    if (logoFile) {
+      const path = `projects/${editing.id}/logo_${Date.now()}_${logoFile.name}`;
+      const { error: upErr } = await supabase.storage.from('uploads').upload(path, logoFile, { upsert: true });
+      if (!upErr) {
+        logoPath = path;
+      }
+    }
+
+    // Upload PDF files
+    const uploadedPdfPaths: string[] = [];
+    for (const file of pdfFiles) {
+      const path = `projects/${editing.id}/pdf_${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
+      if (upErr) {
+        console.error('PDF Upload failed', upErr);
+      } else {
+        uploadedPdfPaths.push(path);
+      }
+    }
+
+    const combinedImages = [ ...(editing.image_urls || []), ...uploadedPaths ];
+    const combinedPdfs = [ ...(editing.file_urls || []), ...uploadedPdfPaths ];
+    const resp = await supabase.from("projects").update({ 
+      ...basePayload, 
+      image_urls: combinedImages,
+      file_urls: combinedPdfs,
+      logo_url: logoPath 
+    }).eq("id", editing.id);
     const error = resp.error as any;
     if (error) {
       console.error("Failed to save project", error);
@@ -374,6 +422,8 @@ function openEdit(p: Project) {
     } else {
       toast({ title: "הצלחה", description: "הפרויקט נשמר בהצלחה" });
       setFiles([]);
+      setLogoFile(null);
+      setPdfFiles([]);
       setOpen(false);
       fetchProjects();
     }
@@ -398,15 +448,44 @@ function openEdit(p: Project) {
         uploadedPaths.push(path);
       }
     }
-    if (uploadedPaths.length > 0) {
-      const updResp = await supabase.from("projects").update({ image_urls: uploadedPaths }).eq("id", created.id);
+
+    // Upload logo if provided
+    let logoPath = null;
+    if (logoFile) {
+      const path = `projects/${created.id}/logo_${Date.now()}_${logoFile.name}`;
+      const { error: upErr } = await supabase.storage.from('uploads').upload(path, logoFile, { upsert: true });
+      if (!upErr) {
+        logoPath = path;
+      }
+    }
+
+    // Upload PDF files
+    const uploadedPdfPaths: string[] = [];
+    for (const file of pdfFiles) {
+      const path = `projects/${created.id}/pdf_${Date.now()}_${file.name}`;
+      const { error: upErr } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
+      if (upErr) {
+        console.error('PDF Upload failed', upErr);
+      } else {
+        uploadedPdfPaths.push(path);
+      }
+    }
+
+    if (uploadedPaths.length > 0 || uploadedPdfPaths.length > 0 || logoPath) {
+      const updResp = await supabase.from("projects").update({ 
+        image_urls: uploadedPaths.length > 0 ? uploadedPaths : null,
+        file_urls: uploadedPdfPaths.length > 0 ? uploadedPdfPaths : null,
+        logo_url: logoPath 
+      }).eq("id", created.id);
       if (updResp.error) {
         console.error("Failed to attach images", updResp.error);
-        toast({ title: "שגיאה בהעלאת תמונות", description: updResp.error.message, variant: "destructive" });
+        toast({ title: "שגיאה בהעלאת קבצים", description: updResp.error.message, variant: "destructive" });
       }
     }
     toast({ title: "הצלחה", description: "הפרויקט נשמר בהצלחה" });
     setFiles([]);
+    setLogoFile(null);
+    setPdfFiles([]);
     setOpen(false);
     fetchProjects();
   }
