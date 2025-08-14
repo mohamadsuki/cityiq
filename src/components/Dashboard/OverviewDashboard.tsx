@@ -250,12 +250,21 @@ export default function OverviewDashboard() {
 
       const [pNew, pUpd, tDone, gNew] = await Promise.all([
         bounded(supabase.from('projects').select('id', { count: 'exact', head: true }), 'created_at'),
-        // For updated projects, exclude newly created ones by checking updated_at != created_at
+        // For updated projects - projects that have been updated in the period but not created in the same period
         supabase.from('projects')
-          .select('id', { count: 'exact', head: true })
+          .select('id, created_at, updated_at', { count: 'exact', head: true })
           .gte('updated_at', fromIso)
           .lte('updated_at', toIso)
-          .neq('updated_at', 'created_at'),
+          .then(result => {
+            if (result.data) {
+              // Filter out projects that were created in the same period
+              const updatedNotNew = result.data.filter(project => 
+                new Date(project.created_at).getTime() < new Date(fromIso).getTime()
+              );
+              return { count: updatedNotNew.length };
+            }
+            return { count: 0 };
+          }),
         bounded(supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'done'), 'updated_at'),
         bounded(supabase.from('grants').select('id', { count: 'exact', head: true }), 'created_at'),
       ]);
