@@ -133,6 +133,44 @@ export default function ProjectsApp() {
     });
   }, [projects, q, department, status, domain]);
 
+  // Calculate KPI data
+  const kpiData = useMemo(() => {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+    
+    const delayedProjects = projects.filter(p => 
+      (p.progress ?? 0) < 10 && 
+      new Date(p.created_at) < oneMonthAgo
+    );
+    
+    const activeProjects = projects.filter(p => 
+      p.status === 'ביצוע'
+    );
+    
+    const planningProjects = projects.filter(p => 
+      p.status === 'תכנון'
+    );
+    
+    const departmentBudgets = ALL_DEPARTMENTS.reduce((acc, dept) => {
+      const deptProjects = projects.filter(p => p.department_slug === dept);
+      const totalBudget = deptProjects.reduce((sum, p) => sum + (p.budget_approved ?? 0), 0);
+      acc[dept] = { count: deptProjects.length, budget: totalBudget };
+      return acc;
+    }, {} as Record<DepartmentSlug, { count: number; budget: number }>);
+    
+    const totalBudget = Object.values(departmentBudgets).reduce((sum, dept) => sum + dept.budget, 0);
+    
+    return {
+      delayed: delayedProjects.length,
+      activeAndPlanning: activeProjects.length + planningProjects.length,
+      activeCount: activeProjects.length,
+      planningCount: planningProjects.length,
+      totalActive: projects.filter(p => p.status === 'ביצוע' || p.status === 'תכנון').length,
+      totalBudget,
+      departmentBudgets
+    };
+  }, [projects]);
+
   // Modal state
   const [open, setOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
@@ -154,6 +192,33 @@ const [form, setForm] = useState<Partial<Project>>({
 });
 
   const [files, setFiles] = useState<File[]>([]);
+
+  // Function to handle KPI card clicks
+  const handleKpiClick = (filterType: string) => {
+    switch (filterType) {
+      case 'delayed':
+        // Filter for delayed projects - this would require custom logic
+        setQ('');
+        setStatus('all');
+        setDomain('all');
+        break;
+      case 'active':
+        setQ('');
+        setStatus('ביצוע');
+        setDomain('all');
+        break;
+      case 'planning':
+        setQ('');
+        setStatus('תכנון');
+        setDomain('all');
+        break;
+      case 'all-active':
+        setQ('');
+        setStatus('all');
+        setDomain('all');
+        break;
+    }
+  };
 
 function openCreate() {
   setEditing(null);
@@ -360,11 +425,14 @@ function openEdit(p: Project) {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 shadow-lg">
+        <Card 
+          className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+          onClick={() => handleKpiClick('delayed')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <Target className="h-8 w-8 text-red-600" />
-              <div className="text-3xl font-bold text-red-700">12</div>
+              <div className="text-3xl font-bold text-red-700">{kpiData.delayed}</div>
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-red-800">פרויקטים בעיכוב</div>
@@ -373,37 +441,50 @@ function openEdit(p: Project) {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg">
+        <Card 
+          className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+          onClick={() => handleKpiClick('active')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <ListChecks className="h-8 w-8 text-blue-600" />
-              <div className="text-3xl font-bold text-blue-700">85</div>
+              <div className="text-3xl font-bold text-blue-700">{kpiData.activeAndPlanning}</div>
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-blue-800">פרויקטים בביצוע ותכנון</div>
-              <div className="text-sm text-blue-600">45 בביצוע, 40 בתכנון</div>
+              <div className="text-sm text-blue-600">{kpiData.activeCount} בביצוע, {kpiData.planningCount} בתכנון</div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-lg">
+        <Card 
+          className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+          onClick={() => handleKpiClick('all-active')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <BarChart3 className="h-8 w-8 text-green-600" />
-              <div className="text-3xl font-bold text-green-700">₪180M</div>
+              <div className="text-3xl font-bold text-green-700">₪{(kpiData.totalBudget / 1000000).toFixed(0)}M</div>
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-green-800">התפלגות לפי מחלקות</div>
-              <div className="text-sm text-green-600">הנדסה: ₪120M, חינוך: ₪35M, רווחה: ₪25M</div>
+              <div className="text-sm text-green-600">
+                הנדסה: ₪{(kpiData.departmentBudgets.engineering?.budget / 1000000 || 0).toFixed(0)}M, 
+                חינוך: ₪{(kpiData.departmentBudgets.education?.budget / 1000000 || 0).toFixed(0)}M, 
+                רווחה: ₪{(kpiData.departmentBudgets.welfare?.budget / 1000000 || 0).toFixed(0)}M
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg">
+        <Card 
+          className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+          onClick={() => handleKpiClick('all-active')}
+        >
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <CheckCircle className="h-8 w-8 text-purple-600" />
-              <div className="text-3xl font-bold text-purple-700">127</div>
+              <div className="text-3xl font-bold text-purple-700">{kpiData.totalActive}</div>
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-purple-800">סה״כ פרויקטים פעילים</div>
