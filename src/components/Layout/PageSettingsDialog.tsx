@@ -25,22 +25,31 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
 
   useEffect(() => {
     let active = true;
+    console.log('PageSettingsDialog useEffect - loading data...');
     supabase
       .from('city_settings')
       .select('city_name, logo_url, population')
       .eq('id', 'global')
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        console.log('Data loaded:', data, 'Error:', error);
         if (!active) return;
         if (data) {
+          console.log('Setting state with data:', data);
           setSrc(data.logo_url || null);
           setCityName(data.city_name || "שם העיר");
           setPopulation(data.population || 342857);
+        } else {
+          console.log('No data found, using defaults');
+          setSrc(null);
+          setCityName("שם העיר");
+          setPopulation(342857);
         }
       });
     const ch = supabase
       .channel('rt-city-settings-dialog')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'city_settings' }, (payload) => {
+        console.log('Realtime update:', payload);
         const row: any = (payload.new as any) || (payload.old as any);
         if (row) {
           setSrc(row.logo_url || null);
@@ -53,11 +62,14 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
   }, []);
 
   useEffect(() => {
+    console.log('Dialog opened, current state:', { cityName, population, src });
     if (open) {
+      console.log('Setting input values:', { cityName, population });
       setCityInput(cityName);
       setPopulationInput(population.toString());
+      setUrlInput(src || "");
     }
-  }, [open, cityName, population]);
+  }, [open, cityName, population, src]);
 
   const displaySrc = useMemo(() => fileDataUrl || urlInput.trim() || src || "/placeholder.svg", [fileDataUrl, urlInput, src]);
 
