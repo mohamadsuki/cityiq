@@ -12,8 +12,12 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
-import { Target, ListChecks, BarChart3, CheckCircle, X } from "lucide-react";
+import { Target, ListChecks, BarChart3, CheckCircle, X, CalendarIcon } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import type { DepartmentSlug } from "@/lib/demoAccess";
 
 // Project row type aligned with DB
@@ -38,7 +42,8 @@ type Project = {
   notes: string | null;
   image_urls: string[] | null; // storage paths or data URLs in demo
   file_urls: string[] | null; // PDF files
-  logo_url: string | null; // project logo
+  start_at: string | null; // start date
+  end_at: string | null; // end date
 };
 
 const DEPARTMENT_LABELS: Record<DepartmentSlug, string> = {
@@ -198,11 +203,11 @@ const [form, setForm] = useState<Partial<Project>>({
   notes: "",
   image_urls: [],
   file_urls: [],
-  logo_url: null,
+  start_at: null,
+  end_at: null,
 });
 
   const [files, setFiles] = useState<File[]>([]);
-  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [pdfFiles, setPdfFiles] = useState<File[]>([]);
 
   // Function to handle KPI card clicks
@@ -263,10 +268,10 @@ function openCreate() {
     notes: "",
     image_urls: [],
     file_urls: [],
-    logo_url: null,
+    start_at: null,
+    end_at: null,
   });
   setFiles([]);
-  setLogoFile(null);
   setPdfFiles([]);
   setOpen(true);
 }
@@ -275,7 +280,6 @@ function openEdit(p: Project) {
   setEditing(p);
   setForm({ ...p });
   setFiles([]);
-  setLogoFile(null);
   setPdfFiles([]);
   setOpen(true);
 }
@@ -312,7 +316,6 @@ function openEdit(p: Project) {
       reader.readAsDataURL(file);
     });
     const newImageUrls = files.length ? await Promise.all(files.map(toDataURL)) : [];
-    const newLogoUrl = logoFile ? await toDataURL(logoFile) : null;
     const newPdfUrls = pdfFiles.length ? await Promise.all(pdfFiles.map(toDataURL)) : [];
     
     const payload: Project = {
@@ -333,7 +336,8 @@ function openEdit(p: Project) {
       notes: (form.notes as string) || null,
       image_urls: [ ...(editing?.image_urls || []), ...newImageUrls ],
       file_urls: [ ...(editing?.file_urls || []), ...newPdfUrls ],
-      logo_url: newLogoUrl || editing?.logo_url || null,
+      start_at: form.start_at,
+      end_at: form.end_at,
     };
 
     let next: Project[] = [];
@@ -348,7 +352,6 @@ function openEdit(p: Project) {
     setProjects(next);
     toast({ title: editing ? "עודכן" : "נוצר", description: "הפרויקט נשמר (מצב הדגמה)" });
     setFiles([]);
-    setLogoFile(null);
     setPdfFiles([]);
     setOpen(false);
     return;
@@ -370,6 +373,8 @@ function openEdit(p: Project) {
     budget_executed: form.budget_executed ?? null,
     progress: form.progress ?? null,
     notes: form.notes ?? null,
+    start_at: form.start_at,
+    end_at: form.end_at,
   };
 
   if (editing) {
@@ -385,15 +390,6 @@ function openEdit(p: Project) {
       }
     }
 
-    // Upload logo if provided
-    let logoPath = editing.logo_url;
-    if (logoFile) {
-      const path = `projects/${editing.id}/logo_${Date.now()}_${logoFile.name}`;
-      const { error: upErr } = await supabase.storage.from('uploads').upload(path, logoFile, { upsert: true });
-      if (!upErr) {
-        logoPath = path;
-      }
-    }
 
     // Upload PDF files
     const uploadedPdfPaths: string[] = [];
@@ -412,8 +408,7 @@ function openEdit(p: Project) {
     const resp = await supabase.from("projects").update({ 
       ...basePayload, 
       image_urls: combinedImages,
-      file_urls: combinedPdfs,
-      logo_url: logoPath 
+      file_urls: combinedPdfs
     }).eq("id", editing.id);
     const error = resp.error as any;
     if (error) {
@@ -422,7 +417,6 @@ function openEdit(p: Project) {
     } else {
       toast({ title: "הצלחה", description: "הפרויקט נשמר בהצלחה" });
       setFiles([]);
-      setLogoFile(null);
       setPdfFiles([]);
       setOpen(false);
       fetchProjects();
@@ -449,15 +443,6 @@ function openEdit(p: Project) {
       }
     }
 
-    // Upload logo if provided
-    let logoPath = null;
-    if (logoFile) {
-      const path = `projects/${created.id}/logo_${Date.now()}_${logoFile.name}`;
-      const { error: upErr } = await supabase.storage.from('uploads').upload(path, logoFile, { upsert: true });
-      if (!upErr) {
-        logoPath = path;
-      }
-    }
 
     // Upload PDF files
     const uploadedPdfPaths: string[] = [];
@@ -471,11 +456,10 @@ function openEdit(p: Project) {
       }
     }
 
-    if (uploadedPaths.length > 0 || uploadedPdfPaths.length > 0 || logoPath) {
+    if (uploadedPaths.length > 0 || uploadedPdfPaths.length > 0) {
       const updResp = await supabase.from("projects").update({ 
         image_urls: uploadedPaths.length > 0 ? uploadedPaths : null,
-        file_urls: uploadedPdfPaths.length > 0 ? uploadedPdfPaths : null,
-        logo_url: logoPath 
+        file_urls: uploadedPdfPaths.length > 0 ? uploadedPdfPaths : null
       }).eq("id", created.id);
       if (updResp.error) {
         console.error("Failed to attach images", updResp.error);
@@ -484,7 +468,6 @@ function openEdit(p: Project) {
     }
     toast({ title: "הצלחה", description: "הפרויקט נשמר בהצלחה" });
     setFiles([]);
-    setLogoFile(null);
     setPdfFiles([]);
     setOpen(false);
     fetchProjects();
@@ -877,11 +860,57 @@ function openEdit(p: Project) {
 </div>
 
 <div>
-  <Label>לוגו הפרויקט</Label>
-  <Input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] || null)} />
-  <p className="text-xs text-muted-foreground mt-1">
-    {logoFile ? `נבחר קובץ: ${logoFile.name}` : editing?.logo_url ? 'קיים לוגו' : 'לא נבחר לוגו'}
-  </p>
+  <Label>תאריך התחלה</Label>
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button
+        variant={"outline"}
+        className={cn(
+          "w-full justify-start text-left font-normal",
+          !form.start_at && "text-muted-foreground"
+        )}
+      >
+        <CalendarIcon className="mr-2 h-4 w-4" />
+        {form.start_at ? format(new Date(form.start_at), "dd/MM/yyyy") : <span>בחר תאריך התחלה</span>}
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-auto p-0" align="start">
+      <Calendar
+        mode="single"
+        selected={form.start_at ? new Date(form.start_at) : undefined}
+        onSelect={(date) => setForm((f) => ({ ...f, start_at: date?.toISOString() || null }))}
+        initialFocus
+        className={cn("p-3 pointer-events-auto")}
+      />
+    </PopoverContent>
+  </Popover>
+</div>
+
+<div>
+  <Label>תאריך סיום</Label>
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button
+        variant={"outline"}
+        className={cn(
+          "w-full justify-start text-left font-normal",
+          !form.end_at && "text-muted-foreground"
+        )}
+      >
+        <CalendarIcon className="mr-2 h-4 w-4" />
+        {form.end_at ? format(new Date(form.end_at), "dd/MM/yyyy") : <span>בחר תאריך סיום</span>}
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-auto p-0" align="start">
+      <Calendar
+        mode="single"
+        selected={form.end_at ? new Date(form.end_at) : undefined}
+        onSelect={(date) => setForm((f) => ({ ...f, end_at: date?.toISOString() || null }))}
+        initialFocus
+        className={cn("p-3 pointer-events-auto")}
+      />
+    </PopoverContent>
+  </Popover>
 </div>
 
 <div className="md:col-span-2">
