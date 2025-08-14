@@ -71,35 +71,58 @@ export default function ProjectsDashboard() {
       </header>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="פרויקטים בעיכוב"
-          value="12"
-          description="פרויקטים עם התקדמות פחות מ-10% כבר יותר מחודש"
-          icon={Target}
-          variant="outlined"
-        />
-        <StatCard
-          title="פרויקטים פעילים/תכנון"
-          value="85"
-          description="45 בביצוע, 40 בתכנון"
-          icon={ListChecks}
-          variant="active"
-        />
-        <StatCard
-          title="התפלגות לפי מחלקות"
-          value="₪180M"
-          description="הנדסה: ₪120M, חינוך: ₪35M, רווחה: ₪25M"
-          icon={BarChart3}
-          variant="default"
-        />
-        <StatCard
-          title="סה״כ פרויקטים פעילים"
-          value="127"
-          description="פרויקטים פעילים בכל המחלקות"
-          icon={CheckCircle}
-          variant="completed"
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <Target className="h-8 w-8 text-red-600" />
+              <div className="text-3xl font-bold text-red-700">12</div>
+            </div>
+            <div className="space-y-1">
+              <div className="font-semibold text-red-800">פרויקטים בעיכוב</div>
+              <div className="text-sm text-red-600">התקדמות פחות מ-10% כבר יותר מחודש</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <ListChecks className="h-8 w-8 text-blue-600" />
+              <div className="text-3xl font-bold text-blue-700">85</div>
+            </div>
+            <div className="space-y-1">
+              <div className="font-semibold text-blue-800">פרויקטים בביצוע ותכנון</div>
+              <div className="text-sm text-blue-600">45 בביצוע, 40 בתכנון</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <BarChart3 className="h-8 w-8 text-green-600" />
+              <div className="text-3xl font-bold text-green-700">₪180M</div>
+            </div>
+            <div className="space-y-1">
+              <div className="font-semibold text-green-800">התפלגות לפי מחלקות</div>
+              <div className="text-sm text-green-600">הנדסה: ₪120M, חינוך: ₪35M, רווחה: ₪25M</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <CheckCircle className="h-8 w-8 text-purple-600" />
+              <div className="text-3xl font-bold text-purple-700">127</div>
+            </div>
+            <div className="space-y-1">
+              <div className="font-semibold text-purple-800">סה״כ פרויקטים פעילים</div>
+              <div className="text-sm text-purple-600">פרויקטים פעילים בכל המחלקות</div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters Section */}
@@ -109,10 +132,10 @@ export default function ProjectsDashboard() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">חתום</label>
               <Select>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="הכל" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border border-border shadow-lg z-50">
                   <SelectItem value="all">הכל</SelectItem>
                   <SelectItem value="signed">חתום</SelectItem>
                   <SelectItem value="unsigned">לא חתום</SelectItem>
@@ -122,10 +145,10 @@ export default function ProjectsDashboard() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">סטטוס</label>
               <Select>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="הכל" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border border-border shadow-lg z-50">
                   <SelectItem value="all">הכל</SelectItem>
                   <SelectItem value="planning">תכנון</SelectItem>
                   <SelectItem value="active">בביצוע</SelectItem>
@@ -136,10 +159,10 @@ export default function ProjectsDashboard() {
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">מחלקה</label>
               <Select>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="הכל" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border border-border shadow-lg z-50">
                   <SelectItem value="all">הכל</SelectItem>
                   <SelectItem value="engineering">הנדסה</SelectItem>
                   <SelectItem value="education">חינוך</SelectItem>
@@ -149,7 +172,7 @@ export default function ProjectsDashboard() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">חיפוש</label>
-              <Input placeholder="חיפוש לפי שם/קוד" />
+              <Input placeholder="חיפוש לפי שם/קוד" className="bg-background" />
             </div>
           </div>
         </CardContent>
