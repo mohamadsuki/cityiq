@@ -70,6 +70,38 @@ export default function ProjectsDashboard() {
         </div>
       </header>
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="פרויקטים בעיכוב"
+          value="12"
+          description="פרויקטים עם התקדמות פחות מ-10% כבר יותר מחודש"
+          icon={Target}
+          variant="outlined"
+        />
+        <StatCard
+          title="פרויקטים פעילים/תכנון"
+          value="85"
+          description="45 בביצוע, 40 בתכנון"
+          icon={ListChecks}
+          variant="active"
+        />
+        <StatCard
+          title="התפלגות לפי מחלקות"
+          value="₪180M"
+          description="הנדסה: ₪120M, חינוך: ₪35M, רווחה: ₪25M"
+          icon={BarChart3}
+          variant="default"
+        />
+        <StatCard
+          title="סה״כ פרויקטים פעילים"
+          value="127"
+          description="פרויקטים פעילים בכל המחלקות"
+          icon={CheckCircle}
+          variant="completed"
+        />
+      </div>
+
       {/* Filters Section */}
       <Card className="shadow-card">
         <CardContent className="p-4">
