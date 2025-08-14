@@ -86,6 +86,12 @@ export default function ProjectsApp() {
   const [domain, setDomain] = useState<string>("all");
   const [showDepartmentChart, setShowDepartmentChart] = useState(false);
 
+  // Handle filtering from "What's New" section
+  const filter = searchParams.get("filter");
+  const period = searchParams.get("period");
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+
   const visibleDepartments: DepartmentSlug[] = (role === "mayor" || role === "ceo") ? ALL_DEPARTMENTS : departments;
 
   useEffect(() => {
@@ -138,9 +144,48 @@ export default function ProjectsApp() {
       if (department !== "all" && p.department_slug !== department) return false;
       if (status !== "all" && (p.status ?? "").toLowerCase() !== status.toLowerCase()) return false;
       if (domain !== "all" && (p.domain ?? "").toLowerCase() !== domain.toLowerCase()) return false;
+      
+      // Apply filter from "What's New" section
+      if (filter && period) {
+        const now = new Date();
+        let from: Date, to: Date;
+        
+        if (period === 'custom' && fromParam && toParam) {
+          from = new Date(fromParam);
+          to = new Date(toParam);
+        } else {
+          // Calculate date range based on period
+          to = now;
+          switch (period) {
+            case 'week':
+              from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              break;
+            case 'month':
+              from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              break;
+            case 'year':
+              from = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+              break;
+            default: // day
+              from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          }
+        }
+        
+        if (filter === 'new') {
+          // Show projects created in the time range
+          const createdAt = new Date(p.created_at);
+          if (createdAt < from || createdAt > to) return false;
+        } else if (filter === 'updated') {
+          // Show projects updated in the time range (excluding newly created ones)
+          const updatedAt = new Date(p.updated_at);
+          const createdAt = new Date(p.created_at);
+          if (updatedAt < from || updatedAt > to || updatedAt.getTime() === createdAt.getTime()) return false;
+        }
+      }
+      
       return true;
     });
-  }, [projects, q, department, status, domain]);
+  }, [projects, q, department, status, domain, filter, period, fromParam, toParam]);
 
   // Calculate KPI data
   const kpiData = useMemo(() => {

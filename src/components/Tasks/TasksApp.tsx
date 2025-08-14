@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,6 +106,7 @@ const DATE_TIME_FORMAT_OPTS: Intl.DateTimeFormatOptions = { dateStyle: "short", 
 export default function TasksApp() {
   const { role, departments, user, session } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -114,6 +116,12 @@ export default function TasksApp() {
   const [status, setStatus] = useState<"all" | TaskStatus>("all");
   const [priority, setPriority] = useState<"all" | TaskPriority>("all");
   const [department, setDepartment] = useState<"all" | DepartmentSlug>("all");
+
+  // Handle filtering from "What's New" section
+  const filter = searchParams.get("filter");
+  const period = searchParams.get("period");
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
 
   // Modal state
   const [open, setOpen] = useState(false);
@@ -144,9 +152,42 @@ export default function TasksApp() {
       if (priority !== "all" && t.priority !== priority) return false;
       if (role === "manager" && departments && !departments.includes(t.department_slug)) return false;
       if (department !== "all" && t.department_slug !== department) return false;
+      
+      // Apply filter from "What's New" section
+      if (filter === 'completed' && period) {
+        const now = new Date();
+        let from: Date, to: Date;
+        
+        if (period === 'custom' && fromParam && toParam) {
+          from = new Date(fromParam);
+          to = new Date(toParam);
+        } else {
+          // Calculate date range based on period
+          to = now;
+          switch (period) {
+            case 'week':
+              from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              break;
+            case 'month':
+              from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              break;
+            case 'year':
+              from = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+              break;
+            default: // day
+              from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          }
+        }
+        
+        // Show only completed tasks in the time range
+        if (t.status !== 'done') return false;
+        const updatedAt = new Date(t.updated_at);
+        if (updatedAt < from || updatedAt > to) return false;
+      }
+      
       return true;
     });
-  }, [tasks, q, status, priority, department, role, departments]);
+  }, [tasks, q, status, priority, department, role, departments, filter, period, fromParam, toParam]);
 
   async function fetchTasks() {
     setLoading(true);

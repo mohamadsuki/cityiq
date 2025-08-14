@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { useSearchParams } from "react-router-dom";
 import type { DepartmentSlug } from "@/lib/demoAccess";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ const statusVariant = (s: string | null): 'default' | 'secondary' | 'destructive
 export default function GrantsApp() {
   const { role, departments, user, session } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   const isDemo = !session;
   const canCreate = role === 'mayor' || role === 'ceo' || role === 'manager';
@@ -64,6 +66,12 @@ export default function GrantsApp() {
   const [status, setStatus] = useState<'all' | GrantStatus>('all');
   const [department, setDepartment] = useState<'all' | DepartmentSlug>('all');
 
+  // Handle filtering from "What's New" section
+  const filter = searchParams.get("filter");
+  const period = searchParams.get("period");
+  const fromParam = searchParams.get("from");
+  const toParam = searchParams.get("to");
+
   const filtered = useMemo(() => {
     return grants.filter((g) => {
       const text = `${g.name ?? ''} ${g.ministry ?? ''}`.toLowerCase();
@@ -71,9 +79,41 @@ export default function GrantsApp() {
       if (status !== 'all' && (g.status || '').toLowerCase() !== status) return false;
       if (role === 'manager' && departments && !departments.includes((g.department_slug as DepartmentSlug))) return false;
       if (department !== 'all' && g.department_slug !== department) return false;
+      
+      // Apply filter from "What's New" section
+      if (filter === 'new' && period) {
+        const now = new Date();
+        let from: Date, to: Date;
+        
+        if (period === 'custom' && fromParam && toParam) {
+          from = new Date(fromParam);
+          to = new Date(toParam);
+        } else {
+          // Calculate date range based on period
+          to = now;
+          switch (period) {
+            case 'week':
+              from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              break;
+            case 'month':
+              from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              break;
+            case 'year':
+              from = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+              break;
+            default: // day
+              from = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          }
+        }
+        
+        // Show only grants created in the time range
+        const createdAt = new Date(g.created_at);
+        if (createdAt < from || createdAt > to) return false;
+      }
+      
       return true;
     });
-  }, [grants, q, status, department, role, departments]);
+  }, [grants, q, status, department, role, departments, filter, period, fromParam, toParam]);
 
   type SortKey = 'name' | 'ministry' | 'amount' | 'status' | 'submitted_at' | 'decision_at';
   const [sortBy, setSortBy] = useState<SortKey>('decision_at');
