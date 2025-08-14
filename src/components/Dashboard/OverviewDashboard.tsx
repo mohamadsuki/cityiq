@@ -208,19 +208,22 @@ export default function OverviewDashboard() {
 
       const bounded = (q: any, col: string) => q.gte(col, fromIso).lte(col, toIso);
 
-      const [pNew, pUpd, tDone, gNew, tAck] = await Promise.all([
+      const [pNew, pUpd, tDone, gNew] = await Promise.all([
         bounded(supabase.from('projects').select('id', { count: 'exact', head: true }), 'created_at'),
-        bounded(supabase.from('projects').select('id', { count: 'exact', head: true }), 'updated_at'),
+        // For updated projects, exclude newly created ones by checking updated_at != created_at
+        supabase.from('projects')
+          .select('id', { count: 'exact', head: true })
+          .gte('updated_at', fromIso)
+          .lte('updated_at', toIso)
+          .neq('updated_at', 'created_at'),
         bounded(supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'done'), 'updated_at'),
         bounded(supabase.from('grants').select('id', { count: 'exact', head: true }), 'created_at'),
-        bounded(supabase.from('task_acknowledgements').select('id', { count: 'exact', head: true }), 'created_at'),
       ]);
       return {
         projectsNew: pNew.count || 0,
         projectsUpdated: pUpd.count || 0,
         tasksDone: tDone.count || 0,
         grantsNew: gNew.count || 0,
-        acknowledgements: tAck.count || 0,
       };
     }
   });
@@ -286,26 +289,22 @@ export default function OverviewDashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <Link to="/projects" className="p-4 rounded-lg bg-muted block">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Link to={`/projects?filter=new&from=${period === 'custom' && dateRange?.from ? dateRange.from.toISOString() : ''}&to=${period === 'custom' && dateRange?.to ? dateRange.to.toISOString() : ''}&period=${period}`} className="p-4 rounded-lg bg-muted hover:bg-muted/80 transition-colors block">
                 <div className="text-sm text-muted-foreground">פרויקטים חדשים</div>
                 <div className="text-2xl font-bold">{execStats.projectsNew}</div>
               </Link>
-              <Link to="/projects" className="p-4 rounded-lg bg-muted block">
+              <Link to={`/projects?filter=updated&from=${period === 'custom' && dateRange?.from ? dateRange.from.toISOString() : ''}&to=${period === 'custom' && dateRange?.to ? dateRange.to.toISOString() : ''}&period=${period}`} className="p-4 rounded-lg bg-muted hover:bg-muted/80 transition-colors block">
                 <div className="text-sm text-muted-foreground">פרויקטים שהתעדכנו</div>
                 <div className="text-2xl font-bold">{execStats.projectsUpdated}</div>
               </Link>
-              <Link to="/tasks" className="p-4 rounded-lg bg-muted block">
+              <Link to={`/tasks?filter=completed&from=${period === 'custom' && dateRange?.from ? dateRange.from.toISOString() : ''}&to=${period === 'custom' && dateRange?.to ? dateRange.to.toISOString() : ''}&period=${period}`} className="p-4 rounded-lg bg-muted hover:bg-muted/80 transition-colors block">
                 <div className="text-sm text-muted-foreground">משימות שהושלמו</div>
                 <div className="text-2xl font-bold">{execStats.tasksDone}</div>
               </Link>
-              <Link to="/grants" className="p-4 rounded-lg bg-muted block">
+              <Link to={`/grants?filter=new&from=${period === 'custom' && dateRange?.from ? dateRange.from.toISOString() : ''}&to=${period === 'custom' && dateRange?.to ? dateRange.to.toISOString() : ''}&period=${period}`} className="p-4 rounded-lg bg-muted hover:bg-muted/80 transition-colors block">
                 <div className="text-sm text-muted-foreground">קולות קוראים חדשים</div>
                 <div className="text-2xl font-bold">{execStats.grantsNew}</div>
-              </Link>
-              <Link to="/tasks" className="p-4 rounded-lg bg-muted block">
-                <div className="text-sm text-muted-foreground">אישורי צפייה (מנהלים)</div>
-                <div className="text-2xl font-bold">{execStats.acknowledgements}</div>
               </Link>
             </div>
           </CardContent>
