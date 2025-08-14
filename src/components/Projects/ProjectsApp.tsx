@@ -160,6 +160,10 @@ export default function ProjectsApp() {
     
     const totalBudget = Object.values(departmentBudgets).reduce((sum, dept) => sum + dept.budget, 0);
     
+    // Debug log to check department calculations
+    console.log('Department budgets:', departmentBudgets);
+    console.log('All projects:', projects.map(p => ({ name: p.name, dept: p.department_slug, budget: p.budget_approved })));
+    
     return {
       delayed: delayedProjects.length,
       activeAndPlanning: activeProjects.length + planningProjects.length,
@@ -469,9 +473,9 @@ function openEdit(p: Project) {
             <div className="space-y-1">
               <div className="font-semibold text-green-800">התפלגות לפי מחלקות</div>
               <div className="text-sm text-green-600">
-                הנדסה: ₪{(kpiData.departmentBudgets.engineering?.budget / 1000000 || 0).toFixed(0)}M, 
-                חינוך: ₪{(kpiData.departmentBudgets.education?.budget / 1000000 || 0).toFixed(0)}M, 
-                רווחה: ₪{(kpiData.departmentBudgets.welfare?.budget / 1000000 || 0).toFixed(0)}M
+                הנדסה: ₪{(kpiData.departmentBudgets.engineering?.budget / 1000000 || 0).toFixed(1)}M, 
+                חינוך: ₪{(kpiData.departmentBudgets.education?.budget / 1000000 || 0).toFixed(1)}M, 
+                רווחה: ₪{(kpiData.departmentBudgets.welfare?.budget / 1000000 || 0).toFixed(1)}M
               </div>
             </div>
           </CardContent>
