@@ -10,10 +10,15 @@ import {
   TrendingUp,
   Activity,
   Store,
-  AlertTriangle,
   ListTodo,
   Megaphone,
-  Eye
+  Eye,
+  Calculator,
+  BookOpen,
+  HardHat,
+  Heart,
+  GamepadIcon,
+  Briefcase
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -67,16 +72,14 @@ const KPICard = ({
 
 const DepartmentCard = ({ 
   name, 
-  status, 
-  budget, 
-  utilization, 
+  description, 
+  components, 
   icon: Icon,
   to
 }: { 
   name: string; 
-  status: string; 
-  budget: string; 
-  utilization: number; 
+  description: string; 
+  components: string[]; 
   icon: any;
   to: string;
 }) => (
@@ -85,26 +88,22 @@ const DepartmentCard = ({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold">{name}</CardTitle>
-          <Icon className="h-5 w-5 text-muted-foreground" />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">סטטוס</span>
-          <Badge variant={status === 'פעיל' ? 'default' : 'secondary'}>
-            {status}
-          </Badge>
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">תקציב מנוצל</span>
-            <span className="font-medium">{utilization}%</span>
+          <div className="h-12 w-12 bg-gradient-primary rounded-lg flex items-center justify-center">
+            <Icon className="h-6 w-6 text-primary-foreground" />
           </div>
-          <Progress value={utilization} className="h-2" />
         </div>
+        <p className="text-sm text-muted-foreground mt-2">{description}</p>
+      </CardHeader>
+      <CardContent className="space-y-3">
         <div className="text-sm">
-          <span className="text-muted-foreground">תקציב שנתי: </span>
-          <span className="font-semibold">{budget}</span>
+          <span className="text-muted-foreground font-medium">רכיבים במחלקה:</span>
+          <div className="mt-2 flex flex-wrap gap-1">
+            {components.map((component, index) => (
+              <Badge key={index} variant="secondary" className="text-xs">
+                {component}
+              </Badge>
+            ))}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -368,86 +367,52 @@ export default function OverviewDashboard() {
 
       {/* Department Overview */}
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div>
           <h2 className="text-2xl font-bold text-foreground">מחלקות עיקריות</h2>
-          <Badge variant="outline" className="gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            3 התראות פעילות
-          </Badge>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <DepartmentCard
             name="מחלקת פיננסים"
-            status="פעיל"
-            budget="₪2.4B"
-            utilization={73}
-            icon={BarChart3}
+            description="ניהול תקציב עירוני, מעקב הוצאות והכנסות"
+            components={["תקציב", "פרויקטים", "קולות קוראים", "דוחות כספיים", "מפה"]}
+            icon={Calculator}
             to="/finance"
           />
           <DepartmentCard
             name="מחלקת חינוך"
-            status="פעיל"
-            budget="₪890M"
-            utilization={81}
-            icon={GraduationCap}
+            description="ניהול מוסדות חינוך וסטטיסטיקות לימודים"
+            components={["סטטיסטיקות תלמידים", "מוסדות חינוך", "פרויקטים", "מפה", "התראות תפוסה"]}
+            icon={BookOpen}
             to="/education"
           />
           <DepartmentCard
             name="מחלקת הנדסה"
-            status="פעיל"
-            budget="₪650M"
-            utilization={67}
-            icon={Building2}
+            description="תכנון ופיתוח עירוני, תוכניות בנייה"
+            components={["תוכניות", "סטטוס אישורים", "שימושי קרקע", "מפה", "טבלת נתונים"]}
+            icon={HardHat}
             to="/engineering"
           />
           <DepartmentCard
             name="מחלקת רווחה"
-            status="פעיל"
-            budget="₪320M"
-            utilization={89}
-            icon={Users}
+            description="שירותי רווחה וטיפול באוכלוסיות מיוחדות"
+            components={["שירותי רווחה", "סטטיסטיקות", "טבלאות נתונים", "דוחות", "מעקב מקרים"]}
+            icon={Heart}
             to="/welfare"
           />
           <DepartmentCard
             name="חינוך בלתי פורמאלי"
-            status="פעיל"
-            budget="₪45M"
-            utilization={76}
-            icon={Activity}
+            description="פעילויות חינוכיות מחוץ למערכת הפורמאלית"
+            components={["פעילויות", "סטטיסטיקות השתתפות", "תוכניות", "מדריכים", "קידום נוער"]}
+            icon={GamepadIcon}
             to="/non-formal"
           />
           <DepartmentCard
             name="רישוי עסקים"
-            status="פעיל"
-            budget="₪12M"
-            utilization={92}
-            icon={Store}
+            description="ניהול רישיונות עסקיים ומעקב תוקפם"
+            components={["רישיונות עסקיים", "סטטוס רישיונות", "סוגי עסקים", "מפה", "התראות"]}
+            icon={Briefcase}
             to="/business"
-          />
-          <DepartmentCard
-            name="קולות קוראים"
-            status="פעיל"
-            budget="₪35M"
-            utilization={58}
-            icon={Megaphone}
-            to="/grants"
-          />
-          <DepartmentCard
-            name="ניהול משימות"
-            status="פעיל"
-            budget="—"
-            utilization={70}
-            icon={ListTodo}
-            to="/tasks"
-          />
-          <DepartmentCard
-            name="פרויקטים"
-            status="פעיל"
-            budget="—"
-            utilization={64}
-            icon={Building2}
-            to="/projects"
           />
         </div>
       </div>
