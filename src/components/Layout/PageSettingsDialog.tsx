@@ -5,9 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Image as ImageIcon, Trash2, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
-const STORAGE_KEY = "global_logo_src";
-const CITY_NAME_KEY = "global_city_name";
-
 interface PageSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -22,35 +19,40 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
   const [cityInput, setCityInput] = useState<string>("");
   const [population, setPopulation] = useState<number>(342857);
   const [populationInput, setPopulationInput] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Load data from database
   useEffect(() => {
-    let active = true;
-    console.log('PageSettingsDialog useEffect - loading data...');
-    supabase
-      .from('city_settings')
-      .select('city_name, logo_url, population')
-      .eq('id', 'global')
-      .maybeSingle()
-      .then(({ data, error }) => {
-        console.log('Data loaded:', data, 'Error:', error);
-        if (!active) return;
+    const loadData = async () => {
+      try {
+        const { data } = await supabase
+          .from('city_settings')
+          .select('city_name, logo_url, population')
+          .eq('id', 'global')
+          .maybeSingle();
+
         if (data) {
-          console.log('Setting state with data:', data);
           setSrc(data.logo_url || null);
           setCityName(data.city_name || "שם העיר");
           setPopulation(data.population || 342857);
-        } else {
-          console.log('No data found, using defaults');
-          setSrc(null);
-          setCityName("שם העיר");
-          setPopulation(342857);
         }
-      });
-    const ch = supabase
-      .channel('rt-city-settings-dialog')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'city_settings' }, (payload) => {
-        console.log('Realtime update:', payload);
-        const row: any = (payload.new as any) || (payload.old as any);
+      } catch (error) {
+        console.error('Error loading city settings:', error);
+      }
+    };
+
+    loadData();
+
+    // Listen for real-time updates
+    const channel = supabase
+      .channel('city-settings-updates')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'city_settings',
+        filter: 'id=eq.global'
+      }, (payload) => {
+        const row: any = payload.new || payload.old;
         if (row) {
           setSrc(row.logo_url || null);
           setCityName(row.city_name || "שם העיר");
@@ -58,127 +60,145 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
         }
       })
       .subscribe();
-    return () => { active = false; supabase.removeChannel(ch); };
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
+  // Update form inputs when dialog opens or data changes
   useEffect(() => {
-    console.log('Dialog opened, current state:', { cityName, population, src });
     if (open) {
-      console.log('Setting input values:', { cityName, population });
       setCityInput(cityName);
       setPopulationInput(population.toString());
-      setUrlInput(src || "");
+      setUrlInput("");
+      setFileDataUrl(null);
+      setFile(null);
     }
-  }, [open, cityName, population, src]);
+  }, [open, cityName, population]);
 
-  const displaySrc = useMemo(() => fileDataUrl || urlInput.trim() || src || "/placeholder.svg", [fileDataUrl, urlInput, src]);
+  const displaySrc = useMemo(() => 
+    fileDataUrl || urlInput.trim() || src || "/placeholder.svg", 
+    [fileDataUrl, urlInput, src]
+  );
 
   const handleFile = async (f?: File | null) => {
-    if (!f) { setFileDataUrl(null); setFile(null); return; }
-    const toDataURL = (file: File) => new Promise<string>((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result));
-      r.onerror = reject;
-      r.readAsDataURL(file);
-    });
-    const dataUrl = await toDataURL(f);
-    setFileDataUrl(dataUrl);
-    setFile(f);
+    if (!f) { 
+      setFileDataUrl(null); 
+      setFile(null); 
+      return; 
+    }
+    
+    try {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = reject;
+        reader.readAsDataURL(f);
+      });
+      
+      setFileDataUrl(dataUrl);
+      setFile(f);
+    } catch (error) {
+      console.error('Error reading file:', error);
+    }
   };
 
   const handleSave = async () => {
-    console.log('HandleSave called with:', { cityInput, populationInput, urlInput, file });
-    const newCity = cityInput.trim() ? cityInput.trim() : cityName;
-    const newPopulation = populationInput.trim() ? parseInt(populationInput.trim()) : population;
+    if (isLoading) return;
+    
+    setIsLoading(true);
+    const newCity = cityInput.trim() || cityName;
+    const newPopulation = populationInput.trim() ? parseInt(populationInput.trim()) || population : population;
     let logoUrl: string | null = null;
 
     try {
+      // Handle file upload
       if (file) {
-        console.log('Uploading file:', file.name);
-        const path = `logo/global-${Date.now()}-${file.name}`;
+        const fileExt = file.name.split('.').pop();
+        const fileName = `global-${Date.now()}.${fileExt}`;
+        const filePath = `logo/${fileName}`;
+
         const { error: uploadError } = await supabase.storage
           .from('branding')
-          .upload(path, file, { upsert: true, contentType: file.type });
+          .upload(filePath, file, { 
+            cacheControl: '3600',
+            upsert: true 
+          });
+
         if (uploadError) throw uploadError;
-        const { data: pub } = supabase.storage.from('branding').getPublicUrl(path);
-        logoUrl = pub.publicUrl;
-        console.log('File uploaded to:', logoUrl);
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('branding')
+          .getPublicUrl(filePath);
+        
+        logoUrl = publicUrl;
       } else if (urlInput.trim()) {
         logoUrl = urlInput.trim();
-        console.log('Using URL input:', logoUrl);
       } else {
         logoUrl = src;
-        console.log('Using existing src:', logoUrl);
       }
 
-      // Check if record exists
-      console.log('Checking if record exists...');
-      const { data: existing } = await supabase
+      // Save to database using upsert
+      const { error } = await supabase
         .from('city_settings')
-        .select('id')
-        .eq('id', 'global')
-        .maybeSingle();
+        .upsert({ 
+          id: 'global', 
+          city_name: newCity, 
+          logo_url: logoUrl,
+          population: newPopulation 
+        }, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
 
-      console.log('Existing record:', existing);
+      if (error) throw error;
 
-      if (existing) {
-        // Update existing record
-        console.log('Updating existing record with:', { newCity, logoUrl, newPopulation });
-        const { error } = await supabase
-          .from('city_settings')
-          .update({ 
-            city_name: newCity, 
-            logo_url: logoUrl ?? null,
-            population: newPopulation 
-          })
-          .eq('id', 'global');
-        if (error) {
-          console.error('Update error:', error);
-          throw error;
-        }
-        console.log('Update successful');
-      } else {
-        // Insert new record
-        console.log('Inserting new record with:', { newCity, logoUrl, newPopulation });
-        const { error } = await supabase
-          .from('city_settings')
-          .insert({ 
-            id: 'global', 
-            city_name: newCity, 
-            logo_url: logoUrl ?? null,
-            population: newPopulation 
-          });
-        if (error) {
-          console.error('Insert error:', error);
-          throw error;
-        }
-        console.log('Insert successful');
-      }
-
-      setSrc(logoUrl ?? null);
+      // Update local state
+      setSrc(logoUrl);
       setCityName(newCity);
       setPopulation(newPopulation);
-      setFileDataUrl(null);
-      setFile(null);
-      setUrlInput("");
+      
+      // Close dialog
       onOpenChange(false);
-      console.log('Save completed successfully');
-    } catch (e) {
-      console.error('Failed to save city settings', e);
+      
+    } catch (error) {
+      console.error('Failed to save city settings:', error);
+      alert('שגיאה בשמירת הנתונים. אנא נסה שוב.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleRemove = async () => {
+    if (isLoading) return;
+    
+    setIsLoading(true);
     try {
-      await supabase
+      const { error } = await supabase
         .from('city_settings')
-        .upsert({ id: 'global', city_name: cityName, logo_url: null }, { onConflict: 'id' });
+        .upsert({ 
+          id: 'global', 
+          city_name: cityName, 
+          logo_url: null,
+          population: population 
+        }, { 
+          onConflict: 'id',
+          ignoreDuplicates: false 
+        });
+
+      if (error) throw error;
+
       setSrc(null);
       setFileDataUrl(null);
       setUrlInput("");
       onOpenChange(false);
-    } catch (e) {
-      console.error('Failed to remove logo', e);
+      
+    } catch (error) {
+      console.error('Failed to remove logo:', error);
+      alert('שגיאה במחיקת הלוגו. אנא נסה שוב.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -193,39 +213,73 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
             <ImageIcon className="h-5 w-5 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">עדכון שם העיר והלוגו</span>
           </div>
+          
           <div>
             <label className="text-sm mb-1 block">שם העיר</label>
-            <Input placeholder="שם העיר" value={cityInput} onChange={(e)=>setCityInput(e.target.value)} />
+            <Input 
+              placeholder="שם העיר" 
+              value={cityInput} 
+              onChange={(e) => setCityInput(e.target.value)}
+              disabled={isLoading}
+            />
           </div>
+          
           <div>
             <label className="text-sm mb-1 block">אוכלוסיית העיר</label>
             <Input 
               type="number" 
               placeholder="אוכלוסיית העיר" 
               value={populationInput} 
-              onChange={(e)=>setPopulationInput(e.target.value)} 
+              onChange={(e) => setPopulationInput(e.target.value)}
+              disabled={isLoading}
             />
           </div>
+          
           <div>
             <label className="text-sm mb-1 block">תצוגה מקדימה</label>
             <div className="flex items-center gap-3">
               <img src={displaySrc} alt="תצוגה מקדימה - לוגו" className="h-12 w-auto" />
-              <span className="text-sm text-muted-foreground">שם: {cityInput || cityName}</span>
+              <span className="text-sm text-muted-foreground">
+                שם: {cityInput || cityName}
+              </span>
             </div>
           </div>
+          
           <div>
             <label className="text-sm mb-1 block">העלאת קובץ</label>
-            <Input type="file" accept="image/*" onChange={(e)=>handleFile(e.target.files?.[0])} />
+            <Input 
+              type="file" 
+              accept="image/*" 
+              onChange={(e) => handleFile(e.target.files?.[0])}
+              disabled={isLoading}
+            />
           </div>
+          
           <div>
             <label className="text-sm mb-1 block">כתובת תמונה (URL)</label>
-            <Input placeholder="https://example.com/logo.png" value={urlInput} onChange={(e)=>setUrlInput(e.target.value)} />
+            <Input 
+              placeholder="https://example.com/logo.png" 
+              value={urlInput} 
+              onChange={(e) => setUrlInput(e.target.value)}
+              disabled={isLoading}
+            />
           </div>
+          
           <div className="flex items-center gap-3">
-            <Button onClick={handleSave} className="inline-flex items-center gap-2">
-              <Save className="h-4 w-4" /> שמירה
+            <Button 
+              onClick={handleSave} 
+              className="inline-flex items-center gap-2"
+              disabled={isLoading}
+            >
+              <Save className="h-4 w-4" /> 
+              {isLoading ? "שומר..." : "שמירה"}
             </Button>
-            <Button variant="destructive" onClick={handleRemove} className="inline-flex items-center gap-2">
+            <Button 
+              variant="destructive" 
+              onClick={handleRemove} 
+              className="inline-flex items-center gap-2"
+              disabled={isLoading}
+            >
               <Trash2 className="h-4 w-4" /> מחיקה
             </Button>
           </div>
