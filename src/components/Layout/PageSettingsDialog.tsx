@@ -75,12 +75,14 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
   };
 
   const handleSave = async () => {
+    console.log('HandleSave called with:', { cityInput, populationInput, urlInput, file });
     const newCity = cityInput.trim() ? cityInput.trim() : cityName;
     const newPopulation = populationInput.trim() ? parseInt(populationInput.trim()) : population;
     let logoUrl: string | null = null;
 
     try {
       if (file) {
+        console.log('Uploading file:', file.name);
         const path = `logo/global-${Date.now()}-${file.name}`;
         const { error: uploadError } = await supabase.storage
           .from('branding')
@@ -88,21 +90,28 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
         if (uploadError) throw uploadError;
         const { data: pub } = supabase.storage.from('branding').getPublicUrl(path);
         logoUrl = pub.publicUrl;
+        console.log('File uploaded to:', logoUrl);
       } else if (urlInput.trim()) {
         logoUrl = urlInput.trim();
+        console.log('Using URL input:', logoUrl);
       } else {
         logoUrl = src;
+        console.log('Using existing src:', logoUrl);
       }
 
       // Check if record exists
+      console.log('Checking if record exists...');
       const { data: existing } = await supabase
         .from('city_settings')
         .select('id')
         .eq('id', 'global')
         .maybeSingle();
 
+      console.log('Existing record:', existing);
+
       if (existing) {
         // Update existing record
+        console.log('Updating existing record with:', { newCity, logoUrl, newPopulation });
         const { error } = await supabase
           .from('city_settings')
           .update({ 
@@ -111,9 +120,14 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
             population: newPopulation 
           })
           .eq('id', 'global');
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
+        console.log('Update successful');
       } else {
         // Insert new record
+        console.log('Inserting new record with:', { newCity, logoUrl, newPopulation });
         const { error } = await supabase
           .from('city_settings')
           .insert({ 
@@ -122,7 +136,11 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
             logo_url: logoUrl ?? null,
             population: newPopulation 
           });
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
+        console.log('Insert successful');
       }
 
       setSrc(logoUrl ?? null);
@@ -132,6 +150,7 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
       setFile(null);
       setUrlInput("");
       onOpenChange(false);
+      console.log('Save completed successfully');
     } catch (e) {
       console.error('Failed to save city settings', e);
     }
