@@ -126,7 +126,10 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
             upsert: true 
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error('שגיאה בהעלאת הקובץ');
+        }
 
         const { data: { publicUrl } } = supabase.storage
           .from('branding')
@@ -139,8 +142,8 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
         logoUrl = src;
       }
 
-      // Save to database using upsert
-      const { error } = await supabase
+      // Try upsert first, then insert if needed
+      let { data, error } = await supabase
         .from('city_settings')
         .upsert({ 
           id: 'global', 
@@ -150,21 +153,44 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
         }, { 
           onConflict: 'id',
           ignoreDuplicates: false 
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Upsert error:', error);
+        // If upsert fails, try direct update
+        const { error: updateError } = await supabase
+          .from('city_settings')
+          .update({ 
+            city_name: newCity, 
+            logo_url: logoUrl,
+            population: newPopulation 
+          })
+          .eq('id', 'global');
+        
+        if (updateError) {
+          console.error('Update error:', updateError);
+          throw new Error('שגיאה בעדכון הנתונים');
+        }
+      }
 
       // Update local state
       setSrc(logoUrl);
       setCityName(newCity);
       setPopulation(newPopulation);
       
+      // Reset form
+      setFileDataUrl(null);
+      setFile(null);
+      setUrlInput("");
+      
       // Close dialog
       onOpenChange(false);
       
     } catch (error) {
       console.error('Failed to save city settings:', error);
-      alert('שגיאה בשמירת הנתונים. אנא נסה שוב.');
+      const message = error instanceof Error ? error.message : 'שגיאה בשמירת הנתונים. אנא נסה שוב.';
+      alert(message);
     } finally {
       setIsLoading(false);
     }
