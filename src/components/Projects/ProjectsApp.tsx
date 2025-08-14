@@ -876,11 +876,27 @@ function openEdit(p: Project) {
   <Input type="number" min={0} max={100} value={(form.progress as number | null) ?? 0} onChange={(e) => setForm((f) => ({ ...f, progress: Math.max(0, Math.min(100, Number(e.target.value) || 0)) }))} />
 </div>
 
+<div>
+  <Label>לוגו הפרויקט</Label>
+  <Input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] || null)} />
+  <p className="text-xs text-muted-foreground mt-1">
+    {logoFile ? `נבחר קובץ: ${logoFile.name}` : editing?.logo_url ? 'קיים לוגו' : 'לא נבחר לוגו'}
+  </p>
+</div>
+
 <div className="md:col-span-2">
   <Label>תמונות פרויקט</Label>
   <Input type="file" accept="image/*" multiple onChange={(e) => setFiles(Array.from(e.target.files || []))} />
   <p className="text-xs text-muted-foreground mt-1">
     נבחרו {files.length} קבצים. {editing?.image_urls?.length ? `(${editing.image_urls.length} תמונות קיימות)` : ""}
+  </p>
+</div>
+
+<div className="md:col-span-2">
+  <Label>קבצי PDF</Label>
+  <Input type="file" accept=".pdf" multiple onChange={(e) => setPdfFiles(Array.from(e.target.files || []))} />
+  <p className="text-xs text-muted-foreground mt-1">
+    נבחרו {pdfFiles.length} קבצי PDF. {editing?.file_urls?.length ? `(${editing.file_urls.length} קבצים קיימים)` : ""}
   </p>
 </div>
 </div>

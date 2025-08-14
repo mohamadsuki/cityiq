@@ -460,6 +460,7 @@ export type Database = {
           funding_source: string | null
           id: string
           image_urls: string[] | null
+          logo_url: string | null
           name: string | null
           notes: string | null
           progress: number | null
@@ -483,6 +484,7 @@ export type Database = {
           funding_source?: string | null
           id?: string
           image_urls?: string[] | null
+          logo_url?: string | null
           name?: string | null
           notes?: string | null
           progress?: number | null
@@ -506,6 +508,7 @@ export type Database = {
           funding_source?: string | null
           id?: string
           image_urls?: string[] | null
+          logo_url?: string | null
           name?: string | null
           notes?: string | null
           progress?: number | null
