@@ -94,19 +94,43 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
         logoUrl = src;
       }
 
-      const { error } = await supabase
+      // Check if record exists
+      const { data: existing } = await supabase
         .from('city_settings')
-        .upsert({ 
-          id: 'global', 
-          city_name: newCity, 
-          logo_url: logoUrl ?? null,
-          population: newPopulation 
-        }, { onConflict: 'id' });
-      if (error) throw error;
+        .select('id')
+        .eq('id', 'global')
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing record
+        const { error } = await supabase
+          .from('city_settings')
+          .update({ 
+            city_name: newCity, 
+            logo_url: logoUrl ?? null,
+            population: newPopulation 
+          })
+          .eq('id', 'global');
+        if (error) throw error;
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('city_settings')
+          .insert({ 
+            id: 'global', 
+            city_name: newCity, 
+            logo_url: logoUrl ?? null,
+            population: newPopulation 
+          });
+        if (error) throw error;
+      }
 
       setSrc(logoUrl ?? null);
       setCityName(newCity);
       setPopulation(newPopulation);
+      setFileDataUrl(null);
+      setFile(null);
+      setUrlInput("");
       onOpenChange(false);
     } catch (e) {
       console.error('Failed to save city settings', e);
