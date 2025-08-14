@@ -20,12 +20,14 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
   const [urlInput, setUrlInput] = useState("");
   const [cityName, setCityName] = useState<string>("שם העיר");
   const [cityInput, setCityInput] = useState<string>("");
+  const [population, setPopulation] = useState<number>(342857);
+  const [populationInput, setPopulationInput] = useState<string>("");
 
   useEffect(() => {
     let active = true;
     supabase
       .from('city_settings')
-      .select('city_name, logo_url')
+      .select('city_name, logo_url, population')
       .eq('id', 'global')
       .maybeSingle()
       .then(({ data }) => {
@@ -33,6 +35,7 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
         if (data) {
           setSrc(data.logo_url || null);
           setCityName(data.city_name || "שם העיר");
+          setPopulation(data.population || 342857);
         }
       });
     const ch = supabase
@@ -42,6 +45,7 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
         if (row) {
           setSrc(row.logo_url || null);
           setCityName(row.city_name || "שם העיר");
+          setPopulation(row.population || 342857);
         }
       })
       .subscribe();
@@ -51,8 +55,9 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
   useEffect(() => {
     if (open) {
       setCityInput(cityName);
+      setPopulationInput(population.toString());
     }
-  }, [open, cityName]);
+  }, [open, cityName, population]);
 
   const displaySrc = useMemo(() => fileDataUrl || urlInput.trim() || src || "/placeholder.svg", [fileDataUrl, urlInput, src]);
 
@@ -71,6 +76,7 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
 
   const handleSave = async () => {
     const newCity = cityInput.trim() ? cityInput.trim() : cityName;
+    const newPopulation = populationInput.trim() ? parseInt(populationInput.trim()) : population;
     let logoUrl: string | null = null;
 
     try {
@@ -90,11 +96,17 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
 
       const { error } = await supabase
         .from('city_settings')
-        .upsert({ id: 'global', city_name: newCity, logo_url: logoUrl ?? null }, { onConflict: 'id' });
+        .upsert({ 
+          id: 'global', 
+          city_name: newCity, 
+          logo_url: logoUrl ?? null,
+          population: newPopulation 
+        }, { onConflict: 'id' });
       if (error) throw error;
 
       setSrc(logoUrl ?? null);
       setCityName(newCity);
+      setPopulation(newPopulation);
       onOpenChange(false);
     } catch (e) {
       console.error('Failed to save city settings', e);
@@ -129,6 +141,15 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
           <div>
             <label className="text-sm mb-1 block">שם העיר</label>
             <Input placeholder="שם העיר" value={cityInput} onChange={(e)=>setCityInput(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm mb-1 block">אוכלוסיית העיר</label>
+            <Input 
+              type="number" 
+              placeholder="אוכלוסיית העיר" 
+              value={populationInput} 
+              onChange={(e)=>setPopulationInput(e.target.value)} 
+            />
           </div>
           <div>
             <label className="text-sm mb-1 block">תצוגה מקדימה</label>

@@ -119,6 +119,33 @@ export default function OverviewDashboard() {
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'year' | 'custom'>('day');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
+  // Load real-time statistics from database
+  const { data: statsData } = useQuery({
+    queryKey: ['overview-stats'],
+    queryFn: async () => {
+      const [activeProjectsRes, institutionsRes, citySettingsRes] = await Promise.all([
+        supabase
+          .from('projects')
+          .select('id', { count: 'exact', head: true })
+          .neq('status', 'completed'),
+        supabase
+          .from('institutions')
+          .select('id', { count: 'exact', head: true }),
+        supabase
+          .from('city_settings')
+          .select('population')
+          .eq('id', 'global')
+          .maybeSingle()
+      ]);
+
+      return {
+        activeProjects: activeProjectsRes.count || 0,
+        institutions: institutionsRes.count || 0,
+        population: citySettingsRes.data?.population || 342857
+      };
+    }
+  });
+
   // Load tasks with creator role marker for filtering
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ['tasks-overview'],
@@ -165,9 +192,23 @@ export default function OverviewDashboard() {
       })
       .subscribe();
 
+    const ch3 = supabase
+      .channel('rt-overview-stats')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['overview-stats'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'institutions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['overview-stats'] });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'city_settings' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['overview-stats'] });
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(ch1);
       supabase.removeChannel(ch2);
+      supabase.removeChannel(ch3);
     };
   }, [queryClient, user?.id]);
 
@@ -344,22 +385,22 @@ export default function OverviewDashboard() {
         />
         <KPICard
           title="אוכלוסיית העיר"
-          value="342,857"
+          value={statsData?.population?.toLocaleString() || "342,857"}
           change="+2.1% גידול שנתי"
           icon={Users}
           trend="up"
         />
         <KPICard
           title="פרויקטים פעילים"
-          value="127"
-          change="15 פרויקטים חדשים"
+          value={statsData?.activeProjects?.toString() || "0"}
+          change="פרויקטים שלא הושלמו"
           icon={Building2}
           trend="up"
         />
         <KPICard
           title="מוסדות חינוך"
-          value="89"
-          change="יציב"
+          value={statsData?.institutions?.toString() || "0"}
+          change="מוסדות במערכת"
           icon={GraduationCap}
           trend="stable"
         />
