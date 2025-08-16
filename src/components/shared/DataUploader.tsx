@@ -3,6 +3,12 @@ import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -21,6 +27,14 @@ export type UploadContext =
 interface DataUploaderProps {
   context?: UploadContext;
   onUploadSuccess?: () => void;
+}
+
+interface DebugLog {
+  id: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  message: string;
+  details?: any;
+  timestamp: Date;
 }
 
 // Very lightweight header-based classifier
@@ -60,16 +74,17 @@ function detectTarget(headers: string[], ctx: UploadContext): { table: string | 
     return { table: "institutions", reason: "זוהה מבנה מוסדות חינוך" };
   }
 
-  // Finance regular budget - Enhanced detection
+  // Finance regular budget - Enhanced detection with more Hebrew variations
   if (
     ctx === "finance" ||
     ctx === "regular_budget" ||
-    hasWords("קטגוריה", "category", "סעיף", "פריט") ||
-    hasWords("תקציב מאושר", "budget_amount", "תקציב") ||
-    hasWords("ביצוע בפועל", "actual_amount", "ביצוע", "בפועל") ||
-    hasWords("הכנסה", "income", "הוצאה", "expense") ||
-    hasWords("ארנונה", "אגרת", "היטל", "מענק") ||
-    hasAny("f7", "f8", "f9", "f10", "f11") // Excel cell references for budget
+    hasWords("קטגוריה", "category", "סעיף", "פריט", "פרט", "תיאור") ||
+    hasWords("תקציב מאושר", "budget_amount", "תקציב", "מאושר", "תקציב שנתי") ||
+    hasWords("ביצוע בפועל", "actual_amount", "ביצוע", "בפועל", "ביצוע שנתי") ||
+    hasWords("הכנסה", "income", "הוצאה", "expense", "הכנסות", "הוצאות") ||
+    hasWords("ארנונה", "אגרת", "היטל", "מענק", "קנס", "רישיון") ||
+    hasWords("סכום", "כסף", "שח", "₪", "מיליון", "אלף") ||
+    hasAny("f7", "f8", "f9", "f10", "f11", "g7", "g8", "h7", "h8") // Excel cell references for budget
   ) {
     return { table: "regular_budget", reason: "זוהה מבנה תקציב רגיל" };
   }
@@ -117,10 +132,22 @@ function detectTarget(headers: string[], ctx: UploadContext): { table: string | 
   return { table: null, reason: "לא זוהה מבנה נתונים מוכר" };
 }
 
-function normalizeKey(k: string): string {
+function normalizeKey(k: string, debugLogs?: DebugLog[]): string {
   const key = k.trim();
   
-  console.log(`=== NORMALIZING KEY: "${key}" ===`);
+  const addLog = (type: DebugLog['type'], message: string, details?: any) => {
+    if (debugLogs) {
+      debugLogs.push({
+        id: Math.random().toString(),
+        type,
+        message,
+        details,
+        timestamp: new Date()
+      });
+    }
+  };
+  
+  addLog('info', `מנרמל מפתח: "${key}"`);
   
   const map: Record<string, string> = {
     // Common Hebrew -> English  
@@ -217,7 +244,7 @@ function normalizeKey(k: string): string {
 
   // First try exact match
   if (map[key]) {
-    console.log(`  Exact match found: "${key}" -> "${map[key]}"`);
+    addLog('success', `התאמה מדויקת: "${key}" -> "${map[key]}"`);
     return map[key];
   }
 
@@ -225,59 +252,74 @@ function normalizeKey(k: string): string {
   const lowerKey = key.toLowerCase();
   for (const [hebrewKey, englishValue] of Object.entries(map)) {
     if (hebrewKey.toLowerCase() === lowerKey) {
-      console.log(`  Case insensitive match: "${key}" -> "${englishValue}"`);
+      addLog('success', `התאמה ללא רגישות לגודל אותיות: "${key}" -> "${englishValue}"`);
       return englishValue;
     }
   }
 
-  // Check if key contains important Hebrew terms
+  // Enhanced Hebrew terms recognition
   if (key.includes('תקציב') && !key.includes('ביצוע')) {
-    console.log(`  Contains "תקציב" -> "budget_amount"`);
+    addLog('info', `מכיל "תקציב" -> "budget_amount"`);
     return 'budget_amount';
   }
-  if (key.includes('ביצוע') || key.includes('בפועל')) {
-    console.log(`  Contains "ביצוע" or "בפועל" -> "actual_amount"`);
+  if (key.includes('ביצוע') || key.includes('בפועל') || key.includes('מבוצע')) {
+    addLog('info', `מכיל "ביצוע/בפועל/מבוצע" -> "actual_amount"`);
     return 'actual_amount';
   }
-  if (key.includes('קטגוריה') || key.includes('סעיף') || key.includes('שם')) {
-    console.log(`  Contains "קטגוריה", "סעיף", or "שם" -> "category_name"`);
+  if (key.includes('קטגוריה') || key.includes('סעיף') || key.includes('שם') || key.includes('תיאור') || key.includes('פריט')) {
+    addLog('info', `מכיל מונח מזהה קטגוריה -> "category_name"`);
     return 'category_name';
+  }
+  if (key.includes('סכום') || key.includes('כסף') || key.includes('₪') || key.includes('שח')) {
+    addLog('warning', `מכיל מונח כספי, אבל לא ברור אם תקציב או ביצוע -> "budget_amount"`);
+    return 'budget_amount';
   }
 
   // Fallback
   const fallback = key.replace(/\s+/g, "_");
-  console.log(`  No match found, using fallback: "${key}" -> "${fallback}"`);
+  addLog('warning', `לא נמצאה התאמה, משתמש בחלופה: "${key}" -> "${fallback}"`);
   return fallback;
 }
 
-function mapRowToTable(table: string, row: Record<string, any>) {
+function mapRowToTable(table: string, row: Record<string, any>, debugLogs?: DebugLog[]) {
+  const addLog = (type: DebugLog['type'], message: string, details?: any) => {
+    if (debugLogs) {
+      debugLogs.push({
+        id: Math.random().toString(),
+        type,
+        message,
+        details,
+        timestamp: new Date()
+      });
+    }
+  };
+
   // Normalize keys
   const norm: Record<string, any> = {};
   Object.keys(row).forEach((k) => {
-    const nk = normalizeKey(String(k));
+    const nk = normalizeKey(String(k), debugLogs);
     norm[nk] = row[k];
   });
 
   switch (table) {
     case "regular_budget":
-      // Enhanced debug logging for regular budget
-      console.log("=== PROCESSING REGULAR BUDGET ROW ===");
-      console.log("Original row keys:", Object.keys(row));
-      console.log("Original row values:", Object.values(row));
-      console.log("Row sample:", JSON.stringify(row, null, 2));
-      console.log("Normalized keys mapping:");
-      Object.keys(row).forEach(k => {
-        console.log(`  "${k}" -> "${normalizeKey(k)}"`);
-      });
-      console.log("Normalized row:", norm);
+      addLog('info', 'מעבד שורת תקציב רגיל');
+      addLog('info', `מפתחות מקוריים: ${Object.keys(row).join(', ')}`);
+      addLog('info', `ערכים לדוגמה: ${Object.values(row).slice(0, 3).join(', ')}`);
+      
+      const keyMappings = Object.keys(row).map(k => ({
+        original: k,
+        normalized: normalizeKey(k, debugLogs)
+      }));
+      addLog('info', 'מיפוי מפתחות:', keyMappings);
       
       // Check for meaningful content - be more lenient
       const meaningfulFields = ['category_name', 'name', 'budget_amount', 'actual_amount'];
-      const hasMeaningfulData = meaningfulFields.some(field => {
+      const validFields = meaningfulFields.filter(field => {
         const value = norm[field];
         const isValidValue = value !== null && value !== undefined && value !== "" && String(value).trim() !== "";
         if (isValidValue) {
-          console.log(`Found meaningful data in field "${field}": "${value}"`);
+          addLog('success', `נמצא נתון משמעותי בשדה "${field}": "${value}"`);
         }
         return isValidValue;
       });
@@ -287,24 +329,22 @@ function mapRowToTable(table: string, row: Record<string, any>) {
         v !== null && v !== undefined && v !== "" && String(v).trim() !== ""
       );
       
-      console.log("Meaningful data check:", hasMeaningfulData);
-      console.log("Any data check:", hasAnyData);
-      
-      if (!hasMeaningfulData && !hasAnyData) {
-        console.log("Row rejected: no meaningful data found");
+      if (validFields.length === 0 && !hasAnyData) {
+        addLog('warning', 'שורה נדחתה: לא נמצאו נתונים משמעותיים');
         return null;
       }
       
+      addLog('success', `שדות תקינים: ${validFields.join(', ')}`);
+      
       // Helper function to parse numbers safely
-      const parseNumber = (val: any) => {
-        console.log(`Parsing number: "${val}" (type: ${typeof val})`);
+      const parseNumber = (val: any, fieldName: string) => {
         if (val === null || val === undefined || val === '') {
-          console.log("  -> null (empty value)");
+          addLog('info', `${fieldName}: ערך ריק`);
           return null;
         }
         
         // Handle different number formats
-        let numStr = String(val).replace(/,/g, '').replace(/₪/g, '').trim();
+        let numStr = String(val).replace(/,/g, '').replace(/₪/g, '').replace(/שח/g, '').trim();
         
         // Handle negative numbers in parentheses: (1000) -> -1000
         if (numStr.match(/^\(.*\)$/)) {
@@ -313,7 +353,13 @@ function mapRowToTable(table: string, row: Record<string, any>) {
         
         const num = Number(numStr);
         const result = isNaN(num) ? null : num;
-        console.log(`  -> ${result}`);
+        
+        if (result !== null) {
+          addLog('success', `${fieldName}: פוענח בהצלחה "${val}" -> ${result}`);
+        } else {
+          addLog('warning', `${fieldName}: לא ניתן לפענח "${val}"`);
+        }
+        
         return result;
       };
       
@@ -333,13 +379,13 @@ function mapRowToTable(table: string, row: Record<string, any>) {
       const result = {
         category_type: categoryType,
         category_name: categoryName,
-        budget_amount: parseNumber(norm.budget_amount),
-        actual_amount: parseNumber(norm.actual_amount),
+        budget_amount: parseNumber(norm.budget_amount, 'תקציב'),
+        actual_amount: parseNumber(norm.actual_amount, 'ביצוע'),
         excel_cell_ref: norm.excel_cell_ref,
         year: norm.year ? Number(norm.year) : new Date().getFullYear(),
       };
       
-      console.log("Processed result:", result);
+      addLog('success', `שורה מעובדת בהצלחה: ${categoryName}`, result);
       return result;
     case "tabarim":
       return {
@@ -444,39 +490,63 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
   const [rows, setRows] = useState<any[]>([]);
   const [detected, setDetected] = useState<{ table: string | null; reason: string }>({ table: null, reason: "" });
   const [busy, setBusy] = useState(false);
+  const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
+  const [showDebug, setShowDebug] = useState(false);
+  const [headers, setHeaders] = useState<string[]>([]);
 
   const onFile = async (f: File) => {
     setFile(f);
+    setDebugLogs([]);
+    const logs: DebugLog[] = [];
+    
+    const addLog = (type: DebugLog['type'], message: string, details?: any) => {
+      logs.push({
+        id: Math.random().toString(),
+        type,
+        message,
+        details,
+        timestamp: new Date()
+      });
+    };
+
     try {
+      addLog('info', `קורא קובץ: ${f.name}`);
+      
       const ab = await f.arrayBuffer();
       const wb = XLSX.read(ab, { type: "array" });
       const first = wb.SheetNames[0];
       const sheet = wb.Sheets[first];
       const data: any[] = XLSX.utils.sheet_to_json(sheet, { defval: null });
+      
+      addLog('success', `נקראו ${data.length} שורות מהקובץ`);
+      
       setRows(data);
       
-      // Enhanced debug logging - log first few rows to see structure
-      console.log("=== EXCEL FILE DEBUG ===");
-      console.log("First 3 rows:", data.slice(0, 3));
-      console.log("Headers from first row keys:", Object.keys(data[0] || {}));
+      const extractedHeaders = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] as string[];
+      const finalHeaders = extractedHeaders || Object.keys(data[0] || {});
+      setHeaders(finalHeaders);
       
-      const headers = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] as string[];
-      console.log("Headers from sheet:", headers);
+      addLog('info', `זוהו כותרות: ${finalHeaders.join(', ')}`);
       
       // Test the normalization process
       if (data[0]) {
-        console.log("Testing normalization:");
+        addLog('info', 'בודק נרמול כותרות:');
         Object.keys(data[0]).forEach(key => {
-          const normalized = normalizeKey(key);
-          console.log(`"${key}" → "${normalized}"`);
+          const normalized = normalizeKey(key, logs);
         });
       }
       
-      const d = detectTarget(headers || Object.keys(data[0] || {}), context);
+      const d = detectTarget(finalHeaders, context);
       setDetected(d);
-      toast({ title: "קובץ נטען", description: `${data.length} שורות. ${d.reason}` });
+      
+      addLog(d.table ? 'success' : 'warning', d.reason);
+      addLog('info', `השלמת ניתוח הקובץ`);
+      
+      setDebugLogs(logs);
+      toast({ title: "קובץ נטען בהצלחה", description: `${data.length} שורות. ${d.reason}` });
     } catch (e: any) {
-      console.error("Error reading file:", e);
+      addLog('error', `שגיאה בקריאת הקובץ: ${e.message}`);
+      setDebugLogs(logs);      
       toast({ title: "שגיאה בקריאת הקובץ", description: e.message, variant: "destructive" });
     }
   };
@@ -552,14 +622,27 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       };
 
       const deptSlug = inferDept(detected.table!, context);
+      const processingLogs: DebugLog[] = [];
+      
+      const addProcessingLog = (type: DebugLog['type'], message: string, details?: any) => {
+        processingLogs.push({
+          id: Math.random().toString(),
+          type,
+          message,
+          details,
+          timestamp: new Date()
+        });
+      };
+
+      addProcessingLog('info', `מתחיל לעבד ${rows.length} שורות`);
+
       const mapped = rows.map((r, index) => {
-        console.log(`=== Processing row ${index + 1} ===`);
-        const mappedRow = mapRowToTable(detected.table!, r);
-        console.log(`Mapped row ${index + 1}:`, mappedRow);
+        addProcessingLog('info', `מעבד שורה ${index + 1}`);
+        const mappedRow = mapRowToTable(detected.table!, r, processingLogs);
         
         // Skip null rows (invalid data)
         if (mappedRow === null) {
-          console.log(`Row ${index + 1} is null, skipping`);
+          addProcessingLog('warning', `שורה ${index + 1} דולגה - אין נתונים תקינים`);
           return null;
         }
         
@@ -570,13 +653,11 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
           ...(deptSlug && detected.table !== 'regular_budget' ? { department_slug: deptSlug } : {})
         };
         
-        console.log(`Final row ${index + 1}:`, result);
+        addProcessingLog('success', `שורה ${index + 1} עובדה בהצלחה`);
         return result;
       }).filter(row => row !== null); // Remove null rows first
       
-      console.log("=== AFTER MAPPING AND NULL FILTERING ===");
-      console.log("Mapped rows count:", mapped.length);
-      console.log("Sample mapped rows:", mapped.slice(0, 3));
+      addProcessingLog('info', `לאחר מיפוי: ${mapped.length} שורות תקינות`);
       
       // More lenient filtering - only filter out rows that are completely empty
       const filtered = mapped.filter((obj) => {
@@ -587,22 +668,28 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
           const hasBudget = budgetObj.budget_amount !== null && budgetObj.budget_amount !== undefined;
           const hasActual = budgetObj.actual_amount !== null && budgetObj.actual_amount !== undefined;
           const isValid = hasCategory || hasBudget || hasActual;
-          console.log(`Regular budget row validation - category: "${budgetObj.category_name}", budget: ${budgetObj.budget_amount}, actual: ${budgetObj.actual_amount}, valid: ${isValid}`);
+          
+          if (!isValid) {
+            addProcessingLog('warning', `שורת תקציב נדחתה - קטגוריה: "${budgetObj.category_name}", תקציב: ${budgetObj.budget_amount}, ביצוע: ${budgetObj.actual_amount}`);
+          }
           return isValid;
         }
         
         // For other tables, use the original logic
         const hasContent = Object.values(obj).some((v) => v !== null && v !== undefined && v !== "");
-        console.log("Row content check:", hasContent, obj);
+        if (!hasContent) {
+          addProcessingLog('warning', 'שורה נדחתה - אין תוכן');
+        }
         return hasContent;
       });
       
-      console.log("=== AFTER FINAL FILTERING ===");
-      console.log("Filtered rows count:", filtered.length);
-      console.log("Sample filtered rows:", filtered.slice(0, 3));
+      addProcessingLog('info', `לאחר סינון סופי: ${filtered.length} שורות תקינות`);
+      setDebugLogs([...debugLogs, ...processingLogs]);
 
       if (filtered.length === 0) {
-        toast({ title: "אין נתונים לשיבוץ", description: "בדוק/י את הקובץ והכותרות", variant: "destructive" });
+        addProcessingLog('error', 'לא נמצאו נתונים תקינים לייבוא');
+        setDebugLogs([...debugLogs, ...processingLogs]);
+        toast({ title: "אין נתונים לשיבוץ", description: "בדוק/י את הקובץ והכותרות בתצוגת הדיבוג", variant: "destructive" });
         setBusy(false);
         return;
       }
@@ -611,19 +698,20 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       
       // For regular_budget table, delete existing data first to replace with new data
       if (tableName === "regular_budget") {
-        console.log("Deleting existing regular_budget data for user:", userId);
+        addProcessingLog('info', 'מוחק נתוני תקציב קיימים');
         const { error: deleteError } = await supabase
           .from('regular_budget')
           .delete()
           .eq('user_id', userId);
 
         if (deleteError) {
-          console.warn("Error deleting existing data:", deleteError);
+          addProcessingLog('warning', `שגיאה במחיקת נתונים קיימים: ${deleteError.message}`);
         } else {
-          console.log("Existing regular_budget data deleted successfully");
+          addProcessingLog('success', 'נתונים קיימים נמחקו בהצלחה');
         }
       }
 
+      addProcessingLog('info', `מכניס ${filtered.length} שורות לטבלה ${tableName}`);
       const { error } = await supabase.from(tableName).insert(filtered as any);
       if (error) throw error;
 
@@ -635,6 +723,9 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
         status: "success",
       });
 
+      addProcessingLog('success', `הנתונים נקלטו בהצלחה! ${filtered.length} שורות`);
+      setDebugLogs([...debugLogs, ...processingLogs]);
+      
       toast({ title: "הנתונים נקלטו בהצלחה", description: `${filtered.length} שורות אל הטבלה ${detected.table}` });
       
       // Call success callback to refresh parent component
@@ -643,37 +734,155 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       setFile(null);
       setRows([]);
       setDetected({ table: null, reason: "" });
+      setHeaders([]);
     } catch (e: any) {
-      console.error(e);
+      const errorLogs: DebugLog[] = [{
+        id: Math.random().toString(),
+        type: 'error',
+        message: `שגיאה קריטית בייבוא: ${e.message}`,
+        details: e,
+        timestamp: new Date()
+      }];
+      setDebugLogs([...debugLogs, ...errorLogs]);
       toast({ title: "שגיאה בקליטת נתונים", description: e.message || "", variant: "destructive" });
     } finally {
       setBusy(false);
     }
   };
 
+  const getLogIcon = (type: DebugLog['type']) => {
+    switch (type) {
+      case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'error': return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case 'warning': return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      default: return <FileText className="h-4 w-4 text-blue-500" />;
+    }
+  };
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Input
-          type="file"
-          accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .xlsx"
-          onChange={(e) => e.target.files && onFile(e.target.files[0])}
-        />
-        {file && <Badge variant="secondary">{file.name}</Badge>}
-      </div>
-      {detected.table && (
-        <p className="text-sm text-muted-foreground">
-          יעד מזוהה: <span className="font-medium">{detected.table}</span> · {detected.reason}
-        </p>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">ייבוא נתונים</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Input
+              type="file"
+              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .xlsx"
+              onChange={(e) => e.target.files && onFile(e.target.files[0])}
+            />
+            {file && <Badge variant="secondary">{file.name}</Badge>}
+          </div>
+
+          {detected.table && (
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                יעד מזוהה: <span className="font-medium">{detected.table}</span> · {detected.reason}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {rows.length > 0 && (
+            <div className="text-sm text-muted-foreground">
+              <p>תצוגה מקדימה: {rows.length} שורות</p>
+              {headers.length > 0 && (
+                <p>כותרות: {headers.slice(0, 5).join(', ')}{headers.length > 5 ? '...' : ''}</p>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-between items-center">
+            {debugLogs.length > 0 && (
+              <Collapsible open={showDebug} onOpenChange={setShowDebug}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                    תצוגת דיבוג ({debugLogs.length})
+                  </Button>
+                </CollapsibleTrigger>
+              </Collapsible>
+            )}
+            <Button onClick={uploadAndIngest} disabled={busy || !file}>
+              {busy ? "מייבא..." : "ייבוא ושיבוץ"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {debugLogs.length > 0 && (
+        <Collapsible open={showDebug} onOpenChange={setShowDebug}>
+          <CollapsibleContent>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">לוג עיבוד הקובץ</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-96 w-full">
+                  <div className="space-y-2">
+                    {debugLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className={`flex items-start gap-2 p-2 rounded-md text-sm ${
+                          log.type === 'error' ? 'bg-red-50 border border-red-200' :
+                          log.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+                          log.type === 'success' ? 'bg-green-50 border border-green-200' :
+                          'bg-blue-50 border border-blue-200'
+                        }`}
+                      >
+                        {getLogIcon(log.type)}
+                        <div className="flex-1">
+                          <p className="font-medium">{log.message}</p>
+                          {log.details && (
+                            <pre className="text-xs mt-1 overflow-x-auto bg-white/50 p-1 rounded">
+                              {typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2)}
+                            </pre>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {log.timestamp.toLocaleTimeString('he-IL')}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
       )}
-      {rows.length > 0 && (
-        <p className="text-xs text-muted-foreground">תצוגה מקדימה: {rows.length} שורות</p>
+
+      {rows.length > 0 && showDebug && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">תצוגה מקדימה של הנתונים</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">כותרות הקובץ:</h4>
+                <div className="flex flex-wrap gap-1">
+                  {headers.map((header, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {header}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <Separator />
+              <div>
+                <h4 className="font-medium mb-2">3 שורות ראשונות:</h4>
+                <ScrollArea className="h-40 w-full">
+                  <pre className="text-xs bg-muted p-2 rounded">
+                    {JSON.stringify(rows.slice(0, 3), null, 2)}
+                  </pre>
+                </ScrollArea>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
-      <div className="flex justify-end">
-        <Button onClick={uploadAndIngest} disabled={busy || !file}>
-          {busy ? "מייבא..." : "ייבוא ושיבוץ"}
-        </Button>
-      </div>
     </div>
   );
 }
