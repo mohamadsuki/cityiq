@@ -89,7 +89,6 @@ export function ExcelSummaryCards() {
               <div className="text-xl font-bold text-green-800 mb-1">
                 {formatCurrency(summaryData.plannedIncomeYearly)}
               </div>
-              <div className="text-xs text-green-600">B25</div>
             </CardContent>
           </Card>
 
@@ -103,7 +102,6 @@ export function ExcelSummaryCards() {
               <div className="text-xl font-bold text-blue-800 mb-1">
                 {formatCurrency(summaryData.plannedIncomePeriod)}
               </div>
-              <div className="text-xs text-blue-600">D25</div>
             </CardContent>
           </Card>
 
@@ -117,7 +115,6 @@ export function ExcelSummaryCards() {
               <div className="text-xl font-bold text-teal-800 mb-1">
                 {formatCurrency(summaryData.actualIncomePeriod)}
               </div>
-              <div className="text-xs text-teal-600">F25</div>
             </CardContent>
           </Card>
 
@@ -131,7 +128,6 @@ export function ExcelSummaryCards() {
               <div className={`text-xl font-bold mb-1 ${(summaryData.incomeDeviation || 0) >= 0 ? 'text-green-800' : 'text-red-800'}`}>
                 {formatPercentage(summaryData.incomeDeviation)}
               </div>
-              <div className={`text-xs ${(summaryData.incomeDeviation || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>J25</div>
             </CardContent>
           </Card>
         </div>
@@ -148,7 +144,6 @@ export function ExcelSummaryCards() {
               <div className="text-xl font-bold text-orange-800 mb-1">
                 {formatCurrency(summaryData.plannedExpensesYearly)}
               </div>
-              <div className="text-xs text-orange-600">B50</div>
             </CardContent>
           </Card>
 
@@ -162,7 +157,6 @@ export function ExcelSummaryCards() {
               <div className="text-xl font-bold text-amber-800 mb-1">
                 {formatCurrency(summaryData.plannedExpensesPeriod)}
               </div>
-              <div className="text-xs text-amber-600">D50</div>
             </CardContent>
           </Card>
 
@@ -176,7 +170,6 @@ export function ExcelSummaryCards() {
               <div className="text-xl font-bold text-red-800 mb-1">
                 {formatCurrency(summaryData.actualExpensesPeriod)}
               </div>
-              <div className="text-xs text-red-600">F50</div>
             </CardContent>
           </Card>
 
@@ -190,7 +183,6 @@ export function ExcelSummaryCards() {
               <div className={`text-xl font-bold mb-1 ${(summaryData.expensesDeviation || 0) <= 0 ? 'text-green-800' : 'text-red-800'}`}>
                 {formatPercentage(summaryData.expensesDeviation)}
               </div>
-              <div className={`text-xs ${(summaryData.expensesDeviation || 0) <= 0 ? 'text-green-600' : 'text-red-600'}`}>J50</div>
             </CardContent>
           </Card>
         </div>
