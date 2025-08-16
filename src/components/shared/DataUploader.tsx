@@ -62,6 +62,9 @@ function parseExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any
     return cell ? cell.v : null;
   };
 
+  // Debug: log all cells in the sheet to see available data
+  console.log('All sheet cells:', Object.keys(sheet).filter(key => key !== '!ref' && key !== '!margins'));
+  
   // Read summary cards data from specific cells
   const summaryCards = {
     plannedIncomeYearly: getCellValue('B25'), // הכנסות שנתי מתוכננות
@@ -84,6 +87,18 @@ function parseExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any
     'D50 (plannedExpensesPeriod)': getCellValue('D50'),
     'F50 (actualExpensesPeriod)': getCellValue('F50'),
     'J50 (expensesDeviation)': getCellValue('J50')
+  });
+  
+  // Also log specific cells being targeted
+  console.log('Raw cell values:', {
+    B25: sheet['B25'],
+    D25: sheet['D25'],
+    F25: sheet['F25'],
+    J25: sheet['J25'],
+    B50: sheet['B50'],
+    D50: sheet['D50'],
+    F50: sheet['F50'],
+    J50: sheet['J50']
   });
   
   // Helper function to expand range to individual cells
