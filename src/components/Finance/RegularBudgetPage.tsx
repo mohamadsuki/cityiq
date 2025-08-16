@@ -479,7 +479,7 @@ export default function RegularBudgetPage() {
 
         {/* Income Charts */}
         <TabsContent value="income" className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>הכנסות - תקציב מול ביצוע (F7-F11, F14-F19, F23-F24)</CardTitle>
@@ -511,6 +511,31 @@ export default function RegularBudgetPage() {
 
             <Card>
               <CardHeader>
+                <CardTitle>תקציב מאושר - הכנסות (D7-D11, D14-D19, D23-D24)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={incomeChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="name" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={100}
+                      interval={0}
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value) => [`₪${Number(value).toFixed(1)}M`, 'תקציב']}
+                    />
+                    <Bar dataKey="budget" fill="hsl(var(--primary))" name="תקציב" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>הפרש הכנסות (ביצוע מינוס תקציב)</CardTitle>
               </CardHeader>
               <CardContent>
@@ -530,7 +555,7 @@ export default function RegularBudgetPage() {
                     />
                     <Bar 
                       dataKey="difference" 
-                      fill="hsl(var(--primary))"
+                      fill="hsl(var(--chart-1))"
                       name="הפרש"
                     />
                   </BarChart>
@@ -542,7 +567,7 @@ export default function RegularBudgetPage() {
 
         {/* Expense Charts */}
         <TabsContent value="expense" className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>הוצאות - תקציב מול ביצוע (F27-F29, F32-F33, F35-F36, F41, F44, F49)</CardTitle>
@@ -574,6 +599,31 @@ export default function RegularBudgetPage() {
 
             <Card>
               <CardHeader>
+                <CardTitle>תקציב מאושר - הוצאות (D27-D29, D32-D33, D35-D36, D41, D44, D49)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={expenseChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="name" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={100}
+                      interval={0}
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value) => [`₪${Number(value).toFixed(1)}M`, 'תקציב']}
+                    />
+                    <Bar dataKey="budget" fill="hsl(var(--secondary))" name="תקציב" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
                 <CardTitle>הפרש הוצאות (ביצוע מינוס תקציב)</CardTitle>
               </CardHeader>
               <CardContent>
@@ -593,7 +643,7 @@ export default function RegularBudgetPage() {
                     />
                     <Bar 
                       dataKey="difference" 
-                      fill="hsl(var(--accent))"
+                      fill="hsl(var(--chart-2))"
                       name="הפרש"
                     />
                   </BarChart>
@@ -657,11 +707,13 @@ export default function RegularBudgetPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable
-            columns={columns}
-            data={filteredData}
-            searchPlaceholder="חיפוש בתקציב..."
-          />
+          <div className="rounded-lg border bg-card">
+            <DataTable
+              columns={columns}
+              data={filteredData}
+              searchPlaceholder="חיפוש בתקציב..."
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

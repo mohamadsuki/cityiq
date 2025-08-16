@@ -37,7 +37,102 @@ interface DebugLog {
   timestamp: Date;
 }
 
-// Very lightweight header-based classifier
+function parseExcelByCellAddresses(sheet: any): any[] {
+  const results = [];
+  
+  // Define cell ranges for different categories
+  const incomeRanges = [
+    { names: 'A7:A11', budget: 'D7:D11', actual: 'F7:F11' },
+    { names: 'A14:A19', budget: 'D14:D19', actual: 'F14:F19' },
+    { names: 'A23:A24', budget: 'D23:D24', actual: 'F23:F24' }
+  ];
+  
+  const expenseRanges = [
+    { names: 'A27:A29', budget: 'D27:D29', actual: 'F27:F29' },
+    { names: 'A32:A33', budget: 'D32:D33', actual: 'F32:F33' },
+    { names: 'A35:A36', budget: 'D35:D36', actual: 'F35:F36' },
+    { names: 'A41:A41', budget: 'D41:D41', actual: 'F41:F41' },
+    { names: 'A44:A44', budget: 'D44:D44', actual: 'F44:F44' },
+    { names: 'A49:A49', budget: 'D49:D49', actual: 'F49:F49' }
+  ];
+  
+  // Helper function to get cell value
+  const getCellValue = (cellAddress: string) => {
+    const cell = sheet[cellAddress];
+    return cell ? cell.v : null;
+  };
+  
+  // Helper function to expand range to individual cells
+  const expandRange = (range: string): string[] => {
+    const [start, end] = range.split(':');
+    if (!end) return [start];
+    
+    const startCol = start.match(/[A-Z]+/)[0];
+    const startRow = parseInt(start.match(/\d+/)[0]);
+    const endCol = end.match(/[A-Z]+/)[0];
+    const endRow = parseInt(end.match(/\d+/)[0]);
+    
+    const cells = [];
+    for (let row = startRow; row <= endRow; row++) {
+      for (let col = startCol.charCodeAt(0); col <= endCol.charCodeAt(0); col++) {
+        cells.push(String.fromCharCode(col) + row);
+      }
+    }
+    return cells;
+  };
+  
+  // Process income ranges
+  incomeRanges.forEach(range => {
+    const nameCells = expandRange(range.names);
+    const budgetCells = expandRange(range.budget);
+    const actualCells = expandRange(range.actual);
+    
+    nameCells.forEach((nameCell, index) => {
+      const categoryName = getCellValue(nameCell);
+      const budgetAmount = getCellValue(budgetCells[index]);
+      const actualAmount = getCellValue(actualCells[index]);
+      
+      if (categoryName && String(categoryName).trim() !== '') {
+        results.push({
+          category_type: 'income',
+          category_name: String(categoryName).trim(),
+          budget_amount: budgetAmount ? Number(budgetAmount) : null,
+          actual_amount: actualAmount ? Number(actualAmount) : null,
+          excel_cell_ref: `${nameCell}, ${budgetCells[index]}, ${actualCells[index]}`,
+          year: new Date().getFullYear()
+        });
+      }
+    });
+  });
+  
+  // Process expense ranges
+  expenseRanges.forEach(range => {
+    const nameCells = expandRange(range.names);
+    const budgetCells = expandRange(range.budget);
+    const actualCells = expandRange(range.actual);
+    
+    nameCells.forEach((nameCell, index) => {
+      const categoryName = getCellValue(nameCell);
+      const budgetAmount = getCellValue(budgetCells[index]);
+      const actualAmount = getCellValue(actualCells[index]);
+      
+      if (categoryName && String(categoryName).trim() !== '') {
+        results.push({
+          category_type: 'expense',  
+          category_name: String(categoryName).trim(),
+          budget_amount: budgetAmount ? Number(budgetAmount) : null,
+          actual_amount: actualAmount ? Number(actualAmount) : null,
+          excel_cell_ref: `${nameCell}, ${budgetCells[index]}, ${actualCells[index]}`,
+          year: new Date().getFullYear()
+        });
+      }
+    });
+  });
+  
+  return results;
+}
+
+// Very lightweight header-based classifier - now enhanced with cell address parsing
 function detectTarget(headers: string[], ctx: UploadContext): { table: string | null; reason: string } {
   const h = headers.map((s) => s.toLowerCase());
 
@@ -516,8 +611,29 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       const wb = XLSX.read(ab, { type: "array" });
       const first = wb.SheetNames[0];
       const sheet = wb.Sheets[first];
-      const data: any[] = XLSX.utils.sheet_to_json(sheet, { defval: null });
       
+      // Check if this should be parsed by cell addresses (for regular budget)
+      if (context === 'regular_budget' || context === 'finance') {
+        addLog('info', 'משתמש בפענוח ישיר לפי כתובות תאים');
+        const data = parseExcelByCellAddresses(sheet);
+        addLog('success', `נמצאו ${data.length} פריטי תקציב`);
+        
+        setRows(data);
+        setHeaders(['category_name', 'category_type', 'budget_amount', 'actual_amount']);
+        setDetected({ table: 'regular_budget', reason: 'פענוח ישיר לפי כתובות תאים' });
+        
+        // Log sample of parsed data
+        if (data.length > 0) {
+          addLog('info', 'דוגמת נתונים שנמצאו:', data.slice(0, 3));
+        }
+        
+        setDebugLogs(logs);
+        toast({ title: "קובץ נטען בהצלחה", description: `${data.length} פריטי תקציב נמצאו` });
+        return;
+      }
+      
+      // Fallback to the original method for other contexts
+      const data: any[] = XLSX.utils.sheet_to_json(sheet, { defval: null });
       addLog('success', `נקראו ${data.length} שורות מהקובץ`);
       
       setRows(data);
@@ -634,7 +750,58 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
         });
       };
 
-      addProcessingLog('info', `מתחיל לעבד ${rows.length} שורות`);
+      // For regular budget with direct cell parsing, skip complex mapping
+      if (context === 'regular_budget' && detected.table === 'regular_budget' && rows[0]?.category_name) {
+        addProcessingLog('info', 'משתמש בנתונים מעובדים מכתובות תאים');
+        
+        const mapped = rows.map((row, index) => ({
+          ...row,
+          user_id: userId
+        }));
+        
+        addProcessingLog('success', `עובדו ${mapped.length} פריטי תקציב`);
+        setDebugLogs([...debugLogs, ...processingLogs]);
+        
+        // Clear existing data and insert new data
+        const targetTableName = 'regular_budget';
+        if (targetTableName === "regular_budget") {
+          const { error: deleteError } = await supabase
+            .from('regular_budget')
+            .delete()
+            .eq('user_id', userId);
+
+          if (deleteError) {
+            addProcessingLog('warning', `שגיאה במחיקת נתונים קיימים: ${deleteError.message}`);
+          } else {
+            addProcessingLog('success', 'נתונים קיימים נמחקו בהצלחה');
+          }
+        }
+        
+        addProcessingLog('info', `מכניס ${mapped.length} שורות לטבלה ${targetTableName}`);
+        const { error } = await supabase.from(targetTableName).insert(mapped as any);
+        if (error) throw error;
+
+        await supabase.from("ingestion_logs").insert({
+          user_id: userId,
+          source_file: path,
+          table_name: detected.table,
+          rows: mapped.length,
+          status: "success",
+        });
+
+        addProcessingLog('success', `הנתונים נקלטו בהצלחה! ${mapped.length} שורות`);
+        setDebugLogs([...debugLogs, ...processingLogs]);
+        
+        toast({ title: "הנתונים נקלטו בהצלחה", description: `${mapped.length} פריטי תקציב` });
+        
+        onUploadSuccess?.();
+        setFile(null);
+        setRows([]);
+        setDetected({ table: null, reason: "" });
+        setHeaders([]);
+        setBusy(false);
+        return;
+      }
 
       const mapped = rows.map((r, index) => {
         addProcessingLog('info', `מעבד שורה ${index + 1}`);
