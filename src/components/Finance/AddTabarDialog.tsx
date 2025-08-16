@@ -87,7 +87,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabar
     if (!user?.id) return;
     
     if (!formData.tabar_name.trim()) {
-      toast.error("נא למלא שם תבר");
+      toast.error("נא למלא שם תב\"ר");
       return;
     }
 
@@ -113,7 +113,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabar
 
       if (error) throw error;
 
-      toast.success("תבר נוסף בהצלחה");
+      toast.success("תב\"ר נוסף בהצלחה");
       setFormData({
         tabar_number: "",
         tabar_name: "",
@@ -127,7 +127,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabar
       onSaved?.();
     } catch (error) {
       console.error("Error adding tabar:", error);
-      toast.error("שגיאה בהוספת תבר");
+      toast.error("שגיאה בהוספת תב\"ר");
     } finally {
       setLoading(false);
     }
@@ -137,18 +137,18 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabar
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle>הוסף תבר חדש</DialogTitle>
+          <DialogTitle>הוסף תב\"ר חדש</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="tabar_number">מספר תבר</Label>
+              <Label htmlFor="tabar_number">מספר תב\"ר</Label>
               <Input
                 id="tabar_number"
                 value={formData.tabar_number}
                 onChange={(e) => setFormData(prev => ({...prev, tabar_number: e.target.value}))}
-                placeholder="מספר תבר"
+                placeholder='מספר תב"ר'
               />
             </div>
 
@@ -170,12 +170,12 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabar
           </div>
 
           <div>
-            <Label htmlFor="tabar_name">שם תבר *</Label>
+            <Label htmlFor="tabar_name">שם תב\"ר *</Label>
             <Input
               id="tabar_name"
               value={formData.tabar_name}
               onChange={(e) => setFormData(prev => ({...prev, tabar_name: e.target.value}))}
-              placeholder="שם התבר"
+              placeholder='שם התב"ר'
               required
             />
           </div>
@@ -259,7 +259,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabar
               ביטול
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? "שומר..." : "שמור תבר"}
+              {loading ? "שומר..." : "שמור תב\"ר"}
             </Button>
           </div>
         </div>
