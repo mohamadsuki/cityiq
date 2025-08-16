@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, DollarSign, Target } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 interface SummaryData {
   plannedIncomeYearly?: number;
@@ -30,9 +31,12 @@ export function ExcelSummaryCards() {
     }
   }, []);
 
-  const formatCurrency = (amount: number | null | undefined) => {
+  const formatCurrency = (amount: number | null | undefined, showThousands = false) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
       return "₪0";
+    }
+    if (showThousands && amount >= 1000) {
+      return `₪${(amount / 1000).toFixed(1)}K`;
     }
     return `₪${amount.toLocaleString('he-IL')}`;
   };
@@ -44,99 +48,185 @@ export function ExcelSummaryCards() {
     return `${percentage.toFixed(1)}%`;
   };
 
-  const StatItem = ({ 
-    icon: Icon, 
-    label, 
-    value, 
-    colorClass = "text-primary" 
-  }: { 
-    icon: any; 
-    label: string; 
-    value: string; 
-    colorClass?: string 
-  }) => (
-    <div className="flex items-center gap-3 p-4 bg-card rounded-lg border shadow-sm">
-      <div className={`p-2 rounded-full bg-background ${colorClass}`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="flex-1">
-        <div className="text-sm text-muted-foreground font-medium">{label}</div>
-        <div className={`text-lg font-bold ${colorClass}`}>{value}</div>
-      </div>
-    </div>
-  );
+  // Prepare data for comparison chart
+  const chartData = [
+    {
+      name: "הכנסות שנתי",
+      מתוכנן: summaryData.plannedIncomeYearly || 0,
+      בפועל: 0 // No yearly actual data available
+    },
+    {
+      name: "הכנסות תקופה",
+      מתוכנן: summaryData.plannedIncomePeriod || 0,
+      בפועל: summaryData.actualIncomePeriod || 0
+    },
+    {
+      name: "הוצאות שנתי", 
+      מתוכנן: (summaryData.plannedExpensesYearly || 0) * -1,
+      בפועל: 0 // No yearly actual data available
+    },
+    {
+      name: "הוצאות תקופה",
+      מתוכנן: (summaryData.plannedExpensesPeriod || 0) * -1,
+      בפועל: (summaryData.actualExpensesPeriod || 0) * -1
+    }
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* Income Section */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="h-5 w-5 text-green-600" />
-          <h3 className="text-xl font-semibold text-green-600">הכנסות</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatItem
-            icon={Target}
-            label="הכנסות שנתי מתוכננות"
-            value={formatCurrency(summaryData.plannedIncomeYearly)}
-            colorClass="text-blue-600"
-          />
-          <StatItem
-            icon={DollarSign}
-            label="הכנסות לתקופה מתוכננות"
-            value={formatCurrency(summaryData.plannedIncomePeriod)}
-            colorClass="text-blue-500"
-          />
-          <StatItem
-            icon={TrendingUp}
-            label="הכנסות לתקופה בפועל"
-            value={formatCurrency(summaryData.actualIncomePeriod)}
-            colorClass="text-green-600"
-          />
-          <StatItem
-            icon={summaryData.incomeDeviation && summaryData.incomeDeviation >= 0 ? TrendingUp : TrendingDown}
-            label="סטייה מהתקציב"
-            value={formatPercentage(summaryData.incomeDeviation)}
-            colorClass={(summaryData.incomeDeviation || 0) >= 0 ? 'text-green-600' : 'text-red-600'}
-          />
-        </div>
+    <div className="space-y-6">
+      {/* Summary Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Income Cards */}
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-green-700">הכנסות שנתי מתוכננות</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-800">
+              {formatCurrency(summaryData.plannedIncomeYearly)}
+            </div>
+            <div className="text-xs text-green-600 mt-1">B25</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-green-700">הכנסות לתקופה מתוכננות</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-800">
+              {formatCurrency(summaryData.plannedIncomePeriod)}
+            </div>
+            <div className="text-xs text-green-600 mt-1">D25</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-blue-700">הכנסות לתקופה בפועל</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-800">
+              {formatCurrency(summaryData.actualIncomePeriod)}
+            </div>
+            <div className="text-xs text-blue-600 mt-1">F25</div>
+          </CardContent>
+        </Card>
+
+        <Card className={`bg-gradient-to-br ${(summaryData.incomeDeviation || 0) >= 0 ? 'from-green-50 to-green-100 border-green-200' : 'from-red-50 to-red-100 border-red-200'}`}>
+          <CardHeader className="pb-2">
+            <CardTitle className={`text-sm font-medium ${(summaryData.incomeDeviation || 0) >= 0 ? 'text-green-700' : 'text-red-700'}`}>סטייה הכנסות</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${(summaryData.incomeDeviation || 0) >= 0 ? 'text-green-800' : 'text-red-800'}`}>
+              {formatPercentage(summaryData.incomeDeviation)}
+            </div>
+            <div className={`text-xs mt-1 ${(summaryData.incomeDeviation || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>J25</div>
+          </CardContent>
+        </Card>
+
+        {/* Expense Cards */}
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-orange-700">הוצאות שנתי מתוכננות</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-800">
+              {formatCurrency(summaryData.plannedExpensesYearly)}
+            </div>
+            <div className="text-xs text-orange-600 mt-1">B50</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-orange-700">הוצאות לתקופה מתוכננות</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-800">
+              {formatCurrency(summaryData.plannedExpensesPeriod)}
+            </div>
+            <div className="text-xs text-orange-600 mt-1">D50</div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-red-700">הוצאות לתקופה בפועל</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-800">
+              {formatCurrency(summaryData.actualExpensesPeriod)}
+            </div>
+            <div className="text-xs text-red-600 mt-1">F50</div>
+          </CardContent>
+        </Card>
+
+        <Card className={`bg-gradient-to-br ${(summaryData.expensesDeviation || 0) <= 0 ? 'from-green-50 to-green-100 border-green-200' : 'from-red-50 to-red-100 border-red-200'}`}>
+          <CardHeader className="pb-2">
+            <CardTitle className={`text-sm font-medium ${(summaryData.expensesDeviation || 0) <= 0 ? 'text-green-700' : 'text-red-700'}`}>סטייה הוצאות</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${(summaryData.expensesDeviation || 0) <= 0 ? 'text-green-800' : 'text-red-800'}`}>
+              {formatPercentage(summaryData.expensesDeviation)}
+            </div>
+            <div className={`text-xs mt-1 ${(summaryData.expensesDeviation || 0) <= 0 ? 'text-green-600' : 'text-red-600'}`}>J50</div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Expenses Section */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingDown className="h-5 w-5 text-orange-600" />
-          <h3 className="text-xl font-semibold text-orange-600">הוצאות</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatItem
-            icon={Target}
-            label="הוצאות שנתי מתוכננות"
-            value={formatCurrency(summaryData.plannedExpensesYearly)}
-            colorClass="text-orange-600"
-          />
-          <StatItem
-            icon={DollarSign}
-            label="הוצאות לתקופה מתוכננות"
-            value={formatCurrency(summaryData.plannedExpensesPeriod)}
-            colorClass="text-orange-500"
-          />
-          <StatItem
-            icon={TrendingDown}
-            label="הוצאות לתקופה בפועל"
-            value={formatCurrency(summaryData.actualExpensesPeriod)}
-            colorClass="text-orange-700"
-          />
-          <StatItem
-            icon={summaryData.expensesDeviation && summaryData.expensesDeviation <= 0 ? TrendingUp : TrendingDown}
-            label="סטייה מהתקציב"
-            value={formatPercentage(summaryData.expensesDeviation)}
-            colorClass={(summaryData.expensesDeviation || 0) <= 0 ? 'text-green-600' : 'text-red-600'}
-          />
-        </div>
-      </div>
+      {/* Comparison Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>השוואה כוללת - מתוכנן מול בפועל</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  tickFormatter={(value) => formatCurrency(Math.abs(value), true)}
+                />
+                <Tooltip 
+                  formatter={(value: number, name: string) => [
+                    formatCurrency(Math.abs(value)), 
+                    name
+                  ]}
+                  labelFormatter={(label) => `${label}`}
+                />
+                <Legend />
+                <Bar 
+                  dataKey="מתוכנן" 
+                  fill="#3b82f6" 
+                  name="מתוכנן"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar 
+                  dataKey="בפועל" 
+                  fill="#10b981" 
+                  name="בפועל"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="text-sm text-muted-foreground mt-2 text-center">
+            * הוצאות מוצגות כערכים שליליים לצורך השוואה
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

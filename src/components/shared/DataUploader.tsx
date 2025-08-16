@@ -62,8 +62,14 @@ function parseExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any
     return cell ? cell.v : null;
   };
 
-  // Debug: log all cells in the sheet to see available data
-  console.log('All sheet cells:', Object.keys(sheet).filter(key => key !== '!ref' && key !== '!margins'));
+  // Debug: log specific cells we're trying to read
+  const targetCells = ['B25', 'D25', 'F25', 'J25', 'B50', 'D50', 'F50', 'J50'];
+  console.log('Target cells data:', targetCells.map(cell => ({
+    cell,
+    value: sheet[cell]?.v,
+    type: sheet[cell]?.t,
+    raw: sheet[cell]
+  })));
   
   // Read summary cards data from specific cells
   const summaryCards = {
@@ -77,29 +83,7 @@ function parseExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any
     expensesDeviation: getCellValue('J50') // סטייה מהתקציב הוצאות (באחוזים)
   };
 
-  // Debug logging for summary card values
-  console.log('Summary Cards Values:', {
-    'B25 (plannedIncomeYearly)': getCellValue('B25'),
-    'D25 (plannedIncomePeriod)': getCellValue('D25'),
-    'F25 (actualIncomePeriod)': getCellValue('F25'),
-    'J25 (incomeDeviation)': getCellValue('J25'),
-    'B50 (plannedExpensesYearly)': getCellValue('B50'),
-    'D50 (plannedExpensesPeriod)': getCellValue('D50'),
-    'F50 (actualExpensesPeriod)': getCellValue('F50'),
-    'J50 (expensesDeviation)': getCellValue('J50')
-  });
-  
-  // Also log specific cells being targeted
-  console.log('Raw cell values:', {
-    B25: sheet['B25'],
-    D25: sheet['D25'],
-    F25: sheet['F25'],
-    J25: sheet['J25'],
-    B50: sheet['B50'],
-    D50: sheet['D50'],
-    F50: sheet['F50'],
-    J50: sheet['J50']
-  });
+  console.log('Final summary cards object:', summaryCards);
   
   // Helper function to expand range to individual cells
   const expandRange = (range: string): string[] => {
