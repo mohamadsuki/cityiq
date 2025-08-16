@@ -49,6 +49,38 @@ function parseCollectionExcelByCellAddresses(sheet: any): { data: any[], summary
     return cell ? cell.v : null;
   };
 
+  // First, let's scan the entire sheet to see where numeric data actually is
+  console.log('=== FULL SHEET SCAN FOR DEBUGGING ===');
+  const allCells = Object.keys(sheet).filter(key => key.match(/^[A-Z]+\d+$/));
+  console.log(`Found ${allCells.length} cells in sheet`);
+  
+  // Look for all numeric values > 1000 (likely to be budget/collection amounts)
+  const numericCells = [];
+  allCells.forEach(cellAddress => {
+    const value = getCellValue(cellAddress);
+    if (value !== null && !isNaN(Number(value)) && Number(value) > 1000) {
+      numericCells.push({ cell: cellAddress, value: Number(value) });
+    }
+  });
+  
+  console.log('Found numeric values > 1000:', numericCells);
+  
+  // Also look for headers that might indicate property types or data columns
+  const textCells = [];
+  allCells.forEach(cellAddress => {
+    const value = getCellValue(cellAddress);
+    if (value && typeof value === 'string') {
+      const text = value.toLowerCase();
+      if (text.includes('מגורים') || text.includes('מסחר') || text.includes('תעשיה') || 
+          text.includes('משרדים') || text.includes('ארנונה') || text.includes('תקציב') ||
+          text.includes('גביה') || text.includes('בפועל') || text.includes('שנתי')) {
+        textCells.push({ cell: cellAddress, value: value });
+      }
+    }
+  });
+  
+  console.log('Found relevant text cells:', textCells);
+
   // Define property types and their expected rows (starting from row 7 as typical)
   const propertyTypeData = [
     { row: 7, name: 'מגורים' },
