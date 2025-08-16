@@ -73,6 +73,18 @@ function parseExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any
     actualExpensesPeriod: getCellValue('F50'), // הוצאות לתקופה בפועל
     expensesDeviation: getCellValue('J50') // סטייה מהתקציב הוצאות (באחוזים)
   };
+
+  // Debug logging for summary card values
+  console.log('Summary Cards Values:', {
+    'B25 (plannedIncomeYearly)': getCellValue('B25'),
+    'D25 (plannedIncomePeriod)': getCellValue('D25'),
+    'F25 (actualIncomePeriod)': getCellValue('F25'),
+    'J25 (incomeDeviation)': getCellValue('J25'),
+    'B50 (plannedExpensesYearly)': getCellValue('B50'),
+    'D50 (plannedExpensesPeriod)': getCellValue('D50'),
+    'F50 (actualExpensesPeriod)': getCellValue('F50'),
+    'J50 (expensesDeviation)': getCellValue('J50')
+  });
   
   // Helper function to expand range to individual cells
   const expandRange = (range: string): string[] => {
