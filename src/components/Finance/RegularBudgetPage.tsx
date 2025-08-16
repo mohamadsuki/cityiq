@@ -59,15 +59,15 @@ export default function RegularBudgetPage() {
     excel_cell_ref: ''
   });
 
-  const isUuid = (v?: string | null) => !!v && /^[0-9a-fA-F-]{36}$/.test(v);
-  const isDemo = !session || !isUuid(user?.id);
+  // Check if user is a demo user
+  const isDemoUser = user?.id?.startsWith('demo-') || !session;
 
   const formatCurrency = (amount: number) => `₪${amount.toLocaleString('he-IL')}`;
 
   const loadBudgetData = async () => {
     setLoading(true);
     
-    if (isDemo) {
+    if (isDemoUser) {
       // Demo data representing Excel structure (F7-F11, F14-F19, F23-F24 for income, F27-F29, F32-F33, F35-F36, F41, F44, F49 for expenses)
       const demoData: RegularBudgetItem[] = [
         // הכנסות
@@ -166,7 +166,7 @@ export default function RegularBudgetPage() {
         year: new Date().getFullYear()
       };
 
-      if (isDemo) {
+      if (isDemoUser) {
         const demoItem: RegularBudgetItem = {
           id: Date.now().toString(),
           ...itemData,

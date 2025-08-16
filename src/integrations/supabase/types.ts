@@ -921,6 +921,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      user_owns_budget_record: {
+        Args: { record_user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "mayor" | "manager" | "ceo"
