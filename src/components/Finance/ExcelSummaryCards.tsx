@@ -45,7 +45,8 @@ export function ExcelSummaryCards() {
     if (percentage === null || percentage === undefined || isNaN(percentage)) {
       return "0%";
     }
-    return `${percentage.toFixed(1)}%`;
+    // Convert decimal to percentage (0.1 -> 10%)
+    return `${(percentage * 100).toFixed(1)}%`;
   };
 
   // Prepare data for comparison chart
