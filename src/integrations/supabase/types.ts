@@ -525,6 +525,174 @@ export type Database = {
         }
         Relationships: []
       }
+      property_tax_collection: {
+        Row: {
+          actual_collection: number | null
+          annual_budget: number | null
+          created_at: string
+          id: string
+          property_type: string
+          relative_budget: number | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          actual_collection?: number | null
+          annual_budget?: number | null
+          created_at?: string
+          id?: string
+          property_type: string
+          relative_budget?: number | null
+          updated_at?: string
+          user_id: string
+          year?: number
+        }
+        Update: {
+          actual_collection?: number | null
+          annual_budget?: number | null
+          created_at?: string
+          id?: string
+          property_type?: string
+          relative_budget?: number | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      regular_budget: {
+        Row: {
+          actual_amount: number | null
+          budget_amount: number | null
+          category_name: string
+          category_type: Database["public"]["Enums"]["budget_category_type"]
+          created_at: string
+          excel_cell_ref: string | null
+          id: string
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          actual_amount?: number | null
+          budget_amount?: number | null
+          category_name: string
+          category_type: Database["public"]["Enums"]["budget_category_type"]
+          created_at?: string
+          excel_cell_ref?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+          year?: number
+        }
+        Update: {
+          actual_amount?: number | null
+          budget_amount?: number | null
+          category_name?: string
+          category_type?: Database["public"]["Enums"]["budget_category_type"]
+          created_at?: string
+          excel_cell_ref?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      salary_data: {
+        Row: {
+          created_at: string
+          education_salary: number | null
+          employee_count: number | null
+          general_salary: number | null
+          id: string
+          quarter: number
+          updated_at: string
+          user_id: string
+          welfare_salary: number | null
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          education_salary?: number | null
+          employee_count?: number | null
+          general_salary?: number | null
+          id?: string
+          quarter: number
+          updated_at?: string
+          user_id: string
+          welfare_salary?: number | null
+          year?: number
+        }
+        Update: {
+          created_at?: string
+          education_salary?: number | null
+          employee_count?: number | null
+          general_salary?: number | null
+          id?: string
+          quarter?: number
+          updated_at?: string
+          user_id?: string
+          welfare_salary?: number | null
+          year?: number
+        }
+        Relationships: []
+      }
+      tabarim: {
+        Row: {
+          approved_budget: number | null
+          created_at: string
+          domain: Database["public"]["Enums"]["tabar_domain"] | null
+          expense_actual: number | null
+          funding_source1: Database["public"]["Enums"]["funding_source"] | null
+          funding_source2: Database["public"]["Enums"]["funding_source"] | null
+          funding_source3: Database["public"]["Enums"]["funding_source"] | null
+          id: string
+          income_actual: number | null
+          status: Database["public"]["Enums"]["tabar_status"] | null
+          surplus_deficit: number | null
+          tabar_name: string
+          tabar_number: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_budget?: number | null
+          created_at?: string
+          domain?: Database["public"]["Enums"]["tabar_domain"] | null
+          expense_actual?: number | null
+          funding_source1?: Database["public"]["Enums"]["funding_source"] | null
+          funding_source2?: Database["public"]["Enums"]["funding_source"] | null
+          funding_source3?: Database["public"]["Enums"]["funding_source"] | null
+          id?: string
+          income_actual?: number | null
+          status?: Database["public"]["Enums"]["tabar_status"] | null
+          surplus_deficit?: number | null
+          tabar_name: string
+          tabar_number?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_budget?: number | null
+          created_at?: string
+          domain?: Database["public"]["Enums"]["tabar_domain"] | null
+          expense_actual?: number | null
+          funding_source1?: Database["public"]["Enums"]["funding_source"] | null
+          funding_source2?: Database["public"]["Enums"]["funding_source"] | null
+          funding_source3?: Database["public"]["Enums"]["funding_source"] | null
+          id?: string
+          income_actual?: number | null
+          status?: Database["public"]["Enums"]["tabar_status"] | null
+          surplus_deficit?: number | null
+          tabar_name?: string
+          tabar_number?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       task_acknowledgements: {
         Row: {
           created_at: string
@@ -718,6 +886,7 @@ export type Database = {
     }
     Enums: {
       app_role: "mayor" | "manager" | "ceo"
+      budget_category_type: "income" | "expense"
       department_slug:
         | "finance"
         | "education"
@@ -728,6 +897,40 @@ export type Database = {
         | "ceo"
         | "city-improvement"
         | "enforcement"
+      funding_source:
+        | "environmental_protection"
+        | "lottery"
+        | "education_ministry"
+        | "construction_housing_ministry"
+        | "loan"
+        | "interior_ministry"
+        | "economy_ministry"
+        | "rmi"
+        | "negev_galilee_resilience_ministry"
+        | "national_digital_ministry"
+        | "environmental_protection_ministry"
+        | "culture_ministry"
+        | "science_technology_ministry"
+        | "planning_administration"
+        | "transportation_ministry"
+        | "health_ministry"
+        | "municipality"
+        | "energy_ministry"
+        | "agriculture_ministry"
+      tabar_domain:
+        | "energy"
+        | "organizational"
+        | "digital"
+        | "veterinary"
+        | "education_buildings"
+        | "public_buildings"
+        | "environment"
+        | "activities"
+        | "welfare"
+        | "public_spaces"
+        | "planning"
+        | "infrastructure_roads"
+      tabar_status: "planning" | "active" | "closed" | "delayed"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "todo" | "in_progress" | "blocked" | "done" | "cancelled"
     }
@@ -858,6 +1061,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["mayor", "manager", "ceo"],
+      budget_category_type: ["income", "expense"],
       department_slug: [
         "finance",
         "education",
@@ -869,6 +1073,42 @@ export const Constants = {
         "city-improvement",
         "enforcement",
       ],
+      funding_source: [
+        "environmental_protection",
+        "lottery",
+        "education_ministry",
+        "construction_housing_ministry",
+        "loan",
+        "interior_ministry",
+        "economy_ministry",
+        "rmi",
+        "negev_galilee_resilience_ministry",
+        "national_digital_ministry",
+        "environmental_protection_ministry",
+        "culture_ministry",
+        "science_technology_ministry",
+        "planning_administration",
+        "transportation_ministry",
+        "health_ministry",
+        "municipality",
+        "energy_ministry",
+        "agriculture_ministry",
+      ],
+      tabar_domain: [
+        "energy",
+        "organizational",
+        "digital",
+        "veterinary",
+        "education_buildings",
+        "public_buildings",
+        "environment",
+        "activities",
+        "welfare",
+        "public_spaces",
+        "planning",
+        "infrastructure_roads",
+      ],
+      tabar_status: ["planning", "active", "closed", "delayed"],
       task_priority: ["low", "medium", "high", "urgent"],
       task_status: ["todo", "in_progress", "blocked", "done", "cancelled"],
     },

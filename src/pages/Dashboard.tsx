@@ -11,6 +11,10 @@ import BusinessDashboard from "@/components/Dashboard/BusinessDashboard";
 import GrantsApp from "@/components/Grants/GrantsApp";
 import ProjectsApp from "@/components/Projects/ProjectsApp";
 import TasksApp from "@/components/Tasks/TasksApp";
+import RegularBudgetPage from "@/components/Finance/RegularBudgetPage";
+import TabarimPage from "@/components/Finance/TabarimPage";
+import CollectionPage from "@/components/Finance/CollectionPage";
+import SalaryPage from "@/components/Finance/SalaryPage";
 import { useAuth } from "@/context/AuthContext";
 import ProfilePage from "@/components/Profile/ProfilePage";
 export default function Dashboard() {
@@ -22,6 +26,10 @@ export default function Dashboard() {
     "/": "overview",
     "/overview": "overview",
     "/finance": "finance",
+    "/finance/regular-budget": "finance-regular-budget",
+    "/finance/tabarim": "finance-tabarim",
+    "/finance/collection": "finance-collection",
+    "/finance/salary": "finance-salary",
     "/education": "education",
     "/engineering": "engineering",
     "/welfare": "welfare",
@@ -42,6 +50,10 @@ export default function Dashboard() {
     const titles: Record<string, string> = {
       "overview": "סקירה כללית - דאשבורד עירוני",
       "finance": "מחלקת פיננסים - דאשבורד עירוני",
+      "finance-regular-budget": "תקציב רגיל - מחלקת פיננסים",
+      "finance-tabarim": "תברים - מחלקת פיננסים",
+      "finance-collection": "גביה - מחלקת פיננסים",
+      "finance-salary": "שכר - מחלקת פיננסים",
       "education": "מחלקת חינוך - דאשבורד עירוני",
       "engineering": "מחלקת הנדסה - דאשבורד עירוני",
       "welfare": "מחלקת רווחה - דאשבורד עירוני",
@@ -55,6 +67,10 @@ export default function Dashboard() {
     const descriptions: Record<string, string> = {
       "overview": "סקירה כללית של מדדי העירייה וכל המחלקות במקום אחד.",
       "finance": "דאשבורד פיננסים: תקציב, ביצוע, מענקים והתראות חריגה.",
+      "finance-regular-budget": "תצוגה מפורטת של התקציב הרגיל עם גרפים ותחזיות.",
+      "finance-tabarim": "ניהול תברים עירוניים: הוספה, עריכה ומעקב סטטוס.",
+      "finance-collection": "מעקב גביה וארנונה: נתונים מהמאזן והתראות פיגורים.",
+      "finance-salary": "מעקב נתוני שכר: התפלגות לפי מחלקות ומגמות עלויות.",
       "education": "דאשבורד חינוך: תלמידים, מוסדות, כיתות והתפלגויות.",
       "engineering": "דאשבורד הנדסה: תוכניות, סטטוסים, ייעודי קרקע ומפות.",
       "welfare": "דאשבורד רווחה: מקבלי שירות, שירותים, מגמות ופילוחים.",
@@ -104,6 +120,14 @@ export default function Dashboard() {
         return <OverviewDashboard />;
       case "finance":
         return <FinanceDashboard />;
+      case "finance-regular-budget":
+        return <RegularBudgetPage />;
+      case "finance-tabarim":
+        return <TabarimPage />;
+      case "finance-collection":
+        return <CollectionPage />;
+      case "finance-salary":
+        return <SalaryPage />;
       case "education":
         return <EducationDashboard />;
       case "engineering":

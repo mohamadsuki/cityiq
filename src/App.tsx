@@ -23,6 +23,10 @@ const App = () => (
           <Route path="/" element={<Protected><Index /></Protected>} />
           <Route path="/overview" element={<Protected><Index /></Protected>} />
           <Route path="/finance" element={<Protected><Index /></Protected>} />
+          <Route path="/finance/regular-budget" element={<Protected><Index /></Protected>} />
+          <Route path="/finance/tabarim" element={<Protected><Index /></Protected>} />
+          <Route path="/finance/collection" element={<Protected><Index /></Protected>} />
+          <Route path="/finance/salary" element={<Protected><Index /></Protected>} />
           <Route path="/education" element={<Protected><Index /></Protected>} />
           <Route path="/engineering" element={<Protected><Index /></Protected>} />
           <Route path="/welfare" element={<Protected><Index /></Protected>} />
