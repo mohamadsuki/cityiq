@@ -50,82 +50,42 @@ function parseCollectionExcelByCellAddresses(sheet: any): { data: any[], summary
   };
 
   // בהתבסס על התמונה, הנתונים מתחילים משורה 13
-  // אני אסרוק מספר שורות כדי למצוא את סוגי הנכסים השונים
+  // נסרוק שורות מ-13 עד 30 כדי למצוא את כל סוגי הנכסים
   
-  console.log('=== SCANNING ACTUAL EXCEL STRUCTURE ===');
+  console.log('=== SCANNING EXCEL DATA FROM ROW 13+ ===');
   
-  // בדיקת שורות מ-13 עד 25 לראות איפה הנתונים
-  const propertyTypes = ['מגורים', 'מסחר', 'תעשיה', 'משרדים', 'אחר'];
-  const foundRows = [];
-  
-  for (let row = 13; row <= 25; row++) {
-    const valueD = getCellValue(`D${row}`);
-    const valueH = getCellValue(`H${row}`);
-    const valueI = getCellValue(`I${row}`);
-    const valueM = getCellValue(`M${row}`);
+  for (let row = 13; row <= 30; row++) {
+    const description = getCellValue(`D${row}`); // תיאור סוג נכס
+    const valueH = getCellValue(`H${row}`); // תקציב שנתי
+    const valueI = getCellValue(`I${row}`); // תקציב יחסי  
+    const valueM = getCellValue(`M${row}`); // גביה בפועל
     
     console.log(`Row ${row}:`, {
-      D: valueD,
-      H: valueH,
-      I: valueI,
-      M: valueM
+      description: description,
+      annual_budget: valueH,
+      relative_budget: valueI,
+      actual_collection: valueM
     });
     
-    // אם יש נתונים מספריים בעמודות H, I, או M
-    if ((valueH && !isNaN(Number(valueH)) && Number(valueH) > 0) ||
-        (valueI && !isNaN(Number(valueI)) && Number(valueI) > 0) ||
-        (valueM && !isNaN(Number(valueM)) && Number(valueM) > 0)) {
+    // אם יש תיאור ולפחות אחד מהערכים המספריים אינו ריק
+    if (description && 
+        description.toString().trim() !== '' &&
+        ((valueH && !isNaN(Number(valueH)) && Number(valueH) !== 0) ||
+         (valueI && !isNaN(Number(valueI)) && Number(valueI) !== 0) ||
+         (valueM && !isNaN(Number(valueM)) && Number(valueM) !== 0))) {
       
-      // נחש את סוג הנכס בהתבסס על התיאור בעמודה D
-      let propertyType = 'אחר';
-      if (valueD && typeof valueD === 'string') {
-        const desc = valueD.toLowerCase();
-        if (desc.includes('מגור') || desc.includes('דיר')) propertyType = 'מגורים';
-        else if (desc.includes('מסחר') || desc.includes('חנו')) propertyType = 'מסחר';
-        else if (desc.includes('תעש') || desc.includes('מפעל')) propertyType = 'תעשיה';
-        else if (desc.includes('משרד')) propertyType = 'משרדים';
-      }
-      
-      foundRows.push({
-        row,
-        propertyType,
-        description: valueD,
-        annualBudget: valueH ? Number(valueH) : null,
-        relativeBudget: valueI ? Number(valueI) : null,
-        actualCollection: valueM ? Number(valueM) : null
+      results.push({
+        property_type: description.toString().trim(), // השתמש בתיאור המלא מעמודה D
+        annual_budget: valueH && !isNaN(Number(valueH)) ? Number(valueH) : null,
+        relative_budget: valueI && !isNaN(Number(valueI)) ? Number(valueI) : null,
+        actual_collection: valueM && !isNaN(Number(valueM)) ? Number(valueM) : null,
+        excel_cell_ref: `H${row}, I${row}, M${row}`,
+        year: new Date().getFullYear() // שנה נוכחית בלבד
       });
     }
   }
   
-  console.log('Found data rows:', foundRows);
-  
-  // אם לא מצאנו מספיק נתונים, נוסיף שורות ברירת מחדל
-  if (foundRows.length === 0) {
-    console.log('No data found, adding default rows with sample data');
-    propertyTypes.forEach((type, index) => {
-      const row = 13 + index;
-      results.push({
-        property_type: type,
-        annual_budget: getCellValue(`H${row}`) ? Number(getCellValue(`H${row}`)) : null,
-        relative_budget: getCellValue(`I${row}`) ? Number(getCellValue(`I${row}`)) : null,
-        actual_collection: getCellValue(`M${row}`) ? Number(getCellValue(`M${row}`)) : null,
-        excel_cell_ref: `H${row}, I${row}, M${row}`,
-        year: new Date().getFullYear()
-      });
-    });
-  } else {
-    // השתמש בנתונים שמצאנו
-    foundRows.forEach(rowData => {
-      results.push({
-        property_type: rowData.propertyType,
-        annual_budget: rowData.annualBudget,
-        relative_budget: rowData.relativeBudget,
-        actual_collection: rowData.actualCollection,
-        excel_cell_ref: `H${rowData.row}, I${rowData.row}, M${rowData.row}`,
-        year: new Date().getFullYear()
-      });
-    });
-  }
+  console.log(`Found ${results.length} property types with data:`, results);
 
   // Calculate summary data
   const totalAnnualBudget = results.reduce((sum, item) => sum + (item.annual_budget || 0), 0);
