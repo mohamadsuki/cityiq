@@ -59,8 +59,8 @@ export default function RegularBudgetPage() {
     excel_cell_ref: ''
   });
 
-  // Check if user is a demo user
-  const isDemoUser = user?.id?.startsWith('demo-') || !session;
+  // Check if user is using actual database (not demo data) - new real users should use database
+  const isDemoUser = false; // All users now use real database
 
   const formatCurrency = (amount: number) => `₪${amount.toLocaleString('he-IL')}`;
 

@@ -48,17 +48,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(s?.user ?? null);
       if (s?.user?.email) {
         applyAccessForEmail(s.user.email);
+      } else {
+        const demoEmail = localStorage.getItem('demo_user_email');
+        if (demoEmail) {
+          const uname = demoEmail.split('@')[0].toLowerCase();
+          const realUserMap: Record<string, string> = {
+            'mayor': '11111111-1111-1111-1111-111111111111',
+            'ceo': '22222222-2222-2222-2222-222222222222', 
+            'finance': '33333333-3333-3333-3333-333333333333',
+            'education': '44444444-4444-4444-4444-444444444444',
+            'engineering': '55555555-5555-5555-5555-555555555555',
+            'welfare': '66666666-6666-6666-6666-666666666666',
+            'nonformal': '77777777-7777-7777-7777-777777777777',
+            'business': '88888888-8888-8888-8888-888888888888',
+          };
+          const userId = realUserMap[uname] || `demo-${uname}`;
+          setUser({ id: userId, email: demoEmail } as unknown as User);
+          applyAccessForEmail(demoEmail);
         } else {
-          const demoEmail = localStorage.getItem('demo_user_email');
-          if (demoEmail) {
-            const uname = demoEmail.split('@')[0].toLowerCase();
-            setUser({ id: `demo-${uname}`, email: demoEmail } as unknown as User);
-            applyAccessForEmail(demoEmail);
-          } else {
-            setRole(null);
-            setDepartments([]);
-          }
+          setRole(null);
+          setDepartments([]);
         }
+      }
     });
 
     // Then check existing session
@@ -79,7 +90,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const demoEmail = localStorage.getItem('demo_user_email');
         if (demoEmail) {
           const uname = demoEmail.split('@')[0].toLowerCase();
-          setUser({ id: `demo-${uname}`, email: demoEmail } as unknown as User);
+          const realUserMap: Record<string, string> = {
+            'mayor': '11111111-1111-1111-1111-111111111111',
+            'ceo': '22222222-2222-2222-2222-222222222222', 
+            'finance': '33333333-3333-3333-3333-333333333333',
+            'education': '44444444-4444-4444-4444-444444444444',
+            'engineering': '55555555-5555-5555-5555-555555555555',
+            'welfare': '66666666-6666-6666-6666-666666666666',
+            'nonformal': '77777777-7777-7777-7777-777777777777',
+            'business': '88888888-8888-8888-8888-888888888888',
+          };
+          const userId = realUserMap[uname] || `demo-${uname}`;
+          setUser({ id: userId, email: demoEmail } as unknown as User);
           applyAccessForEmail(demoEmail);
         }
       }
@@ -92,7 +114,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const demoSignIn = (identifier: string) => {
     const email = identifier.includes('@') ? identifier : `${identifier}@example.com`;
     const uname = email.split('@')[0].toLowerCase();
-    const fakeUser = { id: `demo-${uname}`, email } as unknown as User;
+    
+    // Map to real user UUIDs created in the database
+    const realUserMap: Record<string, string> = {
+      'mayor': '11111111-1111-1111-1111-111111111111',
+      'ceo': '22222222-2222-2222-2222-222222222222', 
+      'finance': '33333333-3333-3333-3333-333333333333',
+      'education': '44444444-4444-4444-4444-444444444444',
+      'engineering': '55555555-5555-5555-5555-555555555555',
+      'welfare': '66666666-6666-6666-6666-666666666666',
+      'nonformal': '77777777-7777-7777-7777-777777777777',
+      'business': '88888888-8888-8888-8888-888888888888',
+    };
+    
+    const userId = realUserMap[uname] || `demo-${uname}`;
+    const fakeUser = { id: userId, email } as unknown as User;
     setUser(fakeUser);
     setSession(null);
     applyAccessForEmail(email);
