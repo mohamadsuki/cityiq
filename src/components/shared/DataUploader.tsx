@@ -20,6 +20,7 @@ export type UploadContext =
 
 interface DataUploaderProps {
   context?: UploadContext;
+  onUploadSuccess?: () => void;
 }
 
 // Very lightweight header-based classifier
@@ -307,7 +308,7 @@ function mapRowToTable(table: string, row: Record<string, any>) {
   }
 }
 
-export function DataUploader({ context = "global" }: DataUploaderProps) {
+export function DataUploader({ context = "global", onUploadSuccess }: DataUploaderProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
@@ -361,20 +362,7 @@ export function DataUploader({ context = "global" }: DataUploaderProps) {
         return;
       }
 
-      // Check if user is demo user  
-      const isDemoUser = userId.startsWith('11111111-') || userId.startsWith('22222222-') || userId.startsWith('33333333-') || 
-                        userId.startsWith('44444444-') || userId.startsWith('55555555-') || userId.startsWith('66666666-') ||
-                        userId.startsWith('77777777-') || userId.startsWith('88888888-') || userId.startsWith('demo-');
-      
-      if (isDemoUser) {
-        toast({
-          title: "העלאה הושלמה בהצלחה",
-          description: `עובד עם ${detected.table} - הנתונים זמינים בדף הרלוונטי`,
-          variant: "default",
-        });
-        setBusy(false);
-        return;
-      }
+      // All users now use real database - no demo user logic needed
 
       // Upload raw file to storage for traceability
       const path = `${userId}/${Date.now()}-${file.name}`;
@@ -445,6 +433,10 @@ export function DataUploader({ context = "global" }: DataUploaderProps) {
       });
 
       toast({ title: "הנתונים נקלטו בהצלחה", description: `${filtered.length} שורות אל הטבלה ${detected.table}` });
+      
+      // Call success callback to refresh parent component
+      onUploadSuccess?.();
+      
       setFile(null);
       setRows([]);
       setDetected({ table: null, reason: "" });

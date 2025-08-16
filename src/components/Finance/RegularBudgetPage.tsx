@@ -397,7 +397,13 @@ export default function RegularBudgetPage() {
                     </p>
                   </div>
                 </div>
-                <DataUploader context="regular_budget" />
+                <DataUploader 
+                  context="regular_budget" 
+                  onUploadSuccess={loadBudgetData}
+                />
+                <div className="mt-4 text-sm text-muted-foreground">
+                  לאחר הייבוא מוצלח, הדף יתרענן אוטומטית ויציג את הנתונים החדשים.
+                </div>
               </div>
             </DialogContent>
           </Dialog>
