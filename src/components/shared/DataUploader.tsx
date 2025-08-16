@@ -354,8 +354,8 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       
       if (!userId) {
         toast({
-          title: "נדרש חיבור משתמש",
-          description: "התחבר/י כדי להעלות ולשבץ נתונים לבסיס הנתונים",
+          title: "נדרש חיבור למערכת",
+          description: "יש להתחבר תחילה כדי להעלות נתונים. לחץ על 'התחבר' בפינה העליונה של הדף",
           variant: "destructive",
         });
         setBusy(false);
