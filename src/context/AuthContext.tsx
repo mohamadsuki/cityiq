@@ -48,17 +48,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(s?.user ?? null);
       if (s?.user?.email) {
         applyAccessForEmail(s.user.email);
-      } else {
-        const demoEmail = localStorage.getItem('demo_user_email');
-        if (demoEmail) {
-          const uname = demoEmail.split('@')[0].toLowerCase();
-          setUser({ id: `demo-${uname}`, email: demoEmail } as unknown as User);
-          applyAccessForEmail(demoEmail);
         } else {
-          setRole(null);
-          setDepartments([]);
+          const demoEmail = localStorage.getItem('demo_user_email');
+          if (demoEmail) {
+            const uname = demoEmail.split('@')[0].toLowerCase();
+            const demoUserMap: Record<string, string> = {
+              'mayor': '00000000-0000-0000-0000-000000000001',
+              'ceo': '00000000-0000-0000-0000-000000000002',
+              'finance': '00000000-0000-0000-0000-000000000003',
+              'education': '00000000-0000-0000-0000-000000000004',
+              'engineering': '00000000-0000-0000-0000-000000000005',
+              'welfare': '00000000-0000-0000-0000-000000000006',
+              'nonformal': '00000000-0000-0000-0000-000000000007',
+              'business': '00000000-0000-0000-0000-000000000008',
+              'cityimprovement': '00000000-0000-0000-0000-000000000009',
+              'enforcement': '00000000-0000-0000-0000-000000000010',
+            };
+            const userId = demoUserMap[uname] || `demo-${uname}`;
+            setUser({ id: userId, email: demoEmail } as unknown as User);
+            applyAccessForEmail(demoEmail);
+          } else {
+            setRole(null);
+            setDepartments([]);
+          }
         }
-      }
     });
 
     // Then check existing session
@@ -79,7 +92,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const demoEmail = localStorage.getItem('demo_user_email');
         if (demoEmail) {
           const uname = demoEmail.split('@')[0].toLowerCase();
-          setUser({ id: `demo-${uname}`, email: demoEmail } as unknown as User);
+          const demoUserMap: Record<string, string> = {
+            'mayor': '00000000-0000-0000-0000-000000000001',
+            'ceo': '00000000-0000-0000-0000-000000000002',
+            'finance': '00000000-0000-0000-0000-000000000003',
+            'education': '00000000-0000-0000-0000-000000000004',
+            'engineering': '00000000-0000-0000-0000-000000000005',
+            'welfare': '00000000-0000-0000-0000-000000000006',
+            'nonformal': '00000000-0000-0000-0000-000000000007',
+            'business': '00000000-0000-0000-0000-000000000008',
+            'cityimprovement': '00000000-0000-0000-0000-000000000009',
+            'enforcement': '00000000-0000-0000-0000-000000000010',
+          };
+          const userId = demoUserMap[uname] || `demo-${uname}`;
+          setUser({ id: userId, email: demoEmail } as unknown as User);
           applyAccessForEmail(demoEmail);
         }
       }
@@ -92,7 +118,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const demoSignIn = (identifier: string) => {
     const email = identifier.includes('@') ? identifier : `${identifier}@example.com`;
     const uname = email.split('@')[0].toLowerCase();
-    const fakeUser = { id: `demo-${uname}`, email } as unknown as User;
+    
+    // Map demo users to fixed UUIDs for database compatibility
+    const demoUserMap: Record<string, string> = {
+      'mayor': '00000000-0000-0000-0000-000000000001',
+      'ceo': '00000000-0000-0000-0000-000000000002',
+      'finance': '00000000-0000-0000-0000-000000000003',
+      'education': '00000000-0000-0000-0000-000000000004',
+      'engineering': '00000000-0000-0000-0000-000000000005',
+      'welfare': '00000000-0000-0000-0000-000000000006',
+      'nonformal': '00000000-0000-0000-0000-000000000007',
+      'business': '00000000-0000-0000-0000-000000000008',
+      'cityimprovement': '00000000-0000-0000-0000-000000000009',
+      'enforcement': '00000000-0000-0000-0000-000000000010',
+    };
+    
+    const userId = demoUserMap[uname] || `demo-${uname}`;
+    const fakeUser = { id: userId, email } as unknown as User;
     setUser(fakeUser);
     setSession(null);
     applyAccessForEmail(email);
