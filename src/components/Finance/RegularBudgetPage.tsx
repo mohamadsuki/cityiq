@@ -39,7 +39,6 @@ interface RegularBudgetItem {
   category_name: string;
   budget_amount: number;
   actual_amount: number;
-  excel_cell_ref?: string;
   year: number;
   difference: number;
   percentage: number;
@@ -57,8 +56,7 @@ export default function RegularBudgetPage() {
     category_type: 'income' as 'income' | 'expense',
     category_name: '',
     budget_amount: '',
-    actual_amount: '',
-    excel_cell_ref: ''
+    actual_amount: ''
   });
 
   // Check if user is using actual database (not demo data) - show real data from database
@@ -80,38 +78,38 @@ export default function RegularBudgetPage() {
       const demoData: RegularBudgetItem[] = [
         // ... keep existing code (demo data)
         // הכנסות
-        { id: '1', category_type: 'income', category_name: 'ארנונה כללית', budget_amount: 450000000, actual_amount: 420000000, excel_cell_ref: 'F7', year: 2024, difference: -30000000, percentage: 93.3 },
-        { id: '2', category_type: 'income', category_name: 'אגרת ביוב', budget_amount: 85000000, actual_amount: 88000000, excel_cell_ref: 'F8', year: 2024, difference: 3000000, percentage: 103.5 },
-        { id: '3', category_type: 'income', category_name: 'אגרת אשפה', budget_amount: 65000000, actual_amount: 62000000, excel_cell_ref: 'F9', year: 2024, difference: -3000000, percentage: 95.4 },
-        { id: '4', category_type: 'income', category_name: 'היטלי פיתוח', budget_amount: 120000000, actual_amount: 135000000, excel_cell_ref: 'F10', year: 2024, difference: 15000000, percentage: 112.5 },
-        { id: '5', category_type: 'income', category_name: 'רישיונות ואגרות', budget_amount: 45000000, actual_amount: 41000000, excel_cell_ref: 'F11', year: 2024, difference: -4000000, percentage: 91.1 },
+        { id: '1', category_type: 'income', category_name: 'ארנונה כללית', budget_amount: 450000000, actual_amount: 420000000, year: 2024, difference: -30000000, percentage: 93.3 },
+        { id: '2', category_type: 'income', category_name: 'אגרת ביוב', budget_amount: 85000000, actual_amount: 88000000, year: 2024, difference: 3000000, percentage: 103.5 },
+        { id: '3', category_type: 'income', category_name: 'אגרת אשפה', budget_amount: 65000000, actual_amount: 62000000, year: 2024, difference: -3000000, percentage: 95.4 },
+        { id: '4', category_type: 'income', category_name: 'היטלי פיתוח', budget_amount: 120000000, actual_amount: 135000000, year: 2024, difference: 15000000, percentage: 112.5 },
+        { id: '5', category_type: 'income', category_name: 'רישיונות ואגרות', budget_amount: 45000000, actual_amount: 41000000, year: 2024, difference: -4000000, percentage: 91.1 },
         
-        { id: '6', category_type: 'income', category_name: 'קנסות חניה', budget_amount: 25000000, actual_amount: 28000000, excel_cell_ref: 'F14', year: 2024, difference: 3000000, percentage: 112 },
-        { id: '7', category_type: 'income', category_name: 'קנסות בנייה', budget_amount: 15000000, actual_amount: 12000000, excel_cell_ref: 'F15', year: 2024, difference: -3000000, percentage: 80 },
-        { id: '8', category_type: 'income', category_name: 'השכרת נכסים', budget_amount: 35000000, actual_amount: 37000000, excel_cell_ref: 'F16', year: 2024, difference: 2000000, percentage: 105.7 },
-        { id: '9', category_type: 'income', category_name: 'מענקים ממשלתיים', budget_amount: 180000000, actual_amount: 195000000, excel_cell_ref: 'F17', year: 2024, difference: 15000000, percentage: 108.3 },
-        { id: '10', category_type: 'income', category_name: 'הכנסות אחרות', budget_amount: 30000000, actual_amount: 25000000, excel_cell_ref: 'F18', year: 2024, difference: -5000000, percentage: 83.3 },
-        { id: '11', category_type: 'income', category_name: 'הכנסות מיוחדות', budget_amount: 40000000, actual_amount: 45000000, excel_cell_ref: 'F19', year: 2024, difference: 5000000, percentage: 112.5 },
+        { id: '6', category_type: 'income', category_name: 'קנסות חניה', budget_amount: 25000000, actual_amount: 28000000, year: 2024, difference: 3000000, percentage: 112 },
+        { id: '7', category_type: 'income', category_name: 'קנסות בנייה', budget_amount: 15000000, actual_amount: 12000000, year: 2024, difference: -3000000, percentage: 80 },
+        { id: '8', category_type: 'income', category_name: 'השכרת נכסים', budget_amount: 35000000, actual_amount: 37000000, year: 2024, difference: 2000000, percentage: 105.7 },
+        { id: '9', category_type: 'income', category_name: 'מענקים ממשלתיים', budget_amount: 180000000, actual_amount: 195000000, year: 2024, difference: 15000000, percentage: 108.3 },
+        { id: '10', category_type: 'income', category_name: 'הכנסות אחרות', budget_amount: 30000000, actual_amount: 25000000, year: 2024, difference: -5000000, percentage: 83.3 },
+        { id: '11', category_type: 'income', category_name: 'הכנסות מיוחדות', budget_amount: 40000000, actual_amount: 45000000, year: 2024, difference: 5000000, percentage: 112.5 },
 
-        { id: '12', category_type: 'income', category_name: 'הכנסות חד פעמיות', budget_amount: 50000000, actual_amount: 55000000, excel_cell_ref: 'F23', year: 2024, difference: 5000000, percentage: 110 },
-        { id: '13', category_type: 'income', category_name: 'הכנסות מרמי', budget_amount: 75000000, actual_amount: 78000000, excel_cell_ref: 'F24', year: 2024, difference: 3000000, percentage: 104 },
+        { id: '12', category_type: 'income', category_name: 'הכנסות חד פעמיות', budget_amount: 50000000, actual_amount: 55000000, year: 2024, difference: 5000000, percentage: 110 },
+        { id: '13', category_type: 'income', category_name: 'הכנסות מרמי', budget_amount: 75000000, actual_amount: 78000000, year: 2024, difference: 3000000, percentage: 104 },
 
         // הוצאות
-        { id: '14', category_type: 'expense', category_name: 'שכר כללי', budget_amount: 320000000, actual_amount: 315000000, excel_cell_ref: 'F27', year: 2024, difference: -5000000, percentage: 98.4 },
-        { id: '15', category_type: 'expense', category_name: 'שכר חינוך', budget_amount: 180000000, actual_amount: 185000000, excel_cell_ref: 'F28', year: 2024, difference: 5000000, percentage: 102.8 },
-        { id: '16', category_type: 'expense', category_name: 'שכר רווחה', budget_amount: 95000000, actual_amount: 92000000, excel_cell_ref: 'F29', year: 2024, difference: -3000000, percentage: 96.8 },
+        { id: '14', category_type: 'expense', category_name: 'שכר כללי', budget_amount: 320000000, actual_amount: 315000000, year: 2024, difference: -5000000, percentage: 98.4 },
+        { id: '15', category_type: 'expense', category_name: 'שכר חינוך', budget_amount: 180000000, actual_amount: 185000000, year: 2024, difference: 5000000, percentage: 102.8 },
+        { id: '16', category_type: 'expense', category_name: 'שכר רווחה', budget_amount: 95000000, actual_amount: 92000000, year: 2024, difference: -3000000, percentage: 96.8 },
 
-        { id: '17', category_type: 'expense', category_name: 'אחזקת רכב', budget_amount: 25000000, actual_amount: 28000000, excel_cell_ref: 'F32', year: 2024, difference: 3000000, percentage: 112 },
-        { id: '18', category_type: 'expense', category_name: 'אחזקת מבנים', budget_amount: 45000000, actual_amount: 41000000, excel_cell_ref: 'F33', year: 2024, difference: -4000000, percentage: 91.1 },
+        { id: '17', category_type: 'expense', category_name: 'אחזקת רכב', budget_amount: 25000000, actual_amount: 28000000, year: 2024, difference: 3000000, percentage: 112 },
+        { id: '18', category_type: 'expense', category_name: 'אחזקת מבנים', budget_amount: 45000000, actual_amount: 41000000, year: 2024, difference: -4000000, percentage: 91.1 },
 
-        { id: '19', category_type: 'expense', category_name: 'חשמל ותאורה', budget_amount: 35000000, actual_amount: 38000000, excel_cell_ref: 'F35', year: 2024, difference: 3000000, percentage: 108.6 },
-        { id: '20', category_type: 'expense', category_name: 'דלק וחימור', budget_amount: 20000000, actual_amount: 22000000, excel_cell_ref: 'F36', year: 2024, difference: 2000000, percentage: 110 },
+        { id: '19', category_type: 'expense', category_name: 'חשמל ותאורה', budget_amount: 35000000, actual_amount: 38000000, year: 2024, difference: 3000000, percentage: 108.6 },
+        { id: '20', category_type: 'expense', category_name: 'דלק וחימור', budget_amount: 20000000, actual_amount: 22000000, year: 2024, difference: 2000000, percentage: 110 },
 
-        { id: '21', category_type: 'expense', category_name: 'שירותים מקצועיים', budget_amount: 55000000, actual_amount: 52000000, excel_cell_ref: 'F41', year: 2024, difference: -3000000, percentage: 94.5 },
+        { id: '21', category_type: 'expense', category_name: 'שירותים מקצועיים', budget_amount: 55000000, actual_amount: 52000000, year: 2024, difference: -3000000, percentage: 94.5 },
 
-        { id: '22', category_type: 'expense', category_name: 'פעילויות תרבות', budget_amount: 15000000, actual_amount: 18000000, excel_cell_ref: 'F44', year: 2024, difference: 3000000, percentage: 120 },
+        { id: '22', category_type: 'expense', category_name: 'פעילויות תרבות', budget_amount: 15000000, actual_amount: 18000000, year: 2024, difference: 3000000, percentage: 120 },
 
-        { id: '23', category_type: 'expense', category_name: 'הוצאות שונות', budget_amount: 30000000, actual_amount: 25000000, excel_cell_ref: 'F49', year: 2024, difference: -5000000, percentage: 83.3 },
+        { id: '23', category_type: 'expense', category_name: 'הוצאות שונות', budget_amount: 30000000, actual_amount: 25000000, year: 2024, difference: -5000000, percentage: 83.3 },
       ];
       setBudgetData(demoData);
       setFilteredData(demoData);
@@ -178,7 +176,6 @@ export default function RegularBudgetPage() {
         category_name: newItem.category_name,
         budget_amount: Number(newItem.budget_amount),
         actual_amount: Number(newItem.actual_amount) || 0,
-        excel_cell_ref: newItem.excel_cell_ref || null,
         year: new Date().getFullYear()
       };
 
@@ -206,8 +203,7 @@ export default function RegularBudgetPage() {
         category_type: 'income',
         category_name: '',
         budget_amount: '',
-        actual_amount: '',
-        excel_cell_ref: ''
+        actual_amount: ''
       });
       setAddDialogOpen(false);
     } catch (error) {
@@ -286,15 +282,6 @@ export default function RegularBudgetPage() {
         );
       },
     },
-    {
-      accessorKey: "excel_cell_ref",
-      header: "תא באקסל",
-      cell: ({ row }) => (
-        <Badge variant="outline">
-          {row.original.excel_cell_ref || '-'}
-        </Badge>
-      ),
-    },
   ];
 
   return (
@@ -362,15 +349,6 @@ export default function RegularBudgetPage() {
                       placeholder="0"
                     />
                   </div>
-                </div>
-                <div>
-                  <Label htmlFor="excel_cell_ref">תא באקסל</Label>
-                  <Input
-                    id="excel_cell_ref"
-                    value={newItem.excel_cell_ref}
-                    onChange={(e) => setNewItem(prev => ({...prev, excel_cell_ref: e.target.value}))}
-                    placeholder="לדוגמה: F7"
-                  />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
@@ -471,7 +449,7 @@ export default function RegularBudgetPage() {
           <div className="grid md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>הכנסות - תקציב מול ביצוע (F7-F11, F14-F19, F23-F24)</CardTitle>
+                <CardTitle>הכנסות - תקציב מול ביצוע</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -500,7 +478,7 @@ export default function RegularBudgetPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>תקציב מאושר - הכנסות (D7-D11, D14-D19, D23-D24)</CardTitle>
+                <CardTitle>תקציב מאושר - הכנסות</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -559,7 +537,7 @@ export default function RegularBudgetPage() {
           <div className="grid md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>הוצאות - תקציב מול ביצוע (F27-F29, F32-F33, F35-F36, F41, F44, F49)</CardTitle>
+                <CardTitle>הוצאות - תקציב מול ביצוע</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -588,7 +566,7 @@ export default function RegularBudgetPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>תקציב מאושר - הוצאות (D27-D29, D32-D33, D35-D36, D41, D44, D49)</CardTitle>
+                <CardTitle>תקציב מאושר - הוצאות</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
