@@ -844,10 +844,6 @@ function openEdit(p: Project) {
               <Input value={(form.name as string) || ""} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
             </div>
 
-            <div>
-              <Label>קוד</Label>
-              <Input value={(form.code as string) || ""} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))} />
-            </div>
 
             <div>
               <Label>מחלקה</Label>
