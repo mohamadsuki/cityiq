@@ -27,6 +27,7 @@ import {
 import { DataTable } from "@/components/shared/DataTable";
 import { ExportButtons } from "@/components/shared/ExportButtons";
 import { DataUploader } from "@/components/shared/DataUploader";
+import { ExcelSummaryCards } from "./ExcelSummaryCards";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -431,6 +432,11 @@ export default function RegularBudgetPage() {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
+
+      {/* Summary Cards from Excel B25, D25, F25, J25 */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <ExcelSummaryCards />
       </div>
 
       {/* Summary Cards */}

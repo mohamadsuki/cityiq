@@ -37,7 +37,7 @@ interface DebugLog {
   timestamp: Date;
 }
 
-function parseExcelByCellAddresses(sheet: any): any[] {
+function parseExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
   const results = [];
   
   // Define cell ranges for different categories
@@ -60,6 +60,14 @@ function parseExcelByCellAddresses(sheet: any): any[] {
   const getCellValue = (cellAddress: string) => {
     const cell = sheet[cellAddress];
     return cell ? cell.v : null;
+  };
+
+  // Read summary cards data from specific cells
+  const summaryCards = {
+    plannedIncomeYearly: getCellValue('B25'), // הכנסות מתוכננות (שנתי)
+    relativeBudgetPeriod: getCellValue('D25'), // תקציב יחסי לתקופה
+    actualIncomePeriod: getCellValue('F25'), // הכנסות בפועל לתקופה
+    budgetDeviation: getCellValue('J25') // סטייה מהתקציב
   };
   
   // Helper function to expand range to individual cells
@@ -129,7 +137,7 @@ function parseExcelByCellAddresses(sheet: any): any[] {
     });
   });
   
-  return results;
+  return { data: results, summaryCards };
 }
 
 // Very lightweight header-based classifier - now enhanced with cell address parsing
@@ -615,8 +623,15 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       // Check if this should be parsed by cell addresses (for regular budget)
       if (context === 'regular_budget' || context === 'finance') {
         addLog('info', 'משתמש בפענוח ישיר לפי כתובות תאים');
-        const data = parseExcelByCellAddresses(sheet);
+        const result = parseExcelByCellAddresses(sheet);
+        const { data, summaryCards } = result;
         addLog('success', `נמצאו ${data.length} פריטי תקציב`);
+        
+        // Store summary cards in localStorage for the regular budget page
+        if (summaryCards) {
+          localStorage.setItem('regular_budget_summary', JSON.stringify(summaryCards));
+          addLog('info', 'נתוני סיכום נשמרו:', summaryCards);
+        }
         
         setRows(data);
         setHeaders(['category_name', 'category_type', 'budget_amount', 'actual_amount']);
