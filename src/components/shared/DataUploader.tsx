@@ -116,28 +116,42 @@ function detectTarget(headers: string[], ctx: UploadContext): { table: string | 
 }
 
 function normalizeKey(k: string): string {
-  const key = k.trim().toLowerCase();
+  const key = k.trim();
   const map: Record<string, string> = {
-    // Common Hebrew -> English
+    // Common Hebrew -> English  
     "מספר רישיון": "license_number",
     "שם עסק": "business_name",
     "בעל העסק": "owner",
     "כתובת": "address",
-    "סוג": "type",
+    "סוג רישיון": "type",
     "סטטוס": "status",
     "תוקף": "expires_at",
     "תאריך פקיעה": "expires_at",
 
-    // Regular budget mapping
+    // Regular budget mapping - Hebrew terms
     "קטגוריה": "category_name",
     "שם קטגוריה": "category_name",
+    "שם הקטגוריה": "category_name",
+    "תיאור": "category_name",
+    "פריט": "category_name",
+    "פרט": "category_name",
+    "סעיף": "category_name",
     "סוג קטגוריה": "category_type",
+    "סוג": "category_type",
     "הכנסה": "income",
     "הוצאה": "expense",
     "תקציב מאושר": "budget_amount",
     "תקציב": "budget_amount",
+    "מאושר": "budget_amount",
+    "תקציב שנתי": "budget_amount",
+    "תקציב 2025": "budget_amount",
+    "תקציב 2024": "budget_amount",
     "ביצוע בפועל": "actual_amount",
     "ביצוע": "actual_amount",
+    "בפועל": "actual_amount",
+    "ביצוע שנתי": "actual_amount",
+    "ביצוע 2025": "actual_amount",
+    "ביצוע 2024": "actual_amount",
     "תא באקסל": "excel_cell_ref",
     "תא": "excel_cell_ref",
     "שנה": "year",
@@ -197,6 +211,11 @@ function mapRowToTable(table: string, row: Record<string, any>) {
 
   switch (table) {
     case "regular_budget":
+      // Enhanced debug logging for regular budget
+      console.log("=== PROCESSING REGULAR BUDGET ROW ===");
+      console.log("Original row:", row);
+      console.log("Normalized row:", norm);
+      
       // For regular budget, accept any row that has some meaningful data
       const hasContent = Object.values(norm).some(v => 
         v !== null && v !== undefined && v !== "" && 
@@ -204,10 +223,18 @@ function mapRowToTable(table: string, row: Record<string, any>) {
       );
       
       if (!hasContent) {
+        console.log("Row rejected: no meaningful content");
         return null;
       }
       
-      return {
+      // Helper function to parse numbers safely
+      const parseNumber = (val: any) => {
+        if (val === null || val === undefined || val === '') return null;
+        const num = Number(String(val).replace(/,/g, ''));
+        return isNaN(num) ? null : num;
+      };
+      
+      const result = {
         category_type: norm.category_type || 
           (norm.income ? 'income' : norm.expense ? 'expense' : 
            (String(norm.category_name || norm.name || '').includes('הכנסה') || 
@@ -217,11 +244,14 @@ function mapRowToTable(table: string, row: Record<string, any>) {
             String(norm.category_name || norm.name || '').includes('קנס') ||
             String(norm.category_name || norm.name || '').includes('רישיון')) ? 'income' : 'expense'),
         category_name: norm.category_name || norm.name || 'ללא שם',
-        budget_amount: norm.budget_amount ? Number(norm.budget_amount) : null,
-        actual_amount: norm.actual_amount ? Number(norm.actual_amount) : null,
+        budget_amount: parseNumber(norm.budget_amount),
+        actual_amount: parseNumber(norm.actual_amount),
         excel_cell_ref: norm.excel_cell_ref,
         year: norm.year ? Number(norm.year) : new Date().getFullYear(),
       };
+      
+      console.log("Processed result:", result);
+      return result;
     case "tabarim":
       return {
         tabar_number: norm.tabar_number,
@@ -336,12 +366,22 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       const data: any[] = XLSX.utils.sheet_to_json(sheet, { defval: null });
       setRows(data);
       
-      // Debug - log first few rows to see structure
+      // Enhanced debug logging - log first few rows to see structure
+      console.log("=== EXCEL FILE DEBUG ===");
       console.log("First 3 rows:", data.slice(0, 3));
       console.log("Headers from first row keys:", Object.keys(data[0] || {}));
       
       const headers = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] as string[];
       console.log("Headers from sheet:", headers);
+      
+      // Test the normalization process
+      if (data[0]) {
+        console.log("Testing normalization:");
+        Object.keys(data[0]).forEach(key => {
+          const normalized = normalizeKey(key);
+          console.log(`"${key}" → "${normalized}"`);
+        });
+      }
       
       const d = detectTarget(headers || Object.keys(data[0] || {}), context);
       setDetected(d);
