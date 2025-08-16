@@ -71,10 +71,12 @@ export default function RegularBudgetPage() {
 
   const loadBudgetData = async () => {
     setLoading(true);
+    console.log("=== LOADING BUDGET DATA ===");
     
     if (isDemoUser) {
       // Demo data representing Excel structure (F7-F11, F14-F19, F23-F24 for income, F27-F29, F32-F33, F35-F36, F41, F44, F49 for expenses)
       const demoData: RegularBudgetItem[] = [
+        // ... keep existing code (demo data)
         // הכנסות
         { id: '1', category_type: 'income', category_name: 'ארנונה כללית', budget_amount: 450000000, actual_amount: 420000000, excel_cell_ref: 'F7', year: 2024, difference: -30000000, percentage: 93.3 },
         { id: '2', category_type: 'income', category_name: 'אגרת ביוב', budget_amount: 85000000, actual_amount: 88000000, excel_cell_ref: 'F8', year: 2024, difference: 3000000, percentage: 103.5 },
@@ -124,11 +126,18 @@ export default function RegularBudgetPage() {
 
       if (error) throw error;
 
+      console.log("Raw data from database:", data);
+      console.log("Number of records:", data?.length || 0);
+
       const processedData: RegularBudgetItem[] = (data || []).map(item => ({
         ...item,
         difference: (item.actual_amount || 0) - (item.budget_amount || 0),
         percentage: item.budget_amount ? ((item.actual_amount || 0) / item.budget_amount) * 100 : 0
       }));
+
+      console.log("Processed data:", processedData);
+      console.log("Income items:", processedData.filter(item => item.category_type === 'income').length);
+      console.log("Expense items:", processedData.filter(item => item.category_type === 'expense').length);
 
       setBudgetData(processedData);
       setFilteredData(processedData);
@@ -211,16 +220,16 @@ export default function RegularBudgetPage() {
 
   const incomeChartData = incomeData.map(item => ({
     name: item.category_name.length > 15 ? item.category_name.substring(0, 15) + '...' : item.category_name,
-    budget: item.budget_amount / 1000000,
-    actual: item.actual_amount / 1000000,
-    difference: item.difference / 1000000
+    budget: (item.budget_amount || 0) / 1000000,
+    actual: (item.actual_amount || 0) / 1000000,
+    difference: (item.difference || 0) / 1000000
   }));
 
   const expenseChartData = expenseData.map(item => ({
     name: item.category_name.length > 15 ? item.category_name.substring(0, 15) + '...' : item.category_name,
-    budget: item.budget_amount / 1000000,
-    actual: item.actual_amount / 1000000,
-    difference: item.difference / 1000000
+    budget: (item.budget_amount || 0) / 1000000,
+    actual: (item.actual_amount || 0) / 1000000,
+    difference: (item.difference || 0) / 1000000
   }));
 
   // Table columns
@@ -421,7 +430,7 @@ export default function RegularBudgetPage() {
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">סה"כ הכנסות מתוכננות</div>
             <div className="text-2xl font-bold text-success">
-              {formatCurrency(incomeData.reduce((sum, item) => sum + item.budget_amount, 0))}
+              {formatCurrency(incomeData.reduce((sum, item) => sum + (item.budget_amount || 0), 0))}
             </div>
           </CardContent>
         </Card>
@@ -429,7 +438,7 @@ export default function RegularBudgetPage() {
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">סה"כ הכנסות בפועל</div>
             <div className="text-2xl font-bold text-success">
-              {formatCurrency(incomeData.reduce((sum, item) => sum + item.actual_amount, 0))}
+              {formatCurrency(incomeData.reduce((sum, item) => sum + (item.actual_amount || 0), 0))}
             </div>
           </CardContent>
         </Card>
@@ -437,7 +446,7 @@ export default function RegularBudgetPage() {
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">סה"כ הוצאות מתוכננות</div>
             <div className="text-2xl font-bold text-destructive">
-              {formatCurrency(expenseData.reduce((sum, item) => sum + item.budget_amount, 0))}
+              {formatCurrency(expenseData.reduce((sum, item) => sum + (item.budget_amount || 0), 0))}
             </div>
           </CardContent>
         </Card>
@@ -445,7 +454,7 @@ export default function RegularBudgetPage() {
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">סה"כ הוצאות בפועל</div>
             <div className="text-2xl font-bold text-destructive">
-              {formatCurrency(expenseData.reduce((sum, item) => sum + item.actual_amount, 0))}
+              {formatCurrency(expenseData.reduce((sum, item) => sum + (item.actual_amount || 0), 0))}
             </div>
           </CardContent>
         </Card>
