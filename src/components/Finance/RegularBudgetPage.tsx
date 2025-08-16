@@ -62,7 +62,12 @@ export default function RegularBudgetPage() {
   // Check if user is using actual database (not demo data) - new real users should use database
   const isDemoUser = false; // All users now use real database
 
-  const formatCurrency = (amount: number) => `₪${amount.toLocaleString('he-IL')}`;
+  const formatCurrency = (amount: number | null | undefined) => {
+    if (amount === null || amount === undefined || isNaN(amount)) {
+      return "₪0";
+    }
+    return `₪${amount.toLocaleString('he-IL')}`;
+  };
 
   const loadBudgetData = async () => {
     setLoading(true);
