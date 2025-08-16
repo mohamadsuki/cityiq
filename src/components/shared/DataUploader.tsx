@@ -409,7 +409,8 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       const mapped = rows.map((r) => ({ 
         ...mapRowToTable(detected.table!, r), 
         user_id: userId,
-        ...(deptSlug ? { department_slug: deptSlug } : {})
+        // Only add department_slug for tables that have this column
+        ...(deptSlug && detected.table !== 'regular_budget' ? { department_slug: deptSlug } : {})
       }));
       // Filter out completely empty objects
       const filtered = mapped.filter((obj) => Object.values(obj).some((v) => v !== null && v !== undefined && v !== ""));
