@@ -42,40 +42,123 @@ interface DebugLog {
 function parseCollectionExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
   const results = [];
   
+  console.log('=== COLLECTION PARSING DEBUG ===');
+  
   // Helper function to get cell value
   const getCellValue = (cellAddress: string) => {
     const cell = sheet[cellAddress];
     return cell ? cell.v : null;
   };
 
-  // Define the rows for different property types based on typical collection data structure
-  // These should be adjusted based on the actual "טיוטת מאזן RAW" file structure
+  // Debug: Log all available cells to see the structure
+  const allCells = Object.keys(sheet).filter(key => key.match(/^[A-Z]+\d+$/));
+  console.log('Available cells in sheet:', allCells.sort());
+  
+  // Debug: Check specific ranges we expect
+  const testCells = ['A1', 'A2', 'A3', 'A4', 'A5', 'B1', 'C1', 'D1', 'E1', 'F1', 'G1', 'H1', 'I1', 'J1', 'K1', 'L1', 'M1'];
+  testCells.forEach(cell => {
+    const value = getCellValue(cell);
+    if (value) {
+      console.log(`Cell ${cell}:`, value);
+    }
+  });
+
+  // Try to find data in different possible locations
+  // First, let's scan the first few rows to find headers
+  const possibleHeaderRows = [1, 2, 3, 4, 5, 6];
+  let headerRow = 1;
+  let dataStartRow = 7;
+  
+  // Look for key column indicators
+  for (let row of possibleHeaderRows) {
+    const cellA = getCellValue(`A${row}`);
+    const cellB = getCellValue(`B${row}`);
+    const cellC = getCellValue(`C${row}`);
+    const cellD = getCellValue(`D${row}`);
+    
+    console.log(`Row ${row} headers:`, { A: cellA, B: cellB, C: cellC, D: cellD });
+    
+    if (cellA && (String(cellA).includes('נכס') || String(cellA).includes('מגורים') || String(cellA).includes('סוג'))) {
+      console.log(`Found potential header row at ${row}`);
+      headerRow = row;
+      dataStartRow = row + 1;
+      break;
+    }
+  }
+
+  // Define the rows for different property types - be more flexible
   const propertyTypeRows = [
-    { row: 7, name: 'מגורים' },
-    { row: 8, name: 'מסחר' },
-    { row: 9, name: 'תעשיה' },
-    { row: 10, name: 'משרדים' },
-    { row: 11, name: 'אחר' }
+    { row: dataStartRow, name: 'מגורים' },
+    { row: dataStartRow + 1, name: 'מסחר' }, 
+    { row: dataStartRow + 2, name: 'תעשיה' },
+    { row: dataStartRow + 3, name: 'משרדים' },
+    { row: dataStartRow + 4, name: 'אחר' }
   ];
 
-  // Process each property type
-  propertyTypeRows.forEach(({ row, name }) => {
-    const propertyType = name;
-    const annualBudget = getCellValue(`H${row}`); // עמודה H - תקציב שנתי
-    const relativeBudget = getCellValue(`I${row}`); // עמודה I - תקציב יחסי
-    const actualCollection = getCellValue(`M${row}`); // עמודה M - גביה בפועל
+  // Try different column combinations for the data
+  const columnSets = [
+    { annual: 'H', relative: 'I', actual: 'M' }, // Original assumption
+    { annual: 'D', relative: 'E', actual: 'F' }, // Alternative 1
+    { annual: 'E', relative: 'F', actual: 'G' }, // Alternative 2
+    { annual: 'F', relative: 'G', actual: 'H' }, // Alternative 3
+    { annual: 'B', relative: 'C', actual: 'D' }, // Alternative 4
+  ];
+
+  let foundData = false;
+  
+  for (let colSet of columnSets) {
+    console.log(`Trying column set:`, colSet);
     
-    if (propertyType) {
-      results.push({
-        property_type: propertyType,
+    // Test this column set
+    const testResults = [];
+    let hasData = false;
+    
+    propertyTypeRows.forEach(({ row, name }) => {
+      const annualBudget = getCellValue(`${colSet.annual}${row}`);
+      const relativeBudget = getCellValue(`${colSet.relative}${row}`);
+      const actualCollection = getCellValue(`${colSet.actual}${row}`);
+      
+      console.log(`Row ${row} (${name}):`, {
+        annual: annualBudget,
+        relative: relativeBudget,
+        actual: actualCollection
+      });
+      
+      if (annualBudget !== null || relativeBudget !== null || actualCollection !== null) {
+        hasData = true;
+      }
+      
+      testResults.push({
+        property_type: name,
         annual_budget: annualBudget ? Number(annualBudget) : null,
         relative_budget: relativeBudget ? Number(relativeBudget) : null,
         actual_collection: actualCollection ? Number(actualCollection) : null,
-        excel_cell_ref: `H${row}, I${row}, M${row}`,
+        excel_cell_ref: `${colSet.annual}${row}, ${colSet.relative}${row}, ${colSet.actual}${row}`,
         year: new Date().getFullYear()
       });
+    });
+    
+    if (hasData) {
+      console.log('Found data with column set:', colSet);
+      results.push(...testResults);
+      foundData = true;
+      break;
     }
-  });
+  }
+
+  if (!foundData) {
+    console.log('No data found in any expected column sets. Trying to scan the entire sheet...');
+    
+    // Last resort: scan for any numeric data
+    for (let row = 1; row <= 20; row++) {
+      for (let col of ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O']) {
+        const value = getCellValue(`${col}${row}`);
+        if (value !== null && !isNaN(Number(value)) && Number(value) > 1000) {
+          console.log(`Found numeric value at ${col}${row}:`, value);
+        }
+      }
+    }
+  }
 
   // Calculate summary data
   const totalAnnualBudget = results.reduce((sum, item) => sum + (item.annual_budget || 0), 0);
@@ -89,8 +172,8 @@ function parseCollectionExcelByCellAddresses(sheet: any): { data: any[], summary
     surplus_deficit: totalActualCollection - totalRelativeBudget
   };
 
-  console.log('Collection data parsed:', results);
-  console.log('Collection summary:', summaryCards);
+  console.log('Final collection data parsed:', results);
+  console.log('Final collection summary:', summaryCards);
   
   return { data: results, summaryCards };
 }
