@@ -60,8 +60,8 @@ export default function RegularBudgetPage() {
     excel_cell_ref: ''
   });
 
-  // Check if user is using actual database (not demo data) - temporarily show demo until real data is imported
-  const isDemoUser = true; // Temporarily show demo data until user imports Excel
+  // Check if user is using actual database (not demo data) - show real data from database
+  const isDemoUser = false; // Show real data from database
 
   const formatCurrency = (amount: number | null | undefined) => {
     if (amount === null || amount === undefined || isNaN(amount)) {

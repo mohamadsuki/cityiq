@@ -262,25 +262,47 @@ function mapRowToTable(table: string, row: Record<string, any>) {
     case "regular_budget":
       // Enhanced debug logging for regular budget
       console.log("=== PROCESSING REGULAR BUDGET ROW ===");
-      console.log("Original row:", row);
+      console.log("Original row keys:", Object.keys(row));
+      console.log("Original row values:", Object.values(row));
+      console.log("Row sample:", JSON.stringify(row, null, 2));
+      console.log("Normalized keys mapping:");
+      Object.keys(row).forEach(k => {
+        console.log(`  "${k}" -> "${normalizeKey(k)}"`);
+      });
       console.log("Normalized row:", norm);
       
-      // For regular budget, accept any row that has some meaningful data
-      const hasContent = Object.values(norm).some(v => 
-        v !== null && v !== undefined && v !== "" && 
-        typeof v === 'string' ? v.trim() !== "" : true
-      );
+      // Check for meaningful content
+      const meaningfulFields = ['category_name', 'name', 'budget_amount', 'actual_amount'];
+      const hasMeaningfulData = meaningfulFields.some(field => {
+        const value = norm[field];
+        return value !== null && value !== undefined && value !== "" && String(value).trim() !== "";
+      });
       
-      if (!hasContent) {
-        console.log("Row rejected: no meaningful content");
+      if (!hasMeaningfulData) {
+        console.log("Row rejected: no meaningful data found");
         return null;
       }
       
       // Helper function to parse numbers safely
       const parseNumber = (val: any) => {
-        if (val === null || val === undefined || val === '') return null;
-        const num = Number(String(val).replace(/,/g, ''));
-        return isNaN(num) ? null : num;
+        console.log(`Parsing number: "${val}" (type: ${typeof val})`);
+        if (val === null || val === undefined || val === '') {
+          console.log("  -> null (empty value)");
+          return null;
+        }
+        
+        // Handle different number formats
+        let numStr = String(val).replace(/,/g, '').replace(/₪/g, '').trim();
+        
+        // Handle negative numbers in parentheses: (1000) -> -1000
+        if (numStr.match(/^\(.*\)$/)) {
+          numStr = '-' + numStr.replace(/[()]/g, '');
+        }
+        
+        const num = Number(numStr);
+        const result = isNaN(num) ? null : num;
+        console.log(`  -> ${result}`);
+        return result;
       };
       
       // Determine category type more intelligently
