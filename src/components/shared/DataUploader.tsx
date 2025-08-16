@@ -60,13 +60,16 @@ function detectTarget(headers: string[], ctx: UploadContext): { table: string | 
     return { table: "institutions", reason: "זוהה מבנה מוסדות חינוך" };
   }
 
-  // Finance regular budget
+  // Finance regular budget - Enhanced detection
   if (
+    ctx === "finance" ||
     ctx === "regular_budget" ||
-    hasWords("קטגוריה", "category") ||
-    hasWords("תקציב מאושר", "budget_amount") ||
-    hasWords("ביצוע בפועל", "actual_amount") ||
-    hasWords("הכנסה", "income", "הוצאה", "expense")
+    hasWords("קטגוריה", "category", "סעיף", "פריט") ||
+    hasWords("תקציב מאושר", "budget_amount", "תקציב") ||
+    hasWords("ביצוע בפועל", "actual_amount", "ביצוע", "בפועל") ||
+    hasWords("הכנסה", "income", "הוצאה", "expense") ||
+    hasWords("ארנונה", "אגרת", "היטל", "מענק") ||
+    hasAny("f7", "f8", "f9", "f10", "f11") // Excel cell references for budget
   ) {
     return { table: "regular_budget", reason: "זוהה מבנה תקציב רגיל" };
   }
@@ -81,9 +84,8 @@ function detectTarget(headers: string[], ctx: UploadContext): { table: string | 
     return { table: "tabarim", reason: 'זוהה מבנה תב"רים' };
   }
 
-  // Finance projects / grants
+  // Finance projects / grants (but not if already detected as regular_budget)
   if (
-    ctx === "finance" ||
     hasWords("project", 'תב"ר') ||
     hasWords("budget", "תקציב")
   ) {
@@ -281,16 +283,22 @@ function mapRowToTable(table: string, row: Record<string, any>) {
         return isNaN(num) ? null : num;
       };
       
+      // Determine category type more intelligently
+      let categoryType = 'expense'; // default
+      if (norm.category_type) {
+        categoryType = norm.category_type === 'income' || norm.category_type === 'הכנסה' ? 'income' : 'expense';
+      } else if (norm.income || String(norm.category_name || norm.name || '').match(/הכנס|ארנונה|אגרת|היטל|קנס|רישיון|מענק/)) {
+        categoryType = 'income';
+      }
+      
+      // Get meaningful category name
+      const categoryName = norm.category_name || norm.name || 
+                          Object.keys(row).find(k => k !== 'category_type' && row[k] && String(row[k]).trim().length > 2) || 
+                          'פריט תקציבי';
+      
       const result = {
-        category_type: norm.category_type || 
-          (norm.income ? 'income' : norm.expense ? 'expense' : 
-           (String(norm.category_name || norm.name || '').includes('הכנסה') || 
-            String(norm.category_name || norm.name || '').includes('ארנונה') || 
-            String(norm.category_name || norm.name || '').includes('אגרת') ||
-            String(norm.category_name || norm.name || '').includes('היטל') ||
-            String(norm.category_name || norm.name || '').includes('קנס') ||
-            String(norm.category_name || norm.name || '').includes('רישיון')) ? 'income' : 'expense'),
-        category_name: norm.category_name || norm.name || 'ללא שם',
+        category_type: categoryType,
+        category_name: categoryName,
         budget_amount: parseNumber(norm.budget_amount),
         actual_amount: parseNumber(norm.actual_amount),
         excel_cell_ref: norm.excel_cell_ref,

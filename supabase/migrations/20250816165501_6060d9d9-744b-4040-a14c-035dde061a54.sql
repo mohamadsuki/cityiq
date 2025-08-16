@@ -1,0 +1,1 @@
+DELETE FROM regular_budget WHERE category_name = 'ללא שם';
