@@ -14,7 +14,9 @@ import {
   Pie,
   Cell,
   LineChart,
-  Line
+  Line,
+  Area,
+  AreaChart
 } from "recharts";
 import {
   TrendingUp,
@@ -24,8 +26,13 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Calculator,
+  Receipt,
+  Users,
+  ArrowRight
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { DataTable } from "@/components/shared/DataTable";
 import { DateRangePicker } from "@/components/shared/DateRangePicker";
 import { ExportButtons } from "@/components/shared/ExportButtons";
@@ -97,6 +104,18 @@ const getStatusText = (status: string) => {
 export default function FinanceDashboard() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const { user, session } = useAuth();
+  const navigate = useNavigate();
+  const [tabarimData, setTabarimData] = useState<any[]>([]);
+  const [regularBudgetData, setRegularBudgetData] = useState<any[]>([]);
+  const [financialSummary, setFinancialSummary] = useState({
+    annualBudget: 0,
+    periodicBudget: 0,
+    incomeActual: 0,
+    expenseActual: 0,
+    surplus: 0,
+    totalTabarimCount: 0,
+    totalTabarimAmount: 0
+  });
 
   type ProjectRow = {
     name: string;
@@ -114,6 +133,13 @@ export default function FinanceDashboard() {
 
   const formatCurrency = (v: number | null | undefined) =>
     v != null && !Number.isNaN(Number(v)) ? `₪${Number(v).toLocaleString('he-IL')}` : "—";
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000000) return `₪${(num / 1000000000).toFixed(1)}B`;
+    if (num >= 1000000) return `₪${(num / 1000000).toFixed(0)}M`;
+    if (num >= 1000) return `₪${(num / 1000).toFixed(0)}K`;
+    return `₪${num.toLocaleString('he-IL')}`;
+  };
 
   const mapProjectToRow = (p: any): ProjectRow => ({
     name: p.code || p.name || '—',
@@ -142,7 +168,89 @@ export default function FinanceDashboard() {
     if (!error && data) setProjectsRows(data.map(mapProjectToRow));
   }
 
-  useEffect(() => { loadProjects(); }, [session, user?.id]);
+  async function loadFinancialData() {
+    if (isDemo) {
+      // Demo data for financial summary
+      setFinancialSummary({
+        annualBudget: 2400000000, // 2.4B
+        periodicBudget: 600000000, // 600M
+        incomeActual: 1950000000, // 1.95B
+        expenseActual: 1680000000, // 1.68B
+        surplus: 270000000, // 270M
+        totalTabarimCount: 47,
+        totalTabarimAmount: 890000000 // 890M
+      });
+      return;
+    }
+
+    try {
+      // Load tabarim data
+      const { data: tabarimData, error: tabarimError } = await supabase
+        .from('tabarim')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (!tabarimError && tabarimData) {
+        setTabarimData(tabarimData);
+        const totalCount = tabarimData.length;
+        const totalAmount = tabarimData.reduce((sum, item) => sum + (Number(item.approved_budget) || 0), 0);
+        
+        setFinancialSummary(prev => ({
+          ...prev,
+          totalTabarimCount: totalCount,
+          totalTabarimAmount: totalAmount
+        }));
+      }
+
+      // Load regular budget data
+      const { data: budgetData, error: budgetError } = await supabase
+        .from('regular_budget')  
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (!budgetError && budgetData) {
+        setRegularBudgetData(budgetData);
+        
+        const incomeItems = budgetData.filter(item => item.category_type === 'income');
+        const expenseItems = budgetData.filter(item => item.category_type === 'expense');
+        
+        const totalIncome = incomeItems.reduce((sum, item) => sum + (Number(item.actual_amount) || 0), 0);
+        const totalExpense = expenseItems.reduce((sum, item) => sum + (Number(item.actual_amount) || 0), 0);
+        const totalBudget = incomeItems.reduce((sum, item) => sum + (Number(item.budget_amount) || 0), 0);
+        
+        setFinancialSummary(prev => ({
+          ...prev,
+          annualBudget: totalBudget,
+          incomeActual: totalIncome,
+          expenseActual: totalExpense,
+          surplus: totalIncome - totalExpense
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading financial data:', error);
+    }
+  }
+
+  // Demo data for budget differences and trends
+  const budgetDifferencesData = [
+    { name: "תקציב רגיל", budgeted: 1200, actual: 980, difference: -220 },
+    { name: "תב״רים", budgeted: 890, actual: 745, difference: -145 },
+    { name: "הכנסות אחרות", budgeted: 340, actual: 425, difference: 85 },
+  ];
+
+  const trendData = [
+    { month: "ינו", budget: 200, actual: 185 },
+    { month: "פבר", budget: 200, actual: 195 },
+    { month: "מרץ", budget: 200, actual: 205 },
+    { month: "אפר", budget: 200, actual: 190 },
+    { month: "מאי", budget: 200, actual: 215 },
+    { month: "יונ", budget: 200, actual: 225 },
+  ];
+
+  useEffect(() => { 
+    loadProjects();
+    loadFinancialData();
+  }, [session, user?.id]);
 
 
   const projectColumns: ColumnDef<ProjectRow>[] = [
@@ -192,16 +300,60 @@ export default function FinanceDashboard() {
         </div>
       </div>
 
+      {/* Navigation to Sub-pages */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Button 
+          variant="outline" 
+          className="h-auto p-4 flex flex-col items-center gap-2"
+          onClick={() => navigate('/finance/regular-budget')}
+        >
+          <Calculator className="h-8 w-8 text-primary" />
+          <span className="font-medium">תקציב רגיל</span>
+          <ArrowRight className="h-4 w-4 opacity-50" />
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          className="h-auto p-4 flex flex-col items-center gap-2"
+          onClick={() => navigate('/finance/tabarim')}
+        >
+          <FileText className="h-8 w-8 text-primary" />
+          <span className="font-medium">תב״רים</span>
+          <ArrowRight className="h-4 w-4 opacity-50" />
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          className="h-auto p-4 flex flex-col items-center gap-2"
+          onClick={() => navigate('/finance/collection')}
+        >
+          <Receipt className="h-8 w-8 text-primary" />
+          <span className="font-medium">גביה</span>
+          <ArrowRight className="h-4 w-4 opacity-50" />
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          className="h-auto p-4 flex flex-col items-center gap-2"
+          onClick={() => navigate('/finance/salary')}
+        >
+          <Users className="h-8 w-8 text-primary" />
+          <span className="font-medium">שכר</span>
+          <ArrowRight className="h-4 w-4 opacity-50" />
+        </Button>
+      </div>
+
       <ExecutiveTasksBanner department="finance" />
 
-      {/* KPI Cards */}
+      {/* Updated KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="shadow-card">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
-                <p className="text-muted-foreground text-sm">תקציב שנתי מאושר</p>
-                <p className="text-3xl font-bold text-foreground">₪2.4B</p>
+                <p className="text-muted-foreground text-sm">תקציב שנתי</p>
+                <p className="text-3xl font-bold text-foreground">{formatNumber(financialSummary.annualBudget)}</p>
+                <p className="text-xs text-muted-foreground">מתא B50</p>
               </div>
               <div className="h-12 w-12 bg-gradient-primary rounded-lg flex items-center justify-center">
                 <DollarSign className="h-6 w-6 text-primary-foreground" />
@@ -214,15 +366,15 @@ export default function FinanceDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
-                <p className="text-muted-foreground text-sm">ביצוע מצטבר</p>
-                <p className="text-3xl font-bold text-foreground">₪1.8B</p>
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <TrendingUp className="h-4 w-4 text-success" />
-                  <span className="text-sm text-success">75%</span>
+                <p className="text-muted-foreground text-sm">ביצוע הכנסות/הוצאות</p>
+                <div className="space-y-1">
+                  <p className="text-lg font-bold text-success">{formatNumber(financialSummary.incomeActual)}</p>
+                  <p className="text-lg font-bold text-destructive">{formatNumber(financialSummary.expenseActual)}</p>
                 </div>
+                <p className="text-xs text-muted-foreground">F25/F50</p>
               </div>
               <div className="h-12 w-12 bg-gradient-accent rounded-lg flex items-center justify-center">
-                <BarChart className="h-6 w-6 text-accent-foreground" />
+                <TrendingUp className="h-6 w-6 text-accent-foreground" />
               </div>
             </div>
           </CardContent>
@@ -233,10 +385,16 @@ export default function FinanceDashboard() {
             <div className="flex items-center justify-between">
               <div className="space-y-2">
                 <p className="text-muted-foreground text-sm">עודף/גרעון</p>
-                <p className="text-3xl font-bold text-success">₪320M</p>
-                <p className="text-sm text-muted-foreground">עודף</p>
+                <p className={`text-3xl font-bold ${financialSummary.surplus >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {formatNumber(Math.abs(financialSummary.surplus))}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {financialSummary.surplus >= 0 ? 'עודף' : 'גרעון'} - F52
+                </p>
               </div>
-              <div className="h-12 w-12 bg-success rounded-lg flex items-center justify-center">
+              <div className={`h-12 w-12 rounded-lg flex items-center justify-center ${
+                financialSummary.surplus >= 0 ? 'bg-success' : 'bg-destructive'
+              }`}>
                 <TrendingUp className="h-6 w-6 text-success-foreground" />
               </div>
             </div>
@@ -247,11 +405,11 @@ export default function FinanceDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-2">
-                <p className="text-muted-foreground text-sm">פרויקטים פעילים</p>
-                <p className="text-3xl font-bold text-foreground">47</p>
+                <p className="text-muted-foreground text-sm">סה״כ תב״רים</p>
+                <p className="text-3xl font-bold text-foreground">{financialSummary.totalTabarimCount}</p>
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <FileText className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">תב״רים</span>
+                  <span className="text-sm text-muted-foreground">{formatNumber(financialSummary.totalTabarimAmount)}</span>
                 </div>
               </div>
               <div className="h-12 w-12 bg-muted rounded-lg flex items-center justify-center">
@@ -262,7 +420,71 @@ export default function FinanceDashboard() {
         </Card>
       </div>
 
-      {/* Charts Section */}
+      {/* New Advanced Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Budget Differences Chart */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-xl">הפרש תקציב מול ביצוע</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={budgetDifferencesData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    `₪${value}M`, 
+                    name === 'budgeted' ? 'מתוכנן' : name === 'actual' ? 'בפועל' : 'הפרש'
+                  ]}
+                />
+                <Bar dataKey="budgeted" fill="hsl(var(--muted))" name="מתוכנן" />
+                <Bar dataKey="actual" fill="hsl(var(--primary))" name="בפועל" />
+                <Bar dataKey="difference" fill="hsl(var(--accent))" name="הפרש" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Tabarim Differences Chart */}
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-xl">גרף הפרש תב״רים</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value, name) => [`₪${value}M`, name === 'budget' ? 'תקציב' : 'ביצוע']} />
+                <Area type="monotone" dataKey="budget" stackId="1" stroke="hsl(var(--muted))" fill="hsl(var(--muted))" fillOpacity={0.6} />
+                <Area type="monotone" dataKey="actual" stackId="2" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.8} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Time Trends Chart */}
+      <Card className="shadow-card">
+        <CardHeader>
+          <CardTitle className="text-xl">מגמות זמן - תקציב מול ביצוע</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip formatter={(value, name) => [`₪${value}M`, name === 'budget' ? 'תקציב' : 'ביצוע']} />
+              <Line type="monotone" dataKey="budget" stroke="hsl(var(--muted))" strokeWidth={2} strokeDasharray="5 5" />
+              <Line type="monotone" dataKey="actual" stroke="hsl(var(--primary))" strokeWidth={3} />
+            </LineChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Budget Execution Chart */}
         <Card className="shadow-card">
