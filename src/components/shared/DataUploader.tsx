@@ -486,6 +486,22 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       }
 
       const tableName = detected.table as 'regular_budget' | 'tabarim' | 'licenses' | 'plans' | 'institutions' | 'projects' | 'grants' | 'welfare_services' | 'activities';
+      
+      // For regular_budget table, delete existing data first to replace with new data
+      if (tableName === "regular_budget") {
+        console.log("Deleting existing regular_budget data for user:", userId);
+        const { error: deleteError } = await supabase
+          .from('regular_budget')
+          .delete()
+          .eq('user_id', userId);
+
+        if (deleteError) {
+          console.warn("Error deleting existing data:", deleteError);
+        } else {
+          console.log("Existing regular_budget data deleted successfully");
+        }
+      }
+
       const { error } = await supabase.from(tableName).insert(filtered as any);
       if (error) throw error;
 

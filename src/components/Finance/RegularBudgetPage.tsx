@@ -413,7 +413,10 @@ export default function RegularBudgetPage() {
                 </div>
                 <DataUploader 
                   context="regular_budget" 
-                  onUploadSuccess={loadBudgetData}
+                  onUploadSuccess={() => {
+                    console.log("Data uploaded successfully - refreshing budget data...");
+                    loadBudgetData();
+                  }}
                 />
                 <div className="mt-4 text-sm text-muted-foreground">
                   לאחר הייבוא מוצלח, הדף יתרענן אוטומטית ויציג את הנתונים החדשים.
