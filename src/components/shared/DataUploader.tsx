@@ -197,8 +197,13 @@ function mapRowToTable(table: string, row: Record<string, any>) {
 
   switch (table) {
     case "regular_budget":
-      // Skip rows with empty category names
-      if (!norm.category_name && !norm.name) {
+      // For regular budget, accept any row that has some meaningful data
+      const hasContent = Object.values(norm).some(v => 
+        v !== null && v !== undefined && v !== "" && 
+        typeof v === 'string' ? v.trim() !== "" : true
+      );
+      
+      if (!hasContent) {
         return null;
       }
       
@@ -330,12 +335,19 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       const sheet = wb.Sheets[first];
       const data: any[] = XLSX.utils.sheet_to_json(sheet, { defval: null });
       setRows(data);
+      
+      // Debug - log first few rows to see structure
+      console.log("First 3 rows:", data.slice(0, 3));
+      console.log("Headers from first row keys:", Object.keys(data[0] || {}));
+      
       const headers = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] as string[];
+      console.log("Headers from sheet:", headers);
+      
       const d = detectTarget(headers || Object.keys(data[0] || {}), context);
       setDetected(d);
       toast({ title: "קובץ נטען", description: `${data.length} שורות. ${d.reason}` });
     } catch (e: any) {
-      console.error(e);
+      console.error("Error reading file:", e);
       toast({ title: "שגיאה בקריאת הקובץ", description: e.message, variant: "destructive" });
     }
   };
