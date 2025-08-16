@@ -375,11 +375,30 @@ export default function RegularBudgetPage() {
                 ייבוא מאקסל
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent dir="rtl" className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>ייבוא תקציב רגיל מאקסל</DialogTitle>
               </DialogHeader>
-              <DataUploader context="finance" />
+              <div className="space-y-4">
+                <div className="p-4 bg-muted/50 rounded-lg">
+                  <h4 className="font-semibold mb-2">📋 הוראות הכנה לייבוא</h4>
+                  <div className="text-sm space-y-2">
+                    <p><strong>כותרות נדרשות בקובץ האקסל:</strong></p>
+                    <ul className="list-disc mr-6 space-y-1">
+                      <li><code>קטגוריה</code> - שם הקטגוריה (ארנונה כללית, שכר כללי וכו')</li>
+                      <li><code>סוג קטגוריה</code> - "הכנסה" או "הוצאה"</li>
+                      <li><code>תקציב מאושר</code> - הסכום המתוכנן</li>
+                      <li><code>ביצוע בפועל</code> - הסכום שבוצע</li>
+                      <li><code>תא באקסל</code> - התא המקורי (F7, F8 וכו')</li>
+                      <li><code>שנה</code> - שנת התקציב (אופציונלי)</li>
+                    </ul>
+                    <p className="text-muted-foreground text-xs">
+                      💡 המערכת תזהה אוטומטית אם הקטגוריה היא הכנסה או הוצאה לפי השם
+                    </p>
+                  </div>
+                </div>
+                <DataUploader context="regular_budget" />
+              </div>
             </DialogContent>
           </Dialog>
         </div>

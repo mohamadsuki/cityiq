@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type UploadContext =
   | "finance"
+  | "regular_budget"
+  | "tabarim"
   | "education"
   | "engineering"
   | "welfare"
@@ -54,6 +56,27 @@ function detectTarget(headers: string[], ctx: UploadContext): { table: string | 
     hasWords("level", "שלב")
   ) {
     return { table: "institutions", reason: "זוהה מבנה מוסדות חינוך" };
+  }
+
+  // Finance regular budget
+  if (
+    ctx === "regular_budget" ||
+    hasWords("קטגוריה", "category") ||
+    hasWords("תקציב מאושר", "budget_amount") ||
+    hasWords("ביצוע בפועל", "actual_amount") ||
+    hasWords("הכנסה", "income", "הוצאה", "expense")
+  ) {
+    return { table: "regular_budget", reason: "זוהה מבנה תקציב רגיל" };
+  }
+
+  // Finance tabarim
+  if (
+    ctx === "tabarim" ||
+    hasWords('תב"ר', "tabar") ||
+    hasWords("תחום", "domain") ||
+    hasWords("מקור תקציבי", "funding_source")
+  ) {
+    return { table: "tabarim", reason: 'זוהה מבנה תב"רים' };
   }
 
   // Finance projects / grants
@@ -103,6 +126,34 @@ function normalizeKey(k: string): string {
     "תוקף": "expires_at",
     "תאריך פקיעה": "expires_at",
 
+    // Regular budget mapping
+    "קטגוריה": "category_name",
+    "שם קטגוריה": "category_name",
+    "סוג קטגוריה": "category_type",
+    "הכנסה": "income",
+    "הוצאה": "expense",
+    "תקציב מאושר": "budget_amount",
+    "תקציב": "budget_amount",
+    "ביצוע בפועל": "actual_amount",
+    "ביצוע": "actual_amount",
+    "תא באקסל": "excel_cell_ref",
+    "תא": "excel_cell_ref",
+    "שנה": "year",
+
+    // Tabarim mapping
+    'מספר תב"ר': "tabar_number",
+    'שם תב"ר': "tabar_name",
+    "תחום": "domain",
+    "מקור תקציבי": "funding_source1",
+    "מקור תקציב ראשון": "funding_source1",
+    "מקור תקציבי 2": "funding_source2",
+    "מקור תקציב 2": "funding_source2",
+    "מקור תקציבי 3": "funding_source3",
+    "מקור תקציב 3": "funding_source3",
+    "ביצוע מצטבר הכנסות": "income_actual",
+    "ביצוע מצטבר הוצאות": "expense_actual",
+    "עודף/גרעון": "surplus_deficit",
+
     "מספר תוכנית": "plan_number",
     "שם תוכנית": "name",
     "אזור": "address",
@@ -116,10 +167,7 @@ function normalizeKey(k: string): string {
     "תפוסה": "occupancy",
 
     "שם פרויקט": "name",
-    'מספר תב"ר': "code",
-    "תקציב מאושר": "budget_approved",
-    "ביצוע": "budget_executed",
-    "מקור תקציב": "funding_source",
+    "מקור מימון פרויקט": "funding_source",
 
     "שירות": "service_type",
     "מקבלי שירות": "recipients",
@@ -128,7 +176,7 @@ function normalizeKey(k: string): string {
 
     "שם פעילות": "name",
     "תוכנית": "program",
-    "קטגוריה": "category",
+    "קטגוריית פעילות": "category",
     "קבוצת גיל": "age_group",
     "משתתפים": "participants",
     "מיקום": "location",
@@ -146,6 +194,36 @@ function mapRowToTable(table: string, row: Record<string, any>) {
   });
 
   switch (table) {
+    case "regular_budget":
+      return {
+        category_type: norm.category_type || 
+          (norm.income ? 'income' : norm.expense ? 'expense' : 
+           (String(norm.category_name || '').includes('הכנסה') || 
+            String(norm.category_name || '').includes('ארנונה') || 
+            String(norm.category_name || '').includes('אגרת') ||
+            String(norm.category_name || '').includes('היטל') ||
+            String(norm.category_name || '').includes('קנס') ||
+            String(norm.category_name || '').includes('רישיון')) ? 'income' : 'expense'),
+        category_name: norm.category_name || norm.name,
+        budget_amount: norm.budget_amount ? Number(norm.budget_amount) : null,
+        actual_amount: norm.actual_amount ? Number(norm.actual_amount) : null,
+        excel_cell_ref: norm.excel_cell_ref,
+        year: norm.year ? Number(norm.year) : new Date().getFullYear(),
+      };
+    case "tabarim":
+      return {
+        tabar_number: norm.tabar_number,
+        tabar_name: norm.tabar_name || norm.name,
+        domain: norm.domain,
+        funding_source1: norm.funding_source1 || norm.funding_source,
+        funding_source2: norm.funding_source2,
+        funding_source3: norm.funding_source3,
+        approved_budget: norm.approved_budget ? Number(norm.approved_budget) : null,
+        income_actual: norm.income_actual ? Number(norm.income_actual) : null,
+        expense_actual: norm.expense_actual ? Number(norm.expense_actual) : null,
+        surplus_deficit: norm.surplus_deficit ? Number(norm.surplus_deficit) : null,
+        status: norm.status || 'planning',
+      };
     case "licenses":
       return {
         license_number: norm.license_number || norm.license || norm.id,
@@ -285,8 +363,19 @@ export function DataUploader({ context = "global" }: DataUploaderProps) {
 
       // Map and insert
       const inferDept = (table: string, ctx: UploadContext): 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | null => {
-        if (ctx && ctx !== 'global') return ctx;
+        if (ctx && ctx !== 'global') {
+          switch (ctx) {
+            case 'regular_budget':
+            case 'tabarim':
+            case 'finance':
+              return 'finance';
+            default:
+              return ctx as any;
+          }
+        }
         switch (table) {
+          case 'regular_budget':
+          case 'tabarim':
           case 'projects':
           case 'grants':
             return 'finance';
@@ -320,7 +409,7 @@ export function DataUploader({ context = "global" }: DataUploaderProps) {
         return;
       }
 
-      const tableName = detected.table as 'licenses' | 'plans' | 'institutions' | 'projects' | 'grants' | 'welfare_services' | 'activities';
+      const tableName = detected.table as 'regular_budget' | 'tabarim' | 'licenses' | 'plans' | 'institutions' | 'projects' | 'grants' | 'welfare_services' | 'activities';
       const { error } = await supabase.from(tableName).insert(filtered as any);
       if (error) throw error;
 
