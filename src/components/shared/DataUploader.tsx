@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 export type UploadContext =
   | "finance"
@@ -308,6 +309,7 @@ function mapRowToTable(table: string, row: Record<string, any>) {
 
 export function DataUploader({ context = "global" }: DataUploaderProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<any[]>([]);
   const [detected, setDetected] = useState<{ table: string | null; reason: string }>({ table: null, reason: "" });
@@ -341,13 +343,32 @@ export function DataUploader({ context = "global" }: DataUploaderProps) {
 
     setBusy(true);
     try {
-      const { data: sessionRes } = await supabase.auth.getSession();
-      const userId = sessionRes.session?.user?.id;
+      // Check for user - either from session or demo user
+      let userId = user?.id;
+      
+      if (!userId) {
+        const { data: sessionRes } = await supabase.auth.getSession();
+        userId = sessionRes.session?.user?.id;
+      }
+      
       if (!userId) {
         toast({
           title: "נדרש חיבור משתמש",
           description: "התחבר/י כדי להעלות ולשבץ נתונים לבסיס הנתונים",
           variant: "destructive",
+        });
+        setBusy(false);
+        return;
+      }
+
+      // Check if user is demo user
+      const isDemoUser = userId.startsWith('00000000-0000-0000-0000-') || userId.startsWith('demo-');
+      
+      if (isDemoUser) {
+        toast({
+          title: "מצב דמו",
+          description: "בגרסת הדמו, הנתונים לא נשמרים בפועל במסד הנתונים",
+          variant: "default",
         });
         setBusy(false);
         return;
