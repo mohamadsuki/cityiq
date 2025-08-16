@@ -157,6 +157,45 @@ export type Database = {
         }
         Relationships: []
       }
+      collection_data: {
+        Row: {
+          actual_collection: number | null
+          annual_budget: number | null
+          created_at: string
+          excel_cell_ref: string | null
+          id: string
+          property_type: string
+          relative_budget: number | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          actual_collection?: number | null
+          annual_budget?: number | null
+          created_at?: string
+          excel_cell_ref?: string | null
+          id?: string
+          property_type: string
+          relative_budget?: number | null
+          updated_at?: string
+          user_id: string
+          year?: number
+        }
+        Update: {
+          actual_collection?: number | null
+          annual_budget?: number | null
+          created_at?: string
+          excel_cell_ref?: string | null
+          id?: string
+          property_type?: string
+          relative_budget?: number | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       demo_user_mapping: {
         Row: {
           created_at: string | null

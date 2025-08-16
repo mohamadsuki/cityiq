@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 export type UploadContext =
   | "finance"
   | "regular_budget"
+  | "collection"
   | "tabarim"
   | "education"
   | "engineering"
@@ -35,6 +36,63 @@ interface DebugLog {
   message: string;
   details?: any;
   timestamp: Date;
+}
+
+// Parse collection data from "טיוטת מאזן RAW" Excel file
+function parseCollectionExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
+  const results = [];
+  
+  // Helper function to get cell value
+  const getCellValue = (cellAddress: string) => {
+    const cell = sheet[cellAddress];
+    return cell ? cell.v : null;
+  };
+
+  // Define the rows for different property types based on typical collection data structure
+  // These should be adjusted based on the actual "טיוטת מאזן RAW" file structure
+  const propertyTypeRows = [
+    { row: 7, name: 'מגורים' },
+    { row: 8, name: 'מסחר' },
+    { row: 9, name: 'תעשיה' },
+    { row: 10, name: 'משרדים' },
+    { row: 11, name: 'אחר' }
+  ];
+
+  // Process each property type
+  propertyTypeRows.forEach(({ row, name }) => {
+    const propertyType = name;
+    const annualBudget = getCellValue(`H${row}`); // עמודה H - תקציב שנתי
+    const relativeBudget = getCellValue(`I${row}`); // עמודה I - תקציב יחסי
+    const actualCollection = getCellValue(`M${row}`); // עמודה M - גביה בפועל
+    
+    if (propertyType) {
+      results.push({
+        property_type: propertyType,
+        annual_budget: annualBudget ? Number(annualBudget) : null,
+        relative_budget: relativeBudget ? Number(relativeBudget) : null,
+        actual_collection: actualCollection ? Number(actualCollection) : null,
+        excel_cell_ref: `H${row}, I${row}, M${row}`,
+        year: new Date().getFullYear()
+      });
+    }
+  });
+
+  // Calculate summary data
+  const totalAnnualBudget = results.reduce((sum, item) => sum + (item.annual_budget || 0), 0);
+  const totalRelativeBudget = results.reduce((sum, item) => sum + (item.relative_budget || 0), 0);
+  const totalActualCollection = results.reduce((sum, item) => sum + (item.actual_collection || 0), 0);
+
+  const summaryCards = {
+    totalAnnualBudget,
+    totalRelativeBudget,
+    totalActualCollection,
+    surplus_deficit: totalActualCollection - totalRelativeBudget
+  };
+
+  console.log('Collection data parsed:', results);
+  console.log('Collection summary:', summaryCards);
+  
+  return { data: results, summaryCards };
 }
 
 function parseExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
@@ -207,6 +265,17 @@ function detectTarget(headers: string[], ctx: UploadContext): { table: string | 
     return { table: "regular_budget", reason: "זוהה מבנה תקציב רגיל" };
   }
 
+  // Finance collection data - טיוטת מאזן RAW
+  if (
+    ctx === "collection" ||
+    hasWords("ארנונה", "גביה", "מאזן", "property", "collection") ||
+    hasWords("סוג נכס", "property_type", "תקציב יחסי", "תקציב שנתי", "גביה בפועל") ||
+    hasWords("מגורים", "מסחר", "תעשיה", "משרדים", "אחר") ||
+    hasAny("d7", "e7", "f7", "g7", "h7", "i7", "l7", "m7") // Excel cell references for collection data
+  ) {
+    return { table: "collection_data", reason: 'זוהה מבנה טיוטת מאזן RAW לגביה' };
+  }
+
   // Finance tabarim
   if (
     ctx === "tabarim" ||
@@ -317,6 +386,18 @@ function normalizeKey(k: string, debugLogs?: DebugLog[]): string {
     "שנה": "year",
     "שנת תקציב": "year",
 
+    // Collection data mapping - טיוטת מאזן RAW
+    "סוג נכס": "property_type",
+    "נכס": "property_type", 
+    "תקציב שנתי ארנונה": "annual_budget",
+    "תקציב יחסי": "relative_budget",
+    "גביה בפועל": "actual_collection",
+    "מגורים": "residential",
+    "מסחר": "commercial", 
+    "תעשיה": "industrial",
+    "משרדים": "office",
+    "אחר": "other",
+
     // Tabarim mapping
     'מספר תב"ר': "tabar_number",
     'שם תב"ר': "tabar_name",
@@ -420,6 +501,21 @@ function mapRowToTable(table: string, row: Record<string, any>, debugLogs?: Debu
   });
 
   switch (table) {
+    case "collection_data":
+      addLog('info', 'מעבד שורת נתוני גביה');
+      
+      const collectionResult = {
+        property_type: norm.property_type || 'לא מוגדר',
+        annual_budget: norm.annual_budget ? Number(norm.annual_budget) : null,
+        relative_budget: norm.relative_budget ? Number(norm.relative_budget) : null,
+        actual_collection: norm.actual_collection ? Number(norm.actual_collection) : null,
+        excel_cell_ref: norm.excel_cell_ref,
+        year: norm.year ? Number(norm.year) : new Date().getFullYear(),
+      };
+      
+      addLog('success', `שורת גביה מעובדת: ${collectionResult.property_type}`, collectionResult);
+      return collectionResult;
+      
     case "regular_budget":
       addLog('info', 'מעבד שורת תקציב רגיל');
       addLog('info', `מפתחות מקוריים: ${Object.keys(row).join(', ')}`);
@@ -635,7 +731,7 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       const first = wb.SheetNames[0];
       const sheet = wb.Sheets[first];
       
-      // Check if this should be parsed by cell addresses (for regular budget)
+      // Check if this should be parsed by cell addresses (for regular budget or collection)
       if (context === 'regular_budget' || context === 'finance') {
         addLog('info', 'משתמש בפענוח ישיר לפי כתובות תאים');
         const result = parseExcelByCellAddresses(sheet);
@@ -659,6 +755,33 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
         
         setDebugLogs(logs);
         toast({ title: "קובץ נטען בהצלחה", description: `${data.length} פריטי תקציב נמצאו` });
+        return;
+      }
+      
+      // Check if this should be parsed as collection data
+      if (context === 'collection') {
+        addLog('info', 'משתמש בפענוח נתוני גביה לפי כתובות תאים');
+        const result = parseCollectionExcelByCellAddresses(sheet);
+        const { data, summaryCards } = result;
+        addLog('success', `נמצאו ${data.length} סוגי נכסים לגביה`);
+        
+        // Store summary cards in localStorage for the collection page
+        if (summaryCards) {
+          localStorage.setItem('collection_summary', JSON.stringify(summaryCards));
+          addLog('info', 'נתוני סיכום גביה נשמרו:', summaryCards);
+        }
+        
+        setRows(data);
+        setHeaders(['property_type', 'annual_budget', 'relative_budget', 'actual_collection']);
+        setDetected({ table: 'collection_data', reason: 'פענוח ישיר נתוני גביה מטיוטת מאזן RAW' });
+        
+        // Log sample of parsed data
+        if (data.length > 0) {
+          addLog('info', 'דוגמת נתונים שנמצאו:', data.slice(0, 3));
+        }
+        
+        setDebugLogs(logs);
+        toast({ title: "קובץ נטען בהצלחה", description: `${data.length} סוגי נכסים נמצאו` });
         return;
       }
       
@@ -779,6 +902,57 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
           timestamp: new Date()
         });
       };
+
+      // For collection data with direct cell parsing
+      if (context === 'collection' && detected.table === 'collection_data' && rows[0]?.property_type) {
+        addProcessingLog('info', 'משתמש בנתוני גביה מעובדים מכתובות תאים');
+        
+        const mapped = rows.map((row, index) => ({
+          ...row,
+          user_id: userId
+        }));
+        
+        addProcessingLog('success', `עובדו ${mapped.length} סוגי נכסים לגביה`);
+        setDebugLogs([...debugLogs, ...processingLogs]);
+        
+        // Clear existing data and insert new data
+        const targetTableName = 'collection_data';
+        const { error: deleteError } = await supabase
+          .from('collection_data')
+          .delete()
+          .eq('user_id', userId);
+
+        if (deleteError) {
+          addProcessingLog('warning', `שגיאה במחיקת נתוני גביה קיימים: ${deleteError.message}`);
+        } else {
+          addProcessingLog('success', 'נתוני גביה קיימים נמחקו בהצלחה');
+        }
+        
+        addProcessingLog('info', `מכניס ${mapped.length} שורות לטבלה ${targetTableName}`);
+        const { error } = await supabase.from(targetTableName).insert(mapped as any);
+        if (error) throw error;
+
+        await supabase.from("ingestion_logs").insert({
+          user_id: userId,
+          source_file: path,
+          table_name: detected.table,
+          rows: mapped.length,
+          status: "success",
+        });
+
+        addProcessingLog('success', `נתוני הגביה נקלטו בהצלחה! ${mapped.length} שורות`);
+        setDebugLogs([...debugLogs, ...processingLogs]);
+        
+        toast({ title: "נתוני הגביה נקלטו בהצלחה", description: `${mapped.length} סוגי נכסים` });
+        
+        onUploadSuccess?.();
+        setFile(null);
+        setRows([]);
+        setDetected({ table: null, reason: "" });
+        setHeaders([]);
+        setBusy(false);
+        return;
+      }
 
       // For regular budget with direct cell parsing, skip complex mapping
       if (context === 'regular_budget' && detected.table === 'regular_budget' && rows[0]?.category_name) {
