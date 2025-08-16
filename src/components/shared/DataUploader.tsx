@@ -117,6 +117,9 @@ function detectTarget(headers: string[], ctx: UploadContext): { table: string | 
 
 function normalizeKey(k: string): string {
   const key = k.trim();
+  
+  console.log(`=== NORMALIZING KEY: "${key}" ===`);
+  
   const map: Record<string, string> = {
     // Common Hebrew -> English  
     "מספר רישיון": "license_number",
@@ -136,25 +139,36 @@ function normalizeKey(k: string): string {
     "פריט": "category_name",
     "פרט": "category_name",
     "סעיף": "category_name",
-    "סוג קטגוריה": "category_type",
+    "שם": "category_name",
+    "שם הסעיף": "category_name",
+    "סוג קטגוريה": "category_type",
     "סוג": "category_type",
     "הכנסה": "income",
     "הוצאה": "expense",
+    "הכנסות": "income",
+    "הוצאות": "expense",
     "תקציב מאושר": "budget_amount",
     "תקציב": "budget_amount",
-    "מאושר": "budget_amount",
+    "מאושר": "budget_amount", 
     "תקציב שנתי": "budget_amount",
     "תקציב 2025": "budget_amount",
     "תקציב 2024": "budget_amount",
+    "סכום מאושר": "budget_amount",
+    "סכום תקציב": "budget_amount",
     "ביצוע בפועל": "actual_amount",
     "ביצוע": "actual_amount",
     "בפועל": "actual_amount",
-    "ביצוע שנתי": "actual_amount",
+    "ביצוע שנתי": "actual_amount", 
     "ביצוע 2025": "actual_amount",
     "ביצוע 2024": "actual_amount",
-    "תא באקסל": "excel_cell_ref",
-    "תא": "excel_cell_ref",
+    "סכום בפועל": "actual_amount",
+    "סכום ביצוע": "actual_amount",
+     "תא באקסל": "excel_cell_ref",
+     "תא": "excel_cell_ref",
+     "תא אקסל": "excel_cell_ref",
+     "מיקום תא": "excel_cell_ref",
     "שנה": "year",
+    "שנת תקציב": "year",
 
     // Tabarim mapping
     'מספר תב"ר': "tabar_number",
@@ -198,7 +212,40 @@ function normalizeKey(k: string): string {
     "מיקום": "location",
     "תאריך": "scheduled_at",
   };
-  return map[key] || key.replace(/\s+/g, "_");
+
+  // First try exact match
+  if (map[key]) {
+    console.log(`  Exact match found: "${key}" -> "${map[key]}"`);
+    return map[key];
+  }
+
+  // Try case insensitive match
+  const lowerKey = key.toLowerCase();
+  for (const [hebrewKey, englishValue] of Object.entries(map)) {
+    if (hebrewKey.toLowerCase() === lowerKey) {
+      console.log(`  Case insensitive match: "${key}" -> "${englishValue}"`);
+      return englishValue;
+    }
+  }
+
+  // Check if key contains important Hebrew terms
+  if (key.includes('תקציב') && !key.includes('ביצוע')) {
+    console.log(`  Contains "תקציב" -> "budget_amount"`);
+    return 'budget_amount';
+  }
+  if (key.includes('ביצוע') || key.includes('בפועל')) {
+    console.log(`  Contains "ביצוע" or "בפועל" -> "actual_amount"`);
+    return 'actual_amount';
+  }
+  if (key.includes('קטגוריה') || key.includes('סעיף') || key.includes('שם')) {
+    console.log(`  Contains "קטגוריה", "סעיף", or "שם" -> "category_name"`);
+    return 'category_name';
+  }
+
+  // Fallback
+  const fallback = key.replace(/\s+/g, "_");
+  console.log(`  No match found, using fallback: "${key}" -> "${fallback}"`);
+  return fallback;
 }
 
 function mapRowToTable(table: string, row: Record<string, any>) {
