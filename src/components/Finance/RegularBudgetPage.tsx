@@ -51,6 +51,7 @@ export default function RegularBudgetPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [newItem, setNewItem] = useState({
     category_type: 'income' as 'income' | 'expense',
     category_name: '',
@@ -382,7 +383,7 @@ export default function RegularBudgetPage() {
             </DialogContent>
           </Dialog>
           
-          <Dialog>
+          <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
                 <FileSpreadsheet className="h-4 w-4 ml-2" />
@@ -416,10 +417,12 @@ export default function RegularBudgetPage() {
                   onUploadSuccess={() => {
                     console.log("Data uploaded successfully - refreshing budget data...");
                     loadBudgetData();
+                    setImportDialogOpen(false);
+                    toast.success('הנתונים יובאו בהצלחה! הדף מתרענן כעת...');
                   }}
                 />
                 <div className="mt-4 text-sm text-muted-foreground">
-                  לאחר הייבוא מוצלח, הדף יתרענן אוטומטית ויציג את הנתונים החדשים.
+                  לאחר הייבוא מוצלח, הדיאלוג יסגר והדף יתרענן אוטומטית.
                 </div>
               </div>
             </DialogContent>
