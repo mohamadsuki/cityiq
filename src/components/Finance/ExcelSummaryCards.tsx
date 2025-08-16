@@ -18,9 +18,11 @@ export function ExcelSummaryCards() {
   useEffect(() => {
     // Read summary data from localStorage (saved by DataUploader)
     const stored = localStorage.getItem('regular_budget_summary');
+    console.log('Stored summary data:', stored);
     if (stored) {
       try {
         const data = JSON.parse(stored);
+        console.log('Parsed summary data:', data);
         setSummaryData(data);
       } catch (error) {
         console.error('Error parsing summary data:', error);
