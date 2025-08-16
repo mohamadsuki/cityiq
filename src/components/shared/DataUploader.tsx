@@ -64,10 +64,14 @@ function parseExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any
 
   // Read summary cards data from specific cells
   const summaryCards = {
-    plannedIncomeYearly: getCellValue('B25'), // הכנסות מתוכננות (שנתי)
-    relativeBudgetPeriod: getCellValue('D25'), // תקציב יחסי לתקופה
-    actualIncomePeriod: getCellValue('F25'), // הכנסות בפועל לתקופה
-    budgetDeviation: getCellValue('J25') // סטייה מהתקציב
+    plannedIncomeYearly: getCellValue('B25'), // הכנסות שנתי מתוכננות
+    plannedIncomePeriod: getCellValue('D25'), // הכנסות לתקופה מתוכננות
+    actualIncomePeriod: getCellValue('F25'), // הכנסות לתקופה בפועל
+    incomeDeviation: getCellValue('J25'), // סטייה מהתקציב הכנסות (באחוזים)
+    plannedExpensesYearly: getCellValue('B50'), // הוצאות שנתי מתוכננות
+    plannedExpensesPeriod: getCellValue('D50'), // הוצאות לתקופה מתוכננות
+    actualExpensesPeriod: getCellValue('F50'), // הוצאות לתקופה בפועל
+    expensesDeviation: getCellValue('J50') // סטייה מהתקציב הוצאות (באחוזים)
   };
   
   // Helper function to expand range to individual cells
