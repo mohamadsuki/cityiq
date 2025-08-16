@@ -271,14 +271,26 @@ function mapRowToTable(table: string, row: Record<string, any>) {
       });
       console.log("Normalized row:", norm);
       
-      // Check for meaningful content
+      // Check for meaningful content - be more lenient
       const meaningfulFields = ['category_name', 'name', 'budget_amount', 'actual_amount'];
       const hasMeaningfulData = meaningfulFields.some(field => {
         const value = norm[field];
-        return value !== null && value !== undefined && value !== "" && String(value).trim() !== "";
+        const isValidValue = value !== null && value !== undefined && value !== "" && String(value).trim() !== "";
+        if (isValidValue) {
+          console.log(`Found meaningful data in field "${field}": "${value}"`);
+        }
+        return isValidValue;
       });
       
-      if (!hasMeaningfulData) {
+      // Also check if we have any data in the original row that could be useful
+      const hasAnyData = Object.values(row).some(v => 
+        v !== null && v !== undefined && v !== "" && String(v).trim() !== ""
+      );
+      
+      console.log("Meaningful data check:", hasMeaningfulData);
+      console.log("Any data check:", hasAnyData);
+      
+      if (!hasMeaningfulData && !hasAnyData) {
         console.log("Row rejected: no meaningful data found");
         return null;
       }
@@ -540,21 +552,54 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       };
 
       const deptSlug = inferDept(detected.table!, context);
-      const mapped = rows.map((r) => {
+      const mapped = rows.map((r, index) => {
+        console.log(`=== Processing row ${index + 1} ===`);
         const mappedRow = mapRowToTable(detected.table!, r);
-        // Skip null rows (invalid data)
-        if (mappedRow === null) return null;
+        console.log(`Mapped row ${index + 1}:`, mappedRow);
         
-        return { 
+        // Skip null rows (invalid data)
+        if (mappedRow === null) {
+          console.log(`Row ${index + 1} is null, skipping`);
+          return null;
+        }
+        
+        const result = { 
           ...mappedRow, 
           user_id: userId,
           // Only add department_slug for tables that have this column
           ...(deptSlug && detected.table !== 'regular_budget' ? { department_slug: deptSlug } : {})
         };
+        
+        console.log(`Final row ${index + 1}:`, result);
+        return result;
       }).filter(row => row !== null); // Remove null rows first
       
-      // Filter out completely empty objects
-      const filtered = mapped.filter((obj) => Object.values(obj).some((v) => v !== null && v !== undefined && v !== ""));
+      console.log("=== AFTER MAPPING AND NULL FILTERING ===");
+      console.log("Mapped rows count:", mapped.length);
+      console.log("Sample mapped rows:", mapped.slice(0, 3));
+      
+      // More lenient filtering - only filter out rows that are completely empty
+      const filtered = mapped.filter((obj) => {
+        // For regular_budget, check if we have at least category_name or meaningful amounts
+        if (detected.table === 'regular_budget') {
+          const budgetObj = obj as any;
+          const hasCategory = budgetObj.category_name && budgetObj.category_name !== 'ללא שם' && budgetObj.category_name.trim() !== '';
+          const hasBudget = budgetObj.budget_amount !== null && budgetObj.budget_amount !== undefined;
+          const hasActual = budgetObj.actual_amount !== null && budgetObj.actual_amount !== undefined;
+          const isValid = hasCategory || hasBudget || hasActual;
+          console.log(`Regular budget row validation - category: "${budgetObj.category_name}", budget: ${budgetObj.budget_amount}, actual: ${budgetObj.actual_amount}, valid: ${isValid}`);
+          return isValid;
+        }
+        
+        // For other tables, use the original logic
+        const hasContent = Object.values(obj).some((v) => v !== null && v !== undefined && v !== "");
+        console.log("Row content check:", hasContent, obj);
+        return hasContent;
+      });
+      
+      console.log("=== AFTER FINAL FILTERING ===");
+      console.log("Filtered rows count:", filtered.length);
+      console.log("Sample filtered rows:", filtered.slice(0, 3));
 
       if (filtered.length === 0) {
         toast({ title: "אין נתונים לשיבוץ", description: "בדוק/י את הקובץ והכותרות", variant: "destructive" });
