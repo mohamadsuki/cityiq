@@ -469,6 +469,7 @@ export type Database = {
           progress: number | null
           start_at: string | null
           status: string | null
+          tabar_assignment: string | null
           updated_at: string
           user_id: string
         }
@@ -493,6 +494,7 @@ export type Database = {
           progress?: number | null
           start_at?: string | null
           status?: string | null
+          tabar_assignment?: string | null
           updated_at?: string
           user_id: string
         }
@@ -517,6 +519,7 @@ export type Database = {
           progress?: number | null
           start_at?: string | null
           status?: string | null
+          tabar_assignment?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -723,6 +726,8 @@ export type Database = {
         | "non-formal"
         | "business"
         | "ceo"
+        | "city-improvement"
+        | "enforcement"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "todo" | "in_progress" | "blocked" | "done" | "cancelled"
     }
@@ -861,6 +866,8 @@ export const Constants = {
         "non-formal",
         "business",
         "ceo",
+        "city-improvement",
+        "enforcement",
       ],
       task_priority: ["low", "medium", "high", "urgent"],
       task_status: ["todo", "in_progress", "blocked", "done", "cancelled"],

@@ -44,6 +44,7 @@ type Project = {
   file_urls: string[] | null; // PDF files
   start_at: string | null; // start date
   end_at: string | null; // end date
+  tabar_assignment: string | null; // שיוך לתב"ר
 };
 
 const DEPARTMENT_LABELS: Record<DepartmentSlug, string> = {
@@ -53,6 +54,8 @@ const DEPARTMENT_LABELS: Record<DepartmentSlug, string> = {
   welfare: "רווחה",
   "non-formal": "חינוך בלתי פורמלי",
   business: "עסקים",
+  "city-improvement": "מחלקת שיפור פני העיר",
+  enforcement: "אכיפה",
   ceo: "מנכ\"ל",
 };
 
@@ -63,6 +66,30 @@ const ALL_DEPARTMENTS: DepartmentSlug[] = [
   "welfare",
   "non-formal",
   "business",
+  "city-improvement",
+  "enforcement",
+];
+
+const FUNDING_SOURCES = [
+  "הגנת סביבה",
+  "מפעל הפיס", 
+  "משרד חינוך",
+  "משרד בינוי ושיכון",
+  "הלוואה",
+  "משרד פנים",
+  "משרד הכלכלה",
+  "רמ\"י",
+  "משרד הנגב, הגליל והחוסן הלאומי",
+  "משרד הדיגיטל הלאומי",
+  "משרד להגנת הסביבה",
+  "משרד התרבות",
+  "משרד המדע והטכנולוגיה",
+  "מנהל תכנון",
+  "משרד תחבורה",
+  "משרד בריאות",
+  "עירייה",
+  "משרד האנרגיה",
+  "משרד החקלאות"
 ];
 
 export default function ProjectsApp() {
@@ -250,6 +277,7 @@ const [form, setForm] = useState<Partial<Project>>({
   file_urls: [],
   start_at: null,
   end_at: null,
+  tabar_assignment: "",
 });
 
   const [files, setFiles] = useState<File[]>([]);
@@ -315,6 +343,7 @@ function openCreate() {
     file_urls: [],
     start_at: null,
     end_at: null,
+    tabar_assignment: "",
   });
   setFiles([]);
   setPdfFiles([]);
@@ -383,6 +412,7 @@ function openEdit(p: Project) {
       file_urls: [ ...(editing?.file_urls || []), ...newPdfUrls ],
       start_at: form.start_at,
       end_at: form.end_at,
+      tabar_assignment: (form.tabar_assignment as string) || null,
     };
 
     let next: Project[] = [];
@@ -420,6 +450,7 @@ function openEdit(p: Project) {
     notes: form.notes ?? null,
     start_at: form.start_at,
     end_at: form.end_at,
+    tabar_assignment: form.tabar_assignment ?? null,
   };
 
   if (editing) {
@@ -792,6 +823,10 @@ function openEdit(p: Project) {
                   <div>{viewing.status || "—"}</div>
                 </div>
                 <div>
+                  <Label>שיוך לתב"ר</Label>
+                  <div>{viewing.tabar_assignment || "—"}</div>
+                </div>
+                <div>
                   <Label>תחום</Label>
                   <div>{viewing.domain || "—"}</div>
                 </div>
@@ -808,7 +843,7 @@ function openEdit(p: Project) {
                   <div>{viewing.budget_executed != null ? `₪${Number(viewing.budget_executed).toLocaleString()}` : "—"}</div>
                 </div>
                 <div className="md:col-span-2">
-                  <Label>הערות</Label>
+                  <Label>תיאור</Label>
                   <div className="text-sm text-muted-foreground whitespace-pre-wrap">{viewing.notes || "—"}</div>
                 </div>
               </div>
@@ -858,6 +893,11 @@ function openEdit(p: Project) {
             </div>
 
             <div>
+              <Label>שיוך לתב"ר</Label>
+              <Input value={(form.tabar_assignment as string) || ""} onChange={(e) => setForm((f) => ({ ...f, tabar_assignment: e.target.value }))} placeholder="מספר תב״ר" />
+            </div>
+
+            <div>
               <Label>תחום</Label>
               <Input value={(form.domain as string) || ""} onChange={(e) => setForm((f) => ({ ...f, domain: e.target.value }))} placeholder="לדוגמה: מבני ציבור / תשתיות / חינוך" />
             </div>
@@ -877,12 +917,33 @@ function openEdit(p: Project) {
 
 <div>
   <Label>מקור מימון</Label>
-  <Input value={(form.funding_source as string) || ""} onChange={(e) => setForm((f) => ({ ...f, funding_source: e.target.value }))} />
+  <Select 
+    value={(form.funding_source as string) || ""} 
+    onValueChange={(v) => {
+      const currentSources = (form.funding_source as string)?.split(', ') || [];
+      const newSources = currentSources.includes(v) 
+        ? currentSources.filter(s => s !== v)
+        : [...currentSources, v];
+      setForm((f) => ({ ...f, funding_source: newSources.join(', ') }));
+    }}
+  >
+    <SelectTrigger><SelectValue placeholder="בחר מקורות מימון" /></SelectTrigger>
+    <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+      {FUNDING_SOURCES.map((source) => (
+        <SelectItem key={source} value={source}>{source}</SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+  {form.funding_source && (
+    <div className="mt-2 text-sm text-muted-foreground">
+      נבחרו: {form.funding_source}
+    </div>
+  )}
 </div>
 
 <div className="md:col-span-2">
-  <Label>הערות</Label>
-  <Textarea value={(form.notes as string) || ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="הוספת הערות כלליות על הפרויקט" />
+  <Label>תיאור</Label>
+  <Textarea value={(form.notes as string) || ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="הוספת תיאור על הפרויקט" />
 </div>
 
             <div>
@@ -896,8 +957,24 @@ function openEdit(p: Project) {
             </div>
 
 <div>
-  <Label>התקדמות (%)</Label>
-  <Input type="number" min={0} max={100} value={(form.progress as number | null) ?? 0} onChange={(e) => setForm((f) => ({ ...f, progress: Math.max(0, Math.min(100, Number(e.target.value) || 0)) }))} />
+  <Label>התקדמות</Label>
+  <div className="space-y-2">
+    <div className="flex gap-2">
+      {[25, 50, 75, 100].map((value) => (
+        <Button
+          key={value}
+          type="button"
+          variant={((form.progress as number) || 0) === value ? "default" : "outline"}
+          size="sm"
+          onClick={() => setForm((f) => ({ ...f, progress: value }))}
+          className="flex-1"
+        >
+          {value}%
+        </Button>
+      ))}
+    </div>
+    <Progress value={(form.progress as number) || 0} className="w-full" />
+  </div>
 </div>
 
 <div>

@@ -1,4 +1,4 @@
-export type DepartmentSlug = 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'ceo';
+export type DepartmentSlug = 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'city-improvement' | 'enforcement' | 'ceo';
 
 export type DemoUser = {
   email: string;
@@ -9,14 +9,16 @@ export type DemoUser = {
 };
 
 export const DEMO_USERS: DemoUser[] = [
-  { email: 'mayor@city.gov.il', password: 'mayor123', role: 'mayor', departments: ['finance','education','engineering','welfare','non-formal','business'], displayName: 'ראש העיר' },
-  { email: 'ceo@city.gov.il', password: 'ceo123', role: 'ceo', departments: ['finance','education','engineering','welfare','non-formal','business'], displayName: 'מנכ"ל העירייה' },
+  { email: 'mayor@city.gov.il', password: 'mayor123', role: 'mayor', departments: ['finance','education','engineering','welfare','non-formal','business','city-improvement','enforcement'], displayName: 'ראש העיר' },
+  { email: 'ceo@city.gov.il', password: 'ceo123', role: 'ceo', departments: ['finance','education','engineering','welfare','non-formal','business','city-improvement','enforcement'], displayName: 'מנכ"ל העירייה' },
   { email: 'finance@city.gov.il', password: 'finance123', role: 'manager', departments: ['finance'], displayName: 'מנהל/ת פיננסים' },
   { email: 'education@city.gov.il', password: 'education123', role: 'manager', departments: ['education'], displayName: 'מנהל/ת חינוך' },
   { email: 'engineering@city.gov.il', password: 'engineering123', role: 'manager', departments: ['engineering'], displayName: 'מנהל/ת הנדסה' },
   { email: 'welfare@city.gov.il', password: 'welfare123', role: 'manager', departments: ['welfare'], displayName: 'מנהל/ת רווחה' },
   { email: 'non-formal@city.gov.il', password: 'nonformal123', role: 'manager', departments: ['non-formal'], displayName: 'מנהל/ת חינוך בלתי פורמאלי' },
   { email: 'business@city.gov.il', password: 'business123', role: 'manager', departments: ['business'], displayName: 'מנהל/ת רישוי עסקים' },
+  { email: 'city-improvement@city.gov.il', password: 'cityimprovement123', role: 'manager', departments: ['city-improvement'], displayName: 'מנהל/ת שיפור פני העיר' },
+  { email: 'enforcement@city.gov.il', password: 'enforcement123', role: 'manager', departments: ['enforcement'], displayName: 'מנהל/ת אכיפה' },
 ];
 
 export function getAccessForEmail(email: string): { role: 'mayor' | 'ceo' | 'manager'; departments: DepartmentSlug[] } | null {
