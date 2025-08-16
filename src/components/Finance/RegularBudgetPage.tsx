@@ -416,7 +416,10 @@ export default function RegularBudgetPage() {
                   context="regular_budget" 
                   onUploadSuccess={() => {
                     console.log("Data uploaded successfully - refreshing budget data...");
-                    loadBudgetData();
+                    // Force page reload to ensure data is fresh
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 1000);
                     setImportDialogOpen(false);
                     toast.success('הנתונים יובאו בהצלחה! הדף מתרענן כעת...');
                   }}
