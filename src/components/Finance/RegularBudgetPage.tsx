@@ -395,8 +395,8 @@ export default function RegularBudgetPage() {
         </div>
       </div>
 
-      {/* Summary Cards from Excel B25, D25, F25, J25 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {/* Summary Cards from Excel */}
+      <div className="mb-8">
         <ExcelSummaryCards />
       </div>
 
