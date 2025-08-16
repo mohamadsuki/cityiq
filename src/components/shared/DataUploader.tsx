@@ -197,16 +197,21 @@ function mapRowToTable(table: string, row: Record<string, any>) {
 
   switch (table) {
     case "regular_budget":
+      // Skip rows with empty category names
+      if (!norm.category_name && !norm.name) {
+        return null;
+      }
+      
       return {
         category_type: norm.category_type || 
           (norm.income ? 'income' : norm.expense ? 'expense' : 
-           (String(norm.category_name || '').includes('הכנסה') || 
-            String(norm.category_name || '').includes('ארנונה') || 
-            String(norm.category_name || '').includes('אגרת') ||
-            String(norm.category_name || '').includes('היטל') ||
-            String(norm.category_name || '').includes('קנס') ||
-            String(norm.category_name || '').includes('רישיון')) ? 'income' : 'expense'),
-        category_name: norm.category_name || norm.name,
+           (String(norm.category_name || norm.name || '').includes('הכנסה') || 
+            String(norm.category_name || norm.name || '').includes('ארנונה') || 
+            String(norm.category_name || norm.name || '').includes('אגרת') ||
+            String(norm.category_name || norm.name || '').includes('היטל') ||
+            String(norm.category_name || norm.name || '').includes('קנס') ||
+            String(norm.category_name || norm.name || '').includes('רישיון')) ? 'income' : 'expense'),
+        category_name: norm.category_name || norm.name || 'ללא שם',
         budget_amount: norm.budget_amount ? Number(norm.budget_amount) : null,
         actual_amount: norm.actual_amount ? Number(norm.actual_amount) : null,
         excel_cell_ref: norm.excel_cell_ref,
@@ -406,12 +411,19 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       };
 
       const deptSlug = inferDept(detected.table!, context);
-      const mapped = rows.map((r) => ({ 
-        ...mapRowToTable(detected.table!, r), 
-        user_id: userId,
-        // Only add department_slug for tables that have this column
-        ...(deptSlug && detected.table !== 'regular_budget' ? { department_slug: deptSlug } : {})
-      }));
+      const mapped = rows.map((r) => {
+        const mappedRow = mapRowToTable(detected.table!, r);
+        // Skip null rows (invalid data)
+        if (mappedRow === null) return null;
+        
+        return { 
+          ...mappedRow, 
+          user_id: userId,
+          // Only add department_slug for tables that have this column
+          ...(deptSlug && detected.table !== 'regular_budget' ? { department_slug: deptSlug } : {})
+        };
+      }).filter(row => row !== null); // Remove null rows first
+      
       // Filter out completely empty objects
       const filtered = mapped.filter((obj) => Object.values(obj).some((v) => v !== null && v !== undefined && v !== ""));
 
