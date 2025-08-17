@@ -12,6 +12,7 @@ import { ChevronDown, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
+import { ExcelCellReader, COLLECTION_EXCEL_CONFIG } from "@/lib/excelCellReader";
 
 export type UploadContext =
   | "finance"
@@ -38,170 +39,26 @@ interface DebugLog {
   timestamp: Date;
 }
 
-// Parse collection data from "טיוטת מאזן RAW" Excel file
+// Parse collection data from "טיוטת מאזן RAW" Excel file using the new ExcelCellReader
 function parseCollectionExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
   console.log('=== COLLECTION EXCEL PARSING DEBUG ===');
-  const results = [];
   
-  // Helper function to get cell value
-  const getCellValue = (cellAddress: string) => {
-    const cell = sheet[cellAddress];
-    console.log(`Cell ${cellAddress}:`, { 
-      exists: !!cell, 
-      value: cell?.v, 
-      type: cell?.t,
-      raw: cell 
-    });
-    return cell ? cell.v : null;
-  };
-
-  console.log('Sheet keys:', Object.keys(sheet).filter(k => k.match(/^[A-Z]+\d+$/)).slice(0, 50));
-
-  // First, let's scan the entire sheet to find where the data actually is
-  console.log('=== SCANNING ENTIRE SHEET FOR PROPERTY DATA ===');
+  const reader = new ExcelCellReader(sheet);
+  const data = reader.parseCollectionData(COLLECTION_EXCEL_CONFIG);
   
-  // Look for the header row first (contains "תאור סוג נכס")
-  let headerRow = -1;
-  for (let row = 1; row <= 50; row++) {
-    const cellD = getCellValue(`D${row}`);
-    if (cellD && cellD.toString().includes('תאור סוג נכס')) {
-      headerRow = row;
-      console.log(`📍 Found header row at: ${row}`);
-      break;
-    }
-  }
-  
-  if (headerRow === -1) {
-    console.log('❌ Could not find header row with "תאור סוג נכס"');
-    return { data: [], summaryCards: {} };
-  }
-
-  // בדיקה מורחבת של השורות מהכותרת ועד שורה 100
-  console.log('=== CHECKING EXTENDED RANGE FOR DATA ===');
-  
-  const targetColumns = ['D', 'H', 'I', 'M'];
-  for (let row = headerRow + 1; row <= Math.min(headerRow + 50, 100); row++) {
-    console.log(`\n--- ROW ${row} ---`);
-    const rowData: Record<string, any> = {};
-    targetColumns.forEach(col => {
-      const cellAddr = `${col}${row}`;
-      const value = getCellValue(cellAddr);
-      rowData[col] = value;
-    });
-    
-    console.log(`Row ${row} complete data:`, rowData);
-    
-    // בדיקה אם יש נתונים בשורה הזו - גם אם אין תיאור אבל יש נתונים נומריים
-    const hasDescription = rowData['D'] && rowData['D'].toString().trim() !== '';
-    const hasNumericData = (rowData['H'] && !isNaN(Number(rowData['H']))) || 
-                          (rowData['I'] && !isNaN(Number(rowData['I']))) || 
-                          (rowData['M'] && !isNaN(Number(rowData['M'])));
-    
-    console.log(`Row ${row} analysis:`, {
-      hasDescription,
-      hasNumericData,
-      description: rowData['D'],
-      H_value: rowData['H'],
-      H_numeric: rowData['H'] !== null && rowData['H'] !== undefined && !isNaN(Number(rowData['H'])),
-      I_value: rowData['I'],
-      I_numeric: rowData['I'] !== null && rowData['I'] !== undefined && !isNaN(Number(rowData['I'])),
-      M_value: rowData['M'],
-      M_numeric: rowData['M'] !== null && rowData['M'] !== undefined && !isNaN(Number(rowData['M']))
-    });
-    
-    // Accept rows that have either description OR significant numeric data
-    if (hasDescription || hasNumericData) {
-      // If no description, try to find it in nearby cells or use a placeholder
-      let propertyType = hasDescription ? rowData['D'].toString().trim() : null;
-      
-      // If no property type found, look in other columns or use row number as fallback
-      if (!propertyType) {
-        // Try column C or other nearby columns
-        const cellC = getCellValue(`C${row}`);
-        const cellE = getCellValue(`E${row}`);
-        
-        if (cellC && typeof cellC === 'string' && cellC.trim()) {
-          propertyType = cellC.toString().trim();
-          console.log(`📍 Found property type in column C: ${propertyType}`);
-        } else if (cellE && typeof cellE === 'string' && cellE.trim()) {
-          propertyType = cellE.toString().trim();
-          console.log(`📍 Found property type in column E: ${propertyType}`);
-        } else {
-          propertyType = `סוג נכס ${row - headerRow}`;
-          console.log(`📍 Using fallback property type: ${propertyType}`);
-        }
-      }
-      
-      console.log(`✅ Row ${row} HAS VALID DATA - adding to results`);
-      
-      const item = {
-        property_type: propertyType,
-        annual_budget: rowData['H'] && !isNaN(Number(rowData['H'])) ? Number(rowData['H']) : null,
-        relative_budget: rowData['I'] && !isNaN(Number(rowData['I'])) ? Number(rowData['I']) : null,
-        actual_collection: rowData['M'] && !isNaN(Number(rowData['M'])) ? Number(rowData['M']) : null,
-        excel_cell_ref: `H${row}, I${row}, M${row}`,
-        year: new Date().getFullYear()
-      };
-      
-      console.log(`Adding item:`, item);
-      results.push(item);
-    } else {
-      console.log(`❌ Row ${row} SKIPPED - no valid data`);
-    }
-    
-    // Stop if we find 5 consecutive empty rows (likely end of data)
-    if (!hasDescription && !hasNumericData) {
-      let emptyCount = 1;
-      for (let checkRow = row + 1; checkRow <= row + 4; checkRow++) {
-        const checkData: Record<string, any> = {};
-        targetColumns.forEach(col => {
-          const cellAddr = `${col}${checkRow}`;
-          checkData[col] = getCellValue(cellAddr);
-        });
-        
-        const checkHasDesc = checkData['D'] && checkData['D'].toString().trim() !== '';
-        const checkHasNum = (checkData['H'] && !isNaN(Number(checkData['H']))) || 
-                           (checkData['I'] && !isNaN(Number(checkData['I']))) || 
-                           (checkData['M'] && !isNaN(Number(checkData['M'])));
-        
-        if (!checkHasDesc && !checkHasNum) emptyCount++;
-      }
-      
-      if (emptyCount >= 5) {
-        console.log(`🛑 Found ${emptyCount} consecutive empty rows, stopping scan at row ${row}`);
-        break;
-      }
-    }
-  }
-
-  console.log('\n=== FINAL RESULTS ===');
-  console.log(`Total items found: ${results.length}`);
-  results.forEach((item, index) => {
-    console.log(`Item ${index + 1}:`, item);
-  });
-
-  // Calculate summary data - filter out null values for accurate totals
-  const validAnnualBudgets = results.filter(item => item.annual_budget !== null).map(item => item.annual_budget || 0);
-  const validRelativeBudgets = results.filter(item => item.relative_budget !== null).map(item => item.relative_budget || 0);
-  const validActualCollections = results.filter(item => item.actual_collection !== null).map(item => item.actual_collection || 0);
-
-  const totalAnnualBudget = validAnnualBudgets.reduce((sum, val) => sum + val, 0);
-  const totalRelativeBudget = validRelativeBudgets.reduce((sum, val) => sum + val, 0);
-  const totalActualCollection = validActualCollections.reduce((sum, val) => sum + val, 0);
+  // Get summary totals
+  const totals = reader.getSummaryTotals(data);
 
   const summaryCards = {
-    totalAnnualBudget,
-    totalRelativeBudget,
-    totalActualCollection,
-    surplus_deficit: totalActualCollection - totalRelativeBudget
+    totalAnnualBudget: totals.annual_budget || 0,
+    totalRelativeBudget: totals.relative_budget || 0,
+    totalActualCollection: totals.actual_collection || 0,
+    surplus_deficit: totals.surplus_deficit || 0
   };
 
-  console.log('Summary calculations:', summaryCards);
-  console.log(`Annual Budget: ${validAnnualBudgets.length} values, Total: ${totalAnnualBudget}`);
-  console.log(`Relative Budget: ${validRelativeBudgets.length} values, Total: ${totalRelativeBudget}`);
-  console.log(`Actual Collection: ${validActualCollections.length} values, Total: ${totalActualCollection}`);
+  console.log(`Parsed ${data.length} collection records with totals:`, summaryCards);
   
-  return { data: results, summaryCards };
+  return { data, summaryCards };
 }
 
 function parseExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {

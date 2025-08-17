@@ -53,13 +53,37 @@ export default function CollectionPage() {
   const loadCollectionData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Build query - filter by current year and order by property type
+      let query = supabase
         .from('collection_data')
         .select('*')
-        .order('created_at', { ascending: false });
+        .eq('year', new Date().getFullYear())
+        .order('property_type');
+
+      // Add user filter if user is logged in
+      if (user?.id) {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
-      setCollectionData(data || []);
+      
+      console.log('Loaded collection data:', data);
+      
+      // Convert to proper format and clean up property types
+      const processedData: CollectionData[] = (data || []).map(item => ({
+        id: item.id,
+        property_type: item.property_type || 'לא מוגדר',
+        annual_budget: Number(item.annual_budget) || 0,
+        relative_budget: Number(item.relative_budget) || 0,
+        actual_collection: Number(item.actual_collection) || 0,
+        year: item.year,
+        created_at: item.created_at
+      }));
+
+      setCollectionData(processedData);
     } catch (error) {
       console.error('Error loading collection data:', error);
       toast({
