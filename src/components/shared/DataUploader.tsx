@@ -250,17 +250,33 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       break;
       
     case 'tabarim':
-      // Handle tabarim-specific mapping
-      mapped.tabar_name = normalizedRow.tabar_name || normalizedRow['שם תב"ר'] || normalizedRow['שם'] || '';
-      mapped.tabar_number = normalizedRow.tabar_number || normalizedRow['מספר תב"ר'] || normalizedRow['מספר'] || '';
+      // Handle tabarim-specific mapping based on actual Excel structure
+      // From logs, the project name is in the first column
+      mapped.tabar_name = normalizedRow['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיל לפי פרקי התקציב'] || 
+                          normalizedRow.tabar_name || 
+                          normalizedRow['שם תב"ר'] || 
+                          normalizedRow['שם'] || '';
       
-      // Map domain field - this is the key fix for the user's issue
-      const domainValue = normalizedRow.domain || normalizedRow['תחום'] || normalizedRow['תחום פעילות'] || '';
+      // The number might be in the second column or a specific field
+      mapped.tabar_number = normalizedRow[''] || 
+                            normalizedRow.tabar_number || 
+                            normalizedRow['מספר תב"ר'] || 
+                            normalizedRow['מספר'] || 
+                            String(normalizedRow['__empty'] || '');
+      
+      // Map domain field - from logs it's in "נכון לחודש 6/2025" column
+      const domainValue = normalizedRow['נכון לחודש 6/2025'] || 
+                         normalizedRow.domain || 
+                         normalizedRow['תחום'] || 
+                         normalizedRow['תחום פעילות'] || '';
+      
+      console.log('🔍 Domain mapping for tabarim:', { domainValue, normalizedRow });
+      
       if (domainValue) {
         // Map Hebrew domain names to enum values
-        if (domainValue.includes('חינוך') || domainValue.includes('education')) {
+        if (domainValue.includes('חינוך') || domainValue.includes('education') || domainValue.includes('מוסדות ציבור')) {
           mapped.domain = 'education';
-        } else if (domainValue.includes('הנדסה') || domainValue.includes('engineering')) {
+        } else if (domainValue.includes('הנדסה') || domainValue.includes('engineering') || domainValue.includes('תכנון')) {
           mapped.domain = 'engineering';
         } else if (domainValue.includes('רווחה') || domainValue.includes('welfare')) {
           mapped.domain = 'welfare';
@@ -268,6 +284,10 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
           mapped.domain = 'finance';
         } else if (domainValue.includes('עסקים') || domainValue.includes('business')) {
           mapped.domain = 'business';
+        } else if (domainValue.includes('תשתיות') || domainValue.includes('כבישים')) {
+          mapped.domain = 'engineering';
+        } else if (domainValue.includes('בינוי')) {
+          mapped.domain = 'engineering';
         } else {
           mapped.domain = 'other';
         }
@@ -275,8 +295,13 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         mapped.domain = 'other';
       }
       
-      // Map funding sources
-      const funding1 = normalizedRow.funding_source1 || normalizedRow['מקור מימון 1'] || normalizedRow['מקור מימון'] || '';
+      // Map funding sources - check multiple possible columns  
+      const funding1 = normalizedRow['__empty_1'] || 
+                       normalizedRow['__empty_2'] ||
+                       normalizedRow.funding_source1 || 
+                       normalizedRow['מקור מימון 1'] || 
+                       normalizedRow['מקור מימון'] || '';
+                       
       if (funding1) {
         if (funding1.includes('משרד') || funding1.includes('ministry')) {
           mapped.funding_source1 = 'ministry';
@@ -284,18 +309,31 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
           mapped.funding_source1 = 'authority';
         } else if (funding1.includes('עצמי') || funding1.includes('self')) {
           mapped.funding_source1 = 'self';
+        } else if (funding1.includes('הלוואה') || funding1.includes('loan')) {
+          mapped.funding_source1 = 'other';
+        } else if (funding1.includes('עירייה') || funding1.includes('municipality')) {
+          mapped.funding_source1 = 'self';
         } else {
           mapped.funding_source1 = 'other';
         }
       }
       
-      // Map numeric fields
-      mapped.approved_budget = parseFloat(normalizedRow.approved_budget || normalizedRow['תקציב מאושר'] || '0') || 0;
-      mapped.income_actual = parseFloat(normalizedRow.income_actual || normalizedRow['הכנסות בפועל'] || '0') || 0;
-      mapped.expense_actual = parseFloat(normalizedRow.expense_actual || normalizedRow['הוצאות בפועל'] || '0') || 0;
+      // Map numeric fields - check the __empty_4, __empty_5, etc. columns
+      mapped.approved_budget = parseFloat(normalizedRow['__empty_4'] || 
+                                         normalizedRow.approved_budget || 
+                                         normalizedRow['תקציב מאושר'] || '0') || 0;
       
-      // Calculate surplus/deficit
-      mapped.surplus_deficit = (mapped.income_actual || 0) - (mapped.expense_actual || 0);
+      mapped.income_actual = parseFloat(normalizedRow['__empty_9'] || 
+                                       normalizedRow.income_actual || 
+                                       normalizedRow['הכנסות בפועל'] || '0') || 0;
+      
+      mapped.expense_actual = parseFloat(normalizedRow['__empty_10'] || 
+                                        normalizedRow.expense_actual || 
+                                        normalizedRow['הוצאות בפועל'] || '0') || 0;
+      
+      // Calculate surplus/deficit from __empty_13 or calculate it
+      mapped.surplus_deficit = parseFloat(normalizedRow['__empty_13'] || '0') || 
+                              ((mapped.income_actual || 0) - (mapped.expense_actual || 0));
       
       break;
       

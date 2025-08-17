@@ -271,9 +271,12 @@ export type Database = {
       }
       ingestion_logs: {
         Row: {
+          context: string | null
           created_at: string
           error: string | null
+          error_rows: number | null
           id: string
+          inserted_rows: number | null
           rows: number | null
           source_file: string | null
           status: string | null
@@ -281,9 +284,12 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          context?: string | null
           created_at?: string
           error?: string | null
+          error_rows?: number | null
           id?: string
+          inserted_rows?: number | null
           rows?: number | null
           source_file?: string | null
           status?: string | null
@@ -291,9 +297,12 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          context?: string | null
           created_at?: string
           error?: string | null
+          error_rows?: number | null
           id?: string
+          inserted_rows?: number | null
           rows?: number | null
           source_file?: string | null
           status?: string | null
@@ -1011,6 +1020,7 @@ export type Database = {
         | "public_spaces"
         | "planning"
         | "infrastructure_roads"
+        | "other"
       tabar_status: "planning" | "active" | "closed" | "delayed"
       task_priority: "low" | "medium" | "high" | "urgent"
       task_status: "todo" | "in_progress" | "blocked" | "done" | "cancelled"
@@ -1188,6 +1198,7 @@ export const Constants = {
         "public_spaces",
         "planning",
         "infrastructure_roads",
+        "other",
       ],
       tabar_status: ["planning", "active", "closed", "delayed"],
       task_priority: ["low", "medium", "high", "urgent"],
