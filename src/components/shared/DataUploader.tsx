@@ -251,11 +251,20 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
     case 'tabarim':
       // Handle tabarim-specific mapping based on actual Excel structure
-      // From logs, the project name is in the first column
-      mapped.tabar_name = normalizedRow['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיל לפי פרקי התקציב'] || 
-                          normalizedRow.tabar_name || 
-                          normalizedRow['שם תב"ר'] || 
-                          normalizedRow['שם'] || '';
+      // Skip header rows and empty rows
+      const projectName = normalizedRow['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיل לפי פרקי התקציב'] || '';
+      
+      // Skip if this looks like a header row or empty row
+      if (!projectName || 
+          projectName.includes('דו"ח תקופתי') || 
+          projectName.includes('שם תב"ר') ||
+          projectName.includes('כולל קליטה') ||
+          projectName.length < 3) {
+        console.log('🚫 Skipping header/empty row:', projectName);
+        return null; // Skip this row
+      }
+      
+      mapped.tabar_name = projectName;
       
       // The number might be in the second column or a specific field
       mapped.tabar_number = normalizedRow[''] || 
@@ -270,7 +279,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
                          normalizedRow['תחום'] || 
                          normalizedRow['תחום פעילות'] || '';
       
-      console.log('🔍 Domain mapping for tabarim:', { domainValue, normalizedRow });
+      console.log('🔍 Domain mapping for tabarim:', { domainValue, projectName });
       
       if (domainValue) {
         // Map Hebrew domain names to enum values based on actual tabar_domain enum
@@ -565,12 +574,21 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
         const batch = rows.slice(i, i + batchSize);
         const mappedBatch = batch.map(row => {
           const mapped = mapRowToTable(detected.table!, row, logs);
+          // Skip null results (header rows)
+          if (mapped === null) return null;
+          
           // Add user_id for all tables that require it
           if (detected.table === 'tabarim' || detected.table === 'regular_budget' || detected.table === 'collection_data') {
             mapped.user_id = '33333333-3333-3333-3333-333333333333'; // Finance demo user
           }
           return mapped;
-        });
+        }).filter(row => row !== null); // Remove null entries
+        
+        // Skip empty batches
+        if (mappedBatch.length === 0) {
+          console.log('📝 Skipping empty batch');
+          continue;
+        }
         
         console.log(`📝 Processing batch ${Math.floor(i/batchSize) + 1}, rows ${i + 1}-${Math.min(i + batchSize, rows.length)}`);
         console.log('📝 Sample mapped row:', mappedBatch[0]);
