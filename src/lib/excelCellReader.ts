@@ -215,24 +215,34 @@ export class ExcelCellReader {
         
         // Map the actual column positions
         Object.entries(rowCells).forEach(([col, header]) => {
+          console.log(`🔍 Checking header in column ${col}: "${header}"`);
           if (header.includes('מספר תב"ר')) {
             headerMappings[col] = 'tabar_number';
+            console.log(`✅ Mapped column ${col} to tabar_number`);
           } else if (header.includes('שם תב"ר')) {
             headerMappings[col] = 'tabar_name';
+            console.log(`✅ Mapped column ${col} to tabar_name`);
           } else if (header === 'תחום' || header.includes('תחום')) {
             headerMappings[col] = 'domain';
+            console.log(`✅ Mapped column ${col} to domain`);
           } else if (header.includes('מקור תקציבי/משרד מממן') || (header.includes('מקור תקציבי') && !header.includes('2') && !header.includes('3'))) {
             headerMappings[col] = 'funding_source1';
+            console.log(`✅ Mapped column ${col} to funding_source1`);
           } else if (header.includes('מקור תקציב 2')) {
             headerMappings[col] = 'funding_source2';
+            console.log(`✅ Mapped column ${col} to funding_source2`);
           } else if (header.includes('מקור תקציב 3')) {
             headerMappings[col] = 'funding_source3';
+            console.log(`✅ Mapped column ${col} to funding_source3`);
           } else if (header.includes('תקציב מאושר')) {
             headerMappings[col] = 'approved_budget';
+            console.log(`✅ Mapped column ${col} to approved_budget`);
           } else if (header.includes('הכנסה בפועל') || header.includes('ביצוע מצטבר הכנסות')) {
             headerMappings[col] = 'income_actual';
+            console.log(`✅ Mapped column ${col} to income_actual`);
           } else if (header.includes('הוצאה בפועל') || header.includes('ביצוע מצטבר הוצאות')) {
             headerMappings[col] = 'expense_actual';
+            console.log(`✅ Mapped column ${col} to expense_actual`);
           }
         });
         break;

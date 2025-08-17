@@ -78,10 +78,16 @@ function parseCollectionExcelByCellAddresses(sheet: any): { data: any[], summary
 
 // Parse Tabarim data from Excel file using the new ExcelCellReader
 function parseTabarimExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
-  console.log('=== TABARIM EXCEL PARSING DEBUG ===');
+  console.log('=== TABARIM EXCEL PARSING DEBUG START ===');
+  console.log('📋 Sheet keys:', Object.keys(sheet).slice(0, 20));
+  console.log('📋 Sheet !ref:', sheet['!ref']);
   
   const reader = new ExcelCellReader(sheet);
+  console.log('📋 Created ExcelCellReader');
+  
   const data = reader.parseTabarimData(TABARIM_EXCEL_CONFIG);
+  console.log('📋 Raw parsed data length:', data.length);
+  console.log('📋 First parsed item:', data[0]);
   
   // Calculate summary statistics
   const summaryCards = {
@@ -92,6 +98,7 @@ function parseTabarimExcelByCellAddresses(sheet: any): { data: any[], summaryCar
   };
 
   console.log(`Parsed ${data.length} Tabarim records with totals:`, summaryCards);
+  console.log('=== TABARIM EXCEL PARSING DEBUG END ===');
   
   return { data, summaryCards };
 }
