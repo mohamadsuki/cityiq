@@ -645,7 +645,24 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
 
       // Call the success callback
       if (onUploadSuccess) {
+        console.log('🎯 Calling onUploadSuccess callback');
         onUploadSuccess();
+      }
+
+      // Verify data was actually inserted
+      console.log('🔍 Verifying data insertion...');
+      if (detected.table === 'tabarim') {
+        const { data: verifyData, error: verifyError } = await supabase
+          .from('tabarim')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(5);
+        
+        console.log('🔍 Verification result:', {
+          count: verifyData?.length || 0,
+          error: verifyError,
+          sampleRecord: verifyData?.[0]
+        });
       }
 
     } catch (error: any) {

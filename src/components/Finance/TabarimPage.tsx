@@ -47,13 +47,25 @@ export default function TabarimPage() {
 
   const loadTabarim = async () => {
     try {
+      console.log('🔄 Loading tabarim from database...');
       setLoading(true);
       const { data, error } = await supabase
         .from('tabarim')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      console.log('📊 Tabarim query result:', { 
+        data: data?.length || 0, 
+        error,
+        sampleData: data?.[0] 
+      });
+
+      if (error) {
+        console.error('❌ Error loading tabarim:', error);
+        throw error;
+      }
+      
+      console.log('✅ Successfully loaded tabarim:', data?.length || 0, 'records');
       setTabarim(data || []);
     } catch (error) {
       console.error('Error loading tabarim:', error);
