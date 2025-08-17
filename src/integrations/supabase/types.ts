@@ -727,11 +727,11 @@ export type Database = {
         Row: {
           approved_budget: number | null
           created_at: string
-          domain: Database["public"]["Enums"]["tabar_domain"] | null
+          domain: string | null
           expense_actual: number | null
-          funding_source1: Database["public"]["Enums"]["funding_source"] | null
-          funding_source2: Database["public"]["Enums"]["funding_source"] | null
-          funding_source3: Database["public"]["Enums"]["funding_source"] | null
+          funding_source1: string | null
+          funding_source2: string | null
+          funding_source3: string | null
           id: string
           income_actual: number | null
           surplus_deficit: number | null
@@ -743,11 +743,11 @@ export type Database = {
         Insert: {
           approved_budget?: number | null
           created_at?: string
-          domain?: Database["public"]["Enums"]["tabar_domain"] | null
+          domain?: string | null
           expense_actual?: number | null
-          funding_source1?: Database["public"]["Enums"]["funding_source"] | null
-          funding_source2?: Database["public"]["Enums"]["funding_source"] | null
-          funding_source3?: Database["public"]["Enums"]["funding_source"] | null
+          funding_source1?: string | null
+          funding_source2?: string | null
+          funding_source3?: string | null
           id?: string
           income_actual?: number | null
           surplus_deficit?: number | null
@@ -759,11 +759,11 @@ export type Database = {
         Update: {
           approved_budget?: number | null
           created_at?: string
-          domain?: Database["public"]["Enums"]["tabar_domain"] | null
+          domain?: string | null
           expense_actual?: number | null
-          funding_source1?: Database["public"]["Enums"]["funding_source"] | null
-          funding_source2?: Database["public"]["Enums"]["funding_source"] | null
-          funding_source3?: Database["public"]["Enums"]["funding_source"] | null
+          funding_source1?: string | null
+          funding_source2?: string | null
+          funding_source3?: string | null
           id?: string
           income_actual?: number | null
           surplus_deficit?: number | null

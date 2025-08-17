@@ -210,34 +210,38 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
                             normalizedRow['מספר'] || 
                             String(normalizedRow['__empty'] || '');
       
-      // Map domain field - KEEP IN HEBREW as requested
-      const domainValue = normalizedRow['נכון לחודש 6/2025'] || 
-                         row['נכון לחודש 6/2025'] ||
+      // Map domain field - now accepts Hebrew text directly
+      const domainValue = row['נכון לחודש 6/2025'] || 
+                         normalizedRow['נכון לחודש 6/2025'] ||
                          normalizedRow.domain || 
                          normalizedRow['תחום'] || 
                          normalizedRow['תחום פעילות'] || '';
       
       console.log('🔍 Domain mapping for tabarim:', { domainValue, projectName });
       
-      // Keep domain in Hebrew instead of translating to English
+      // Keep domain in Hebrew - now table accepts Hebrew text directly
       mapped.domain = domainValue || 'אחר';
       
-      // Map funding sources according to actual Excel columns
+      // Map funding sources according to actual Excel columns with correct normalization
       const funding1 = row['מקור תקציבי/משרד מממן'] || 
                        normalizedRow['מקור תקציבי/משרד מממן'] ||
+                       row['__EMPTY_1'] || 
                        normalizedRow['__empty_1'] || '';
       
       const funding2 = row['מקור תקציב 2'] || 
                        normalizedRow['מקור תקציב 2'] ||
+                       row['__EMPTY_2'] || 
                        normalizedRow['__empty_2'] || '';
       
       const funding3 = row['מקור תקציב 3'] || 
                        normalizedRow['מקור תקציב 3'] ||
+                       row['__EMPTY_3'] || 
                        normalizedRow['__empty_3'] || '';
       
       console.log('🔍 Funding sources mapping:', { funding1, funding2, funding3 });
+      console.log('🔍 Available row keys:', Object.keys(row).filter(k => k.includes('מקור') || k.includes('EMPTY')));
       
-      // Keep funding sources in Hebrew
+      // Keep funding sources in Hebrew - now table accepts Hebrew text
       mapped.funding_source1 = funding1 || null;
       mapped.funding_source2 = funding2 || null;
       mapped.funding_source3 = funding3 || null;
