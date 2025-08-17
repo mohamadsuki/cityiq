@@ -164,7 +164,18 @@ const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
     'סוג נכס': 'property_type',
     'תקציב שנתי': 'annual_budget',
     'תקציב יחסי': 'relative_budget',
-    'גביה בפועל': 'actual_collection'
+    'גביה בפועל': 'actual_collection',
+    
+    // Tabarim fields
+    'שם תב"ר': 'tabar_name',
+    'מספר תב"ר': 'tabar_number',
+    'תחום': 'domain',
+    'תחום פעילות': 'domain',
+    'מקור מימון': 'funding_source1',
+    'מקור מימון 1': 'funding_source1',
+    'תקציב מאושר': 'approved_budget',
+    'הכנסות בפועל': 'income_actual',
+    'הוצאות בפועל': 'expense_actual'
   };
   
   if (mappings[original]) {
@@ -236,6 +247,56 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.annual_budget = parseFloat(normalizedRow.annual_budget || normalizedRow['תקציב שנתי'] || '0') || 0;
       mapped.relative_budget = parseFloat(normalizedRow.relative_budget || normalizedRow['תקציב יחסי'] || '0') || 0;
       mapped.actual_collection = parseFloat(normalizedRow.actual_collection || normalizedRow['גביה בפועל'] || '0') || 0;
+      break;
+      
+    case 'tabarim':
+      // Handle tabarim-specific mapping
+      mapped.tabar_name = normalizedRow.tabar_name || normalizedRow['שם תב"ר'] || normalizedRow['שם'] || '';
+      mapped.tabar_number = normalizedRow.tabar_number || normalizedRow['מספר תב"ר'] || normalizedRow['מספר'] || '';
+      
+      // Map domain field - this is the key fix for the user's issue
+      const domainValue = normalizedRow.domain || normalizedRow['תחום'] || normalizedRow['תחום פעילות'] || '';
+      if (domainValue) {
+        // Map Hebrew domain names to enum values
+        if (domainValue.includes('חינוך') || domainValue.includes('education')) {
+          mapped.domain = 'education';
+        } else if (domainValue.includes('הנדסה') || domainValue.includes('engineering')) {
+          mapped.domain = 'engineering';
+        } else if (domainValue.includes('רווחה') || domainValue.includes('welfare')) {
+          mapped.domain = 'welfare';
+        } else if (domainValue.includes('כספים') || domainValue.includes('finance')) {
+          mapped.domain = 'finance';
+        } else if (domainValue.includes('עסקים') || domainValue.includes('business')) {
+          mapped.domain = 'business';
+        } else {
+          mapped.domain = 'other';
+        }
+      } else {
+        mapped.domain = 'other';
+      }
+      
+      // Map funding sources
+      const funding1 = normalizedRow.funding_source1 || normalizedRow['מקור מימון 1'] || normalizedRow['מקור מימון'] || '';
+      if (funding1) {
+        if (funding1.includes('משרד') || funding1.includes('ministry')) {
+          mapped.funding_source1 = 'ministry';
+        } else if (funding1.includes('רשות') || funding1.includes('authority')) {
+          mapped.funding_source1 = 'authority';
+        } else if (funding1.includes('עצמי') || funding1.includes('self')) {
+          mapped.funding_source1 = 'self';
+        } else {
+          mapped.funding_source1 = 'other';
+        }
+      }
+      
+      // Map numeric fields
+      mapped.approved_budget = parseFloat(normalizedRow.approved_budget || normalizedRow['תקציב מאושר'] || '0') || 0;
+      mapped.income_actual = parseFloat(normalizedRow.income_actual || normalizedRow['הכנסות בפועל'] || '0') || 0;
+      mapped.expense_actual = parseFloat(normalizedRow.expense_actual || normalizedRow['הוצאות בפועל'] || '0') || 0;
+      
+      // Calculate surplus/deficit
+      mapped.surplus_deficit = (mapped.income_actual || 0) - (mapped.expense_actual || 0);
+      
       break;
       
     default:
