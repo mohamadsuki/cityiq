@@ -1,121 +1,53 @@
-import { useState } from 'react';
-import * as XLSX from 'xlsx';
+import React, { useState, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, FileText, AlertCircle, CheckCircle2, Info } from "lucide-react";
+import { FileUp, Upload, AlertCircle, CheckCircle, Database, Download } from "lucide-react";
+import { cn } from "@/lib/utils";
+import * as XLSX from 'xlsx';
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
-type UploadContext = 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'global' | 'regular_budget' | 'finance' | 'collection' | 'tabarim';
-
-interface DataUploaderProps {
-  context?: UploadContext;
-  onUploadSuccess?: () => void;
-}
-
-interface DebugLog {
-  id: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  message: string;
-  details?: any;
-  timestamp: Date;
-}
-
-interface ImportOption {
+type ImportOption = {
   mode: 'replace' | 'append';
   confirmed: boolean;
-}
-
-const parseCollectionExcelByCellAddresses = (sheet: any) => {
-  console.log('📊 parseCollectionExcelByCellAddresses called');
-  
-  // This is a simplified version - the full implementation would be in the ExcelCellReader
-  const data: any[] = [];
-  const summaryCards: any = {};
-  
-  try {
-    // Get the raw data from the sheet
-    const rawData = XLSX.utils.sheet_to_json(sheet);
-    console.log('📊 Raw collection data:', rawData);
-    
-    // Basic parsing for collection data
-    rawData.forEach((row: any, index: number) => {
-      if (row && typeof row === 'object') {
-        const parsedRow = {
-          property_type: row['סוג נכס'] || row['property_type'] || '',
-          annual_budget: parseFloat(row['תקציב שנתי'] || row['annual_budget'] || '0') || 0,
-          relative_budget: parseFloat(row['תקציב יחסי'] || row['relative_budget'] || '0') || 0,
-          actual_collection: parseFloat(row['גביה בפועל'] || row['actual_collection'] || '0') || 0
-        };
-        
-        if (parsedRow.property_type) {
-          data.push(parsedRow);
-        }
-      }
-    });
-    
-    console.log('📊 Parsed collection data:', data);
-    
-  } catch (error) {
-    console.error('❌ Error parsing collection data:', error);
-  }
-  
-  return { data, summaryCards };
 };
 
-const detectTarget = (headers: string[], ctx: UploadContext) => {
-  console.log('🎯 detectTarget called with headers:', headers, 'context:', ctx);
-  
-  // Context-based detection first
-  if (ctx === 'tabarim') {
-    return { table: 'tabarim', reason: 'זוהה כנתוני תב"רים על בסיס הקונטקסט' };
-  }
-  
-  if (ctx === 'education') {
-    return { table: 'institutions', reason: 'זוהה כנתוני חינוך על בסיס הקונטקסט' };
-  }
-  
-  if (ctx === 'engineering') {
-    return { table: 'engineering_plans', reason: 'זוהה כנתוני הנדסה על בסיס הקונטקסט' };
-  }
-  
-  if (ctx === 'welfare') {
-    return { table: 'welfare_services', reason: 'זוהה כנתוני רווחה על בסיס הקונטקסט' };
-  }
-  
-  if (ctx === 'non-formal') {
-    return { table: 'non_formal_activities', reason: 'זוהה כנתוני חינוך בלתי פורמלי על בסיס הקונטקסט' };
-  }
-  
-  if (ctx === 'business') {
-    return { table: 'business_licenses', reason: 'זוהה כנתוני עסקים על בסיס הקונטקסט' };
-  }
-  
-  if (ctx === 'regular_budget' || ctx === 'finance') {
-    return { table: 'regular_budget', reason: 'זוהה כנתוני תקציב רגיל על בסיס הקונטקסט' };
-  }
-  
-  if (ctx === 'collection') {
-    return { table: 'collection_data', reason: 'זוהה כנתוני גביה על בסיס הקונטקסט' };
-  }
-  
-  // Header-based detection as fallback
+type DataUploaderProps = {
+  context?: string;
+  onUploadSuccess?: () => void;
+};
+
+type DebugLog = {
+  id: string;
+  type: 'info' | 'warning' | 'error' | 'success';
+  message: string;
+  timestamp: Date;
+  details?: any;
+};
+
+const detectDataType = (headers: string[], rows: any[]) => {
   const headerStr = headers.join(' ').toLowerCase();
+  console.log('🔍 Headers for detection:', headers);
+  console.log('🔍 First few rows for detection:', rows.slice(0, 3));
+  
+  // Check for collection-specific keywords
+  if (headerStr.includes('property_type') || headerStr.includes('סוג נכס') || headerStr.includes('גביה')) {
+    return { table: 'collection_data', reason: 'זוהה על בסיס כותרות גביה' };
+  }
+  
+  // Check for salary-specific keywords
+  if (headerStr.includes('salary') || headerStr.includes('משכורת') || headerStr.includes('רבעון') || headerStr.includes('quarter')) {
+    return { table: 'salary_data', reason: 'זוהה על בסיס כותרות משכורות' };
+  }
+  
+  // Check for regular budget keywords
+  if (headerStr.includes('budget') || headerStr.includes('תקציב רגיל') || headerStr.includes('category')) {
+    return { table: 'regular_budget', reason: 'זוהה על בסיס כותרות תקציב רגיל' };
+  }
   
   // Check for tabarim-specific keywords
   if (headerStr.includes('תב"ר') || headerStr.includes('תקציב בלתי רגיל') || headerStr.includes('התקבולים והתשלומים')) {
@@ -177,6 +109,8 @@ const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
     'הכנסות בפועל': 'income_actual',
     'הוצאות בפועל': 'expense_actual'
   };
+  
+
   
   if (mappings[original]) {
     normalized = mappings[original];
@@ -252,9 +186,10 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       break;
       
     case 'tabarim':
-      // Handle tabarim-specific mapping based on actual Excel structure
-      // Skip header rows and empty rows
-      const projectName = normalizedRow['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיل לפי פרקי התקציב'] || '';
+      // CRITICAL FIX: Use original row because normalizeKey lowercases the Hebrew key
+      const projectName = row['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיל לפי פרקי התקציב'] || '';
+      
+      console.log('🐛 FIXED: Extracted project name from original row:', projectName);
       
       // Skip if this looks like a header row or empty row
       if (!projectName || 
@@ -277,6 +212,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
       // Map domain field - from logs it's in "נכון לחודש 6/2025" column
       const domainValue = normalizedRow['נכון לחודש 6/2025'] || 
+                         row['נכון לחודש 6/2025'] ||
                          normalizedRow.domain || 
                          normalizedRow['תחום'] || 
                          normalizedRow['תחום פעילות'] || '';
@@ -401,81 +337,97 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
         id: Math.random().toString(),
         type,
         message,
-        details,
-        timestamp: new Date()
+        timestamp: new Date(),
+        details
       });
+      setDebugLogs([...logs]);
     };
 
-    try {
-      addLog('info', `קורא קובץ: ${f.name}`);
-      console.log('📊 Starting file processing...');
-      
-      const ab = await f.arrayBuffer();
-      console.log('📊 ArrayBuffer created, size:', ab.byteLength);
-      const wb = XLSX.read(ab, { type: "array" });
-      console.log('📊 Workbook read, sheets:', wb.SheetNames);
-      const first = wb.SheetNames[0];
-      const sheet = wb.Sheets[first];
-      console.log('📊 Sheet extracted, context check:', context);
-      
-      // Check if this should be parsed as collection data
-      if (context === 'collection') {
-        addLog('info', 'משתמש בפענוח נתוני גביה בסיסי');
-        const result = parseCollectionExcelByCellAddresses(sheet);
-        const { data, summaryCards } = result;
-        addLog('success', `נמצאו ${data.length} סוגי נכסים לגביה`);
-        
-        setRows(data);
-        setHeaders(['property_type', 'annual_budget', 'relative_budget', 'actual_collection']);
-        setDetected({ table: 'collection_data', reason: 'פענוח ישיר נתוני גביה' });
-        
-        setDebugLogs(logs);
-        toast({ title: "קובץ נטען בהצלחה", description: `${data.length} סוגי נכסים נמצאו` });
-        return;
-      }
-      
-      // Standard header detection for all other contexts  
-      console.log('📊 Headers detection for context:', context);
-      const headers = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] as string[];
-      console.log('📊 Raw headers found:', headers);
-      const cleanHeaders = headers.filter(h => h && h.trim()).map(h => h.trim().toLowerCase());
-      console.log('📊 Clean headers:', cleanHeaders);
-
-      const detected = detectTarget(cleanHeaders, context);
-      console.log('🎯 Detection result:', detected);
-      
-      setDetected(detected);
-      const rows = XLSX.utils.sheet_to_json(sheet);
-      console.log('📊 Rows count:', rows.length);
-      
-      setRows(rows);
-      setHeaders(cleanHeaders);
-      addLog('success', `נמצאו ${rows.length} שורות`);
-      
-      setDebugLogs(logs);
-      toast({ title: "קובץ נטען בהצלחה", description: `${rows.length} שורות. ${detected.reason}` });
-    } catch (e: any) {
-      addLog('error', `שגיאה בקריאת הקובץ: ${e.message}`);
-      setDebugLogs(logs);      
-      toast({ title: "שגיאה בקריאת הקובץ", description: e.message, variant: "destructive" });
-    }
-  };
-
-  const uploadAndIngest = async () => {
-    console.log('🔥 uploadAndIngest called!');
-    console.log('State check:', { 
-      file: !!file, 
-      rowsLength: rows.length, 
-      detectedTable: detected.table,
-      context,
-      importOption: importOption.confirmed
-    });
-
-    if (!file || rows.length === 0 || !detected.table) {
-      toast({ title: "שגיאה", description: "אין קובץ או נתונים להעלאה", variant: "destructive" });
+    if (!f) {
+      addLog('error', 'לא נבחר קובץ');
       return;
     }
 
+    addLog('info', `קורא קובץ: ${f.name} (${(f.size / 1024).toFixed(1)} KB)`);
+
+    try {
+      const buffer = await f.arrayBuffer();
+      const workbook = XLSX.read(buffer);
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      
+      addLog('info', `גיליון נקרא בהצלחה: ${firstSheetName}`);
+      
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { 
+        header: 1, 
+        defval: null,
+        raw: false 
+      }) as any[][];
+      
+      if (jsonData.length === 0) {
+        addLog('error', 'הקובץ ריק');
+        return;
+      }
+      
+      // Find the first non-empty row as headers
+      let headerRowIndex = 0;
+      while (headerRowIndex < jsonData.length && (!jsonData[headerRowIndex] || jsonData[headerRowIndex].length === 0)) {
+        headerRowIndex++;
+      }
+      
+      if (headerRowIndex >= jsonData.length) {
+        addLog('error', 'לא נמצאה שורת כותרות');
+        return;
+      }
+      
+      const headersArray = jsonData[headerRowIndex];
+      const dataRows = jsonData.slice(headerRowIndex + 1);
+      
+      addLog('info', `נמצאו ${headersArray.length} כותרות ו-${dataRows.length} שורות נתונים`);
+      
+      // Convert to objects
+      const rowObjects = dataRows.map((row, index) => {
+        const obj: Record<string, any> = {};
+        headersArray.forEach((header, colIndex) => {
+          const key = header || `__EMPTY${colIndex > 0 ? `_${colIndex}` : ''}`;
+          obj[key] = row[colIndex];
+        });
+        obj.__rowNum__ = index + headerRowIndex + 2; // Excel row number
+        return obj;
+      });
+      
+      setHeaders(headersArray);
+      setRows(rowObjects);
+      
+      // Detect data type
+      const detection = detectDataType(headersArray, rowObjects.slice(0, 5));
+      setDetected(detection);
+      
+      if (detection.table) {
+        addLog('success', `זוהה כ: ${detection.table} - ${detection.reason}`);
+      } else {
+        addLog('warning', `לא זוהה סוג נתונים: ${detection.reason}`);
+      }
+      
+    } catch (error) {
+      console.error('Error reading file:', error);
+      addLog('error', `שגיאה בקריאת הקובץ: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}`);
+    }
+  };
+
+  const uploadAndIngest = useCallback(async () => {
+    if (!file || !detected.table || rows.length === 0) {
+      toast({ variant: "destructive", title: "שגיאה", description: "לא נבחר קובץ או לא זוהה סוג נתונים" });
+      return;
+    }
+
+    if (!importOption.confirmed) {
+      console.log('📋 Import not confirmed yet, showing dialog');
+      setShowImportDialog(true);
+      return;
+    }
+
+    console.log('🔄 Starting upload and ingestion process');
     setIsUploading(true);
     const logs: DebugLog[] = [...debugLogs];
     
@@ -485,397 +437,359 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
         id: Math.random().toString(),
         type,
         message,
-        details,
-        timestamp: new Date()
+        timestamp: new Date(),
+        details
       });
       setDebugLogs([...logs]);
     };
 
     try {
-      // Add debug logging
-      console.log('🔍 Starting upload process...');
-      console.log('🔍 File:', file.name, 'Context:', context);
-      console.log('🔍 Detected table:', detected.table);
-      
-      // First, upload the file to Supabase storage with a safe filename
-      addLog('info', 'מעלה קובץ לאחסון...');
-      console.log('🔍 About to upload to storage...');
-      
-      // Create a safe filename by removing non-ASCII characters and replacing them
-      const fileExtension = file.name.split('.').pop() || 'xlsx';
-      const safeFileName = `tabarim_${Date.now()}.${fileExtension}`;
-      const fileName = `uploads/${safeFileName}`;
-      
-      console.log('📁 Original filename:', file.name);
-      console.log('📁 Safe filename:', fileName);
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('uploads')
-        .upload(fileName, file);
+      console.log('🗂️ Starting data mapping and insertion process...');
+      addLog('info', `מתחיל עיבוד ${rows.length} שורות לטבלה: ${detected.table}`);
 
-      console.log('🔍 Storage upload result:', { uploadData, uploadError });
+      // Upload file to storage first
+      const timestamp = Date.now();
+      const fileName = `${detected.table}_${timestamp}.xlsx`;
+      const filePath = `uploads/${fileName}`;
+
+      addLog('info', `מעלה קובץ: ${filePath}`);
+      const { error: uploadError } = await supabase.storage
+        .from('uploads')
+        .upload(filePath, file);
 
       if (uploadError) {
-        console.error('❌ Upload error:', uploadError);
-        addLog('error', `שגיאה בהעלאת הקובץ: ${uploadError.message}`);
-        toast({ title: "שגיאה בהעלאה", description: uploadError.message, variant: "destructive" });
-        return;
+        throw new Error(`שגיאה בהעלאת קובץ: ${uploadError.message}`);
       }
 
-      addLog('success', `קובץ הועלה בהצלחה: ${fileName}`);
-      console.log('✅ File uploaded successfully');
-
-      // Log the ingestion event - simplified to avoid issues
-      console.log('🔍 About to log ingestion event...');
+      // Log the ingestion
       try {
         const { error: logError } = await supabase
           .from('ingestion_logs')
           .insert({
             file_name: file.name,
-            file_path: fileName,
-            context: context,
+            file_path: filePath,
+            context: detected.table,
             detected_table: detected.table,
-            row_count: rows.length,
             status: 'processing',
-            user_id: '33333333-3333-3333-3333-333333333333'
+            user_id: '33333333-3333-3333-3333-333333333333' // Demo user
           });
 
         if (logError) {
-          console.warn('⚠️ Log warning (non-critical):', logError);
-        } else {
-          console.log('✅ Ingestion logged successfully');
+          console.warn('⚠️ Could not create ingestion log:', logError);
         }
-      } catch (logError) {
-        console.warn('⚠️ Logging failed but continuing:', logError);
+      } catch (logErr) {
+        console.warn('⚠️ Ingestion log error:', logErr);
       }
 
       // Clear existing data if replace mode
       if (importOption.mode === 'replace') {
         addLog('info', `מוחק נתונים קיימים מטבלה: ${detected.table}`);
-        const { error: deleteError } = await (supabase as any)
-          .from(detected.table)
+        const { error: deleteError } = await supabase
+          .from(detected.table as any)
           .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all real records
 
         if (deleteError) {
-          console.error('❌ Delete error:', deleteError);
-          addLog('warning', `שגיאה במחיקת נתונים קיימים: ${deleteError.message}`);
-        } else {
-          addLog('success', 'נתונים קיימים נמחקו בהצלחה');
+          console.warn(`⚠️ Could not clear existing data: ${deleteError.message}`);
+          addLog('warning', `לא ניתן למחוק נתונים קיימים: ${deleteError.message}`);
         }
       }
 
       // Process and insert data
-      addLog('info', `מעבד ומכניס ${rows.length} שורות...`);
-      
-      const batchSize = 100;
+      console.log('🗂️ Processing rows for table:', detected.table);
       let insertedCount = 0;
-      let errorCount = 0;
+      let skippedCount = 0;
 
-      for (let i = 0; i < rows.length; i += batchSize) {
-        const batch = rows.slice(i, i + batchSize);
-        const mappedBatch = batch.map(row => {
-          const mapped = mapRowToTable(detected.table!, row, logs);
-          // Skip null results (header rows)
-          if (mapped === null) return null;
-          
-          // Add user_id for all tables that require it
-          if (detected.table === 'tabarim' || detected.table === 'regular_budget' || detected.table === 'collection_data') {
-            mapped.user_id = '33333333-3333-3333-3333-333333333333'; // Finance demo user
-          }
-          return mapped;
-        }).filter(row => row !== null); // Remove null entries
-        
-        // Skip empty batches
-        if (mappedBatch.length === 0) {
-          console.log('📝 Skipping empty batch');
-          continue;
-        }
-        
-        console.log(`📝 Processing batch ${Math.floor(i/batchSize) + 1}, rows ${i + 1}-${Math.min(i + batchSize, rows.length)}`);
-        console.log('📝 Sample mapped row:', mappedBatch[0]);
-        console.log('📝 Full batch sample (first 3 rows):', mappedBatch.slice(0, 3));
-
-        // Add detailed logging before insert
-        console.log('🔍 About to insert into table:', detected.table);
-        console.log('🔍 Batch size:', mappedBatch.length);
-        
-        try {
-          const { data: insertData, error: insertError } = await (supabase as any)
-            .from(detected.table)
-            .insert(mappedBatch)
-            .select();
-
-          console.log('📊 Insert result:', { 
-            insertData: insertData?.length || 0, 
-            insertError,
-            errorCode: insertError?.code,
-            errorMessage: insertError?.message,
-            errorDetails: insertError?.details
-          });
-
-          if (insertError) {
-            console.error('❌ Insert error details:', {
-              code: insertError.code,
-              message: insertError.message,
-              details: insertError.details,
-              hint: insertError.hint,
-              batchSample: mappedBatch[0]
-            });
-            addLog('error', `שגיאה בהכנסת נתונים: ${insertError.message}`, { 
-              batch: i/batchSize + 1,
-              code: insertError.code,
-              details: insertError.details
-            });
-            errorCount += batch.length;
-          } else {
-            console.log('✅ Batch inserted successfully:', insertData?.length || 0, 'rows');
-            insertedCount += insertData?.length || 0;
-            addLog('success', `הוכנסו ${insertData?.length || 0} שורות בקבוצה ${Math.floor(i/batchSize) + 1}`);
-          }
-        } catch (insertException) {
-          console.error('💥 Insert exception caught:', insertException);
-          addLog('error', `חריגה בהכנסת נתונים: ${insertException}`, { batch: i/batchSize + 1 });
-          errorCount += batch.length;
-        }
-      }
-
-      // Update the ingestion log - simplified
       try {
-        const { error: updateLogError } = await supabase
-          .from('ingestion_logs')
-          .update({
-            status: errorCount > 0 ? 'completed_with_errors' : 'completed',
-            inserted_rows: insertedCount,
-            error_rows: errorCount
-          })
-          .eq('file_path', fileName);
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          console.log(`🗂️ Processing row ${i + 1}/${rows.length}`);
+          
+          const mappedRow = mapRowToTable(detected.table, row, logs);
+          
+          if (!mappedRow) {
+            console.log(`🚫 Skipping row ${i + 1} - returned null from mapping`);
+            skippedCount++;
+            continue;
+          }
 
-        if (updateLogError) {
-          console.warn('⚠️ Update log warning (non-critical):', updateLogError);
+          // Add user_id and other metadata
+          mappedRow.user_id = '33333333-3333-3333-3333-333333333333'; // Demo user
+
+          console.log('🐛 DEBUG: Attempting to insert mapped row:', mappedRow);
+
+          try {
+            const { data, error } = await supabase
+              .from(detected.table as any)
+              .insert(mappedRow)
+              .select('*');
+
+            if (error) {
+              console.error(`❌ Insert error for row ${i + 1}:`, error);
+              addLog('error', `שגיאה בהכנסת שורה ${i + 1}: ${error.message}`, { row: mappedRow, error });
+            } else {
+              console.log(`✅ Successfully inserted row ${i + 1}:`, data);
+              insertedCount++;
+            }
+          } catch (insertErr) {
+            console.error(`❌ Insert exception for row ${i + 1}:`, insertErr);
+            addLog('error', `חריגה בהכנסת שורה ${i + 1}: ${insertErr}`, { row: mappedRow });
+          }
         }
-      } catch (updateError) {
-        console.warn('⚠️ Update logging failed but continuing:', updateError);
+
+        // Update ingestion log with results
+        try {
+          await supabase
+            .from('ingestion_logs')
+            .update({
+              status: 'completed',
+              inserted_rows: insertedCount,
+              error_rows: rows.length - insertedCount - skippedCount
+            })
+            .eq('file_path', filePath);
+        } catch (updateErr) {
+          console.warn('⚠️ Could not update ingestion log:', updateErr);
+        }
+
+        console.log(`📋 [success] הושלם בהצלחה: ${insertedCount} שורות הוכנסו`);
+        addLog('success', `הושלם בהצלחה: ${insertedCount} שורות הוכנסו, ${skippedCount} שורות דולגו`);
+
+        // Call success callback
+        if (onUploadSuccess) {
+          console.log('🎯 Calling onUploadSuccess callback');
+          onUploadSuccess();
+        }
+
+        // Verification step
+        try {
+          console.log('🔍 Verifying data insertion...');
+          const { count, error: countError, data: sampleData } = await supabase
+            .from(detected.table as any)
+            .select('*', { count: 'exact' })
+            .limit(1);
+          
+          console.log('🔍 Verification result:', { 
+            count, 
+            error: countError, 
+            sampleRecord: sampleData?.[0] ? { _type: typeof sampleData[0], value: typeof sampleData[0] } : { _type: 'undefined', value: 'undefined' }
+          });
+        } catch (verifyErr) {
+          console.warn('⚠️ Verification error:', verifyErr);
+        }
+
+        // Test direct insert
+        try {
+          console.log('🧪 Testing direct insert...');
+          const { data: testData, error: testError } = await supabase
+            .from(detected.table as any)
+            .insert({
+              tabar_name: 'בדיקת מערכת',
+              tabar_number: '999',
+              domain: 'other',
+              approved_budget: 1000,
+              income_actual: 500,
+              expense_actual: 300,
+              surplus_deficit: 200,
+              user_id: '33333333-3333-3333-3333-333333333333'
+            })
+            .select('*');
+
+          console.log('🧪 Test insert result:', { success: !testError, data: testData, error: testError });
+        } catch (testErr) {
+          console.warn('🧪 Test insert error:', testErr);
+        }
+
+      } catch (processingError) {
+        console.error('❌ Processing error:', processingError);
+        addLog('error', `שגיאה בעיבוד הנתונים: ${processingError instanceof Error ? processingError.message : 'שגיאה לא ידועה'}`);
+        throw processingError;
       }
 
-      const finalMessage = errorCount > 0 
-        ? `הושלם עם שגיאות: ${insertedCount} שורות הוכנסו, ${errorCount} שגיאות`
-        : `הושלם בהצלחה: ${insertedCount} שורות הוכנסו`;
-
-      addLog(errorCount > 0 ? 'warning' : 'success', finalMessage);
       toast({ 
-        title: "ההעלאה הושלמה", 
-        description: finalMessage,
-        variant: errorCount > 0 ? "destructive" : "default"
+        title: "הצלחה!", 
+        description: `${insertedCount} רשומות הוכנסו בהצלחה לטבלה ${detected.table}` 
       });
 
-      // Call the success callback
-      if (onUploadSuccess) {
-        console.log('🎯 Calling onUploadSuccess callback');
-        onUploadSuccess();
-      }
-
-      // Verify data was actually inserted
-      console.log('🔍 Verifying data insertion...');
-      if (detected.table === 'tabarim') {
-        const { data: verifyData, error: verifyError } = await supabase
-          .from('tabarim')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(5);
-        
-        console.log('🔍 Verification result:', {
-          count: verifyData?.length || 0,
-          error: verifyError,
-          sampleRecord: verifyData?.[0]
-        });
-
-        // Test direct insert as well
-        console.log('🧪 Testing direct insert...');
-        const testRecord = {
-          tabar_name: 'בדיקת מערכת' as const,
-          tabar_number: '999',
-          domain: 'other' as const,
-          approved_budget: 1000,
-          income_actual: 500,
-          expense_actual: 300,
-          surplus_deficit: 200,
-          user_id: '33333333-3333-3333-3333-333333333333'
-        };
-        
-        const { data: testData, error: testError } = await supabase
-          .from('tabarim')
-          .insert(testRecord)
-          .select();
-          
-        console.log('🧪 Test insert result:', {
-          success: !testError,
-          data: testData,
-          error: testError
-        });
-      }
-
-    } catch (error: any) {
-      console.error('❌ Unexpected error:', error);
-      addLog('error', `שגיאה לא צפויה: ${error.message}`);
-      toast({ title: "שגיאה לא צפויה", description: error.message, variant: "destructive" });
+    } catch (error) {
+      console.error('❌ Upload and ingestion error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'שגיאה לא ידועה';
+      addLog('error', `שגיאה בהעלאה: ${errorMessage}`);
+      toast({ 
+        variant: "destructive", 
+        title: "שגיאה", 
+        description: `שגיאה בהעלאת הנתונים: ${errorMessage}` 
+      });
     } finally {
       setIsUploading(false);
+      setImportOption({ mode: 'replace', confirmed: false }); // Reset for next time
     }
+  }, [file, detected.table, rows, debugLogs, importOption, onUploadSuccess, toast]);
+
+  const renderPreview = () => {
+    if (rows.length === 0) return null;
+
+    const previewRows = rows.slice(0, 5);
+    const previewHeaders = headers.slice(0, 10); // Limit columns for display
+
+    return (
+      <div className="mt-4">
+        <h3 className="text-sm font-medium mb-2">תצוגה מקדימה (5 שורות ראשונות):</h3>
+        <div className="border rounded-lg overflow-auto max-h-64">
+          <table className="w-full text-xs">
+            <thead className="bg-muted">
+              <tr>
+                {previewHeaders.map((header, index) => (
+                  <th key={index} className="border p-2 text-right">
+                    {header || `עמודה ${index + 1}`}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {previewRows.map((row, rowIndex) => (
+                <tr key={rowIndex} className="hover:bg-muted/50">
+                  {previewHeaders.map((header, colIndex) => (
+                    <td key={colIndex} className="border p-2 text-right">
+                      {String(row[header] || '').slice(0, 50)}
+                      {String(row[header] || '').length > 50 ? '...' : ''}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
   };
 
-  const handleUpload = () => {
-    console.log('🎯 handleUpload called');
-    console.log('Current state:', { 
-      hasFile: !!file, 
-      rowsCount: rows.length, 
-      detectedTable: detected.table,
-      importOption
-    });
+  const renderDebugLogs = () => {
+    if (debugLogs.length === 0) return null;
 
-    if (!file || rows.length === 0 || !detected.table) {
-      toast({ title: "שגיאה", description: "אין קובץ או נתונים להעלאה", variant: "destructive" });
-      return;
-    }
-
-    // Show confirmation dialog for tabarim
-    if (detected.table === 'tabarim') {
-      console.log('📋 Showing import dialog for tabarim');
-      setShowImportDialog(true);
-      return;
-    }
-
-    // For other tables, proceed directly
-    uploadAndIngest();
-  };
-
-  const getIcon = (type: DebugLog['type']) => {
-    switch (type) {
-      case 'success': return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case 'error': return <AlertCircle className="h-4 w-4 text-red-600" />;
-      case 'warning': return <AlertCircle className="h-4 w-4 text-yellow-600" />;
-      default: return <Info className="h-4 w-4 text-blue-600" />;
-    }
+    return (
+      <div className="mt-4">
+        <h3 className="text-sm font-medium mb-2">יומן עיבוד:</h3>
+        <div className="space-y-1 max-h-64 overflow-auto">
+          {debugLogs.map((log) => (
+            <div key={log.id} className={cn(
+              "text-xs p-2 rounded border-r-2",
+              log.type === 'error' && "bg-destructive/10 border-r-destructive text-destructive",
+              log.type === 'warning' && "bg-warning/10 border-r-warning text-warning",
+              log.type === 'success' && "bg-success/10 border-r-success text-success", 
+              log.type === 'info' && "bg-muted border-r-muted-foreground"
+            )}>
+              <div className="flex items-center gap-2">
+                {log.type === 'error' && <AlertCircle className="w-3 h-3" />}
+                {log.type === 'success' && <CheckCircle className="w-3 h-3" />}
+                {log.type === 'info' && <Database className="w-3 h-3" />}
+                <span>{log.message}</span>
+              </div>
+              {log.details && (
+                <pre className="mt-1 text-xs opacity-75 overflow-auto">
+                  {JSON.stringify(log.details, null, 2)}
+                </pre>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
+    <>
+      <Card className="w-full max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            העלאת קובץ Excel
+            <Upload className="w-5 h-5" />
+            העלאת נתונים מקובץ Excel
           </CardTitle>
           <CardDescription>
-            בחר קובץ Excel להעלאה ועיבוד הנתונים
+            בחר קובץ .xlsx או .xls כדי להעלות נתונים למערכת
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="file-upload">קובץ Excel</Label>
+          <div className="grid w-full items-center gap-1.5">
+            <Label htmlFor="file">קובץ Excel</Label>
             <Input
-              id="file-upload"
+              id="file"
               type="file"
               accept=".xlsx,.xls"
-              onChange={(e) => {
-                if (e.target.files?.[0]) {
-                  onFile(e.target.files[0]);
-                }
-              }}
+              onChange={(e) => onFile(e.target.files?.[0] || null)}
+              className="cursor-pointer"
             />
           </div>
 
-          {file && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <FileText className="h-5 w-5" />
-                  <span className="font-medium">{file.name}</span>
-                  <Badge variant="secondary">{(file.size / 1024 / 1024).toFixed(2)} MB</Badge>
-                </div>
-
-                {detected.table && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">טבלה מזוהה: {detected.table}</Badge>
-                      <Badge variant="outline">{rows.length} שורות</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">{detected.reason}</p>
-                  </div>
-                )}
-
-                {rows.length > 0 && (
-                  <Button 
-                    onClick={handleUpload} 
-                    disabled={isUploading}
-                    className="mt-4"
-                  >
-                    {isUploading ? 'מעלה...' : 'העלה נתונים'}
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+          {detected.table && (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                {detected.table}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {detected.reason}
+              </span>
+            </div>
           )}
+
+          {renderPreview()}
+          {renderDebugLogs()}
+
+          <div className="flex gap-2">
+            <Button 
+              onClick={uploadAndIngest}
+              disabled={!file || !detected.table || isUploading}
+              className="flex-1"
+            >
+              {isUploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
+                  מעלה...
+                </>
+              ) : (
+                <>
+                  <FileUp className="w-4 h-4 mr-2" />
+                  העלה לבסיס הנתונים
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      {debugLogs.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>יומן עיבוד</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-64">
-              <div className="space-y-2">
-                {debugLogs.map((log) => (
-                  <div key={log.id} className="flex items-start gap-2 text-sm">
-                    {getIcon(log.type)}
-                    <div className="flex-1">
-                      <div>{log.message}</div>
-                      {log.details && (
-                        <pre className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">
-                          {typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2)}
-                        </pre>
-                      )}
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {log.timestamp.toLocaleTimeString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
-
-      <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>אישור יבוא נתונים</AlertDialogTitle>
-            <AlertDialogDescription>
-              נמצאו {rows.length} תב"רים בקובץ. 
-              <br />
-              האם להחליף את הרשימה הקיימת או להוסיף לרשימה הנוכחית?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => handleConfirmImport('append')}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              הוסף לרשימה הקיימת
-            </AlertDialogAction>
-            <AlertDialogAction 
-              onClick={() => handleConfirmImport('replace')}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              החלף את הרשימה הקיימת
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>אפשרויות יבוא נתונים</DialogTitle>
+            <DialogDescription>
+              כיצד ברצונך להתמודד עם הנתונים הקיימים?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleConfirmImport('replace')}
+              >
+                <div className="text-right">
+                  <div className="font-medium">החלף את כל הנתונים הקיימים</div>
+                  <div className="text-sm text-muted-foreground">מחק את הנתונים הקיימים והכנס את החדשים</div>
+                </div>
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => handleConfirmImport('append')}
+              >
+                <div className="text-right">
+                  <div className="font-medium">הוסף לנתונים הקיימים</div>
+                  <div className="text-sm text-muted-foreground">הוסף את הנתונים החדשים לקיימים</div>
+                </div>
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
