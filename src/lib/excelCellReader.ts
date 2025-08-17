@@ -21,6 +21,7 @@ export const COLLECTION_EXCEL_CONFIG: ExcelConfig = {
   dataStartRow: 13, // Data starts from row 13
   columnMapping: {
     D: "property_type", // תיאור סוג נכס
+    F: "year", // שנה
     H: "annual_budget", // תקציב שנתי ארנונה
     I: "relative_budget", // תקציב יחסי ארנונה
     M: "actual_collection" // גביה בפועל
@@ -177,7 +178,7 @@ export class ExcelCellReader {
     // Parse each data row
     for (let row = config.dataStartRow || 13; row <= lastDataRow; row++) {
       try {
-        const rowData: any = { year: currentYear };
+        const rowData: any = {};
         let hasValidData = false;
 
         // Extract data from configured columns
@@ -193,6 +194,11 @@ export class ExcelCellReader {
               hasValidData = true;
               console.log(`✅ Property type: "${cleanType}"`);
             }
+          } else if (field === 'year') {
+            // Handle year field - parse as number but fallback to current year
+            const yearValue = this.parseYearValue(rawValue);
+            rowData[field] = yearValue;
+            console.log(`✅ Year value: ${yearValue}`);
           } else {
             // Handle numeric fields with improved parsing
             const numValue = this.parseNumericValue(rawValue);
@@ -214,6 +220,11 @@ export class ExcelCellReader {
           rowData.annual_budget = rowData.annual_budget || null;
           rowData.relative_budget = rowData.relative_budget || null;
           rowData.actual_collection = rowData.actual_collection || null;
+          
+          // Ensure year exists - fallback to current year if not set
+          if (!rowData.year) {
+            rowData.year = currentYear;
+          }
           
           // Calculate surplus/deficit (will be handled by database trigger, but calculate for logging)
           const actualCollection = rowData.actual_collection || 0;
@@ -311,6 +322,53 @@ export class ExcelCellReader {
     // If none match, classify as "אחר"
     console.log(`⚠️ No match found for: "${normalizedValue}" -> "אחר"`);
     return 'אחר';
+  }
+
+  /**
+   * Parse year value from various formats
+   */
+  private parseYearValue(value: any): number {
+    const currentYear = new Date().getFullYear();
+    
+    // Handle null, undefined, or empty values - default to current year
+    if (value === null || value === undefined || value === '') {
+      return currentYear;
+    }
+    
+    // If already a number, validate it's a reasonable year
+    if (typeof value === 'number' && !isNaN(value)) {
+      if (value >= 1900 && value <= currentYear + 10) {
+        return Math.floor(value);
+      }
+      return currentYear;
+    }
+    
+    // Handle string values
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      
+      // Skip empty strings after trimming
+      if (trimmed === '') return currentYear;
+      
+      // Try to extract year from string
+      const yearMatch = trimmed.match(/\b(19|20)\d{2}\b/);
+      if (yearMatch) {
+        const year = parseInt(yearMatch[0]);
+        if (year >= 1900 && year <= currentYear + 10) {
+          return year;
+        }
+      }
+      
+      // Try direct number conversion
+      const num = parseInt(trimmed);
+      if (!isNaN(num) && num >= 1900 && num <= currentYear + 10) {
+        return num;
+      }
+    }
+    
+    // Fallback to current year
+    console.log(`⚠️ Could not parse year value: "${value}", using current year ${currentYear}`);
+    return currentYear;
   }
 
   /**
