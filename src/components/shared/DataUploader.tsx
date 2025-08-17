@@ -214,12 +214,8 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
       mapped.tabar_name = projectName;
       
-      // The number might be in the second column or a specific field
-      mapped.tabar_number = normalizedRow[''] || 
-                            normalizedRow.tabar_number || 
-                            normalizedRow['מספר תב"ר'] || 
-                            normalizedRow['מספר'] || 
-                            String(normalizedRow['__empty'] || '');
+      // Map tabar number from the " " (space) column 
+      mapped.tabar_number = row[' '] || row['__EMPTY'] || String(normalizedRow['__empty'] || '');
       
       // Map domain field - now accepts Hebrew text directly
       const domainValue = row['נכון לחודש 6/2025'] || 
@@ -233,37 +229,34 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       // Keep domain in Hebrew - now table accepts Hebrew text directly
       mapped.domain = domainValue || 'אחר';
       
-      // Map funding sources based on actual Excel structure with __EMPTY_X columns
-      // From previous logs: __EMPTY_1, __EMPTY_2, __EMPTY_3 contain funding sources
-      const funding1 = row['__EMPTY_1'] || normalizedRow['__empty_1'] || '';
-      const funding2 = row['__EMPTY_2'] || normalizedRow['__empty_2'] || '';  
-      const funding3 = row['__EMPTY_3'] || normalizedRow['__empty_3'] || '';
+      // Map funding sources - FIXED: No __EMPTY_1,2,3 exist in this Excel structure
+      // Based on logs, there are no funding source columns in the current Excel structure
+      console.log('🔍 Funding sources - Excel structure has no funding columns');
+      mapped.funding_source1 = null;
+      mapped.funding_source2 = null;
+      mapped.funding_source3 = null;
       
-      console.log('🔍 Fixed funding sources mapping:', { funding1, funding2, funding3 });
-      console.log('🔍 Row __EMPTY_1:', row['__EMPTY_1'], 'Row __EMPTY_2:', row['__EMPTY_2'], 'Row __EMPTY_3:', row['__EMPTY_3']);
+      // Map numeric fields - CORRECTED based on actual Excel structure from logs
+      // __EMPTY_7 = approved budget, __EMPTY_9 = income, __EMPTY_10 = expense, __EMPTY_13 = surplus
+      const approvedBudgetRaw = row['__EMPTY_7'] || '0';
+      const incomeActualRaw = row['__EMPTY_9'] || '0'; 
+      const expenseActualRaw = row['__EMPTY_10'] || '0';
+      const surplusDeficitRaw = row['__EMPTY_13'] || '0';
       
-      // Keep funding sources in Hebrew - now table accepts Hebrew text
-      mapped.funding_source1 = funding1 || null;
-      mapped.funding_source2 = funding2 || null;
-      mapped.funding_source3 = funding3 || null;
+      // Clean numbers (remove commas if they exist)
+      mapped.approved_budget = parseFloat(String(approvedBudgetRaw).replace(/,/g, '')) || 0;
+      mapped.income_actual = parseFloat(String(incomeActualRaw).replace(/,/g, '')) || 0;
+      mapped.expense_actual = parseFloat(String(expenseActualRaw).replace(/,/g, '')) || 0;
+      mapped.surplus_deficit = parseFloat(String(surplusDeficitRaw).replace(/,/g, '')) || 0;
       
-      // Map numeric fields - fix the column mapping based on actual Excel structure
-      // From logs: __EMPTY_4 = approved budget, __EMPTY_9 = income, __EMPTY_10 = expense, __EMPTY_13 = surplus
-      mapped.approved_budget = parseFloat(row['__EMPTY_4'] || normalizedRow['__empty_4'] || '0') || 0;
-      
-      mapped.income_actual = parseFloat(row['__EMPTY_9'] || normalizedRow['__empty_9'] || '0') || 0;
-      
-      mapped.expense_actual = parseFloat(row['__EMPTY_10'] || normalizedRow['__empty_10'] || '0') || 0;
-      
-      // Calculate surplus/deficit from __EMPTY_13 or calculate it
-      mapped.surplus_deficit = parseFloat(row['__EMPTY_13'] || normalizedRow['__empty_13'] || '0') || 
-                              ((mapped.income_actual || 0) - (mapped.expense_actual || 0));
-      
-      console.log('🔍 Fixed numeric mapping:', { 
-        approved_budget: mapped.approved_budget, 
-        income_actual: mapped.income_actual, 
-        expense_actual: mapped.expense_actual, 
-        surplus_deficit: mapped.surplus_deficit 
+      console.log('🔍 CORRECTED numeric mapping:', { 
+        raw_values: { approvedBudgetRaw, incomeActualRaw, expenseActualRaw, surplusDeficitRaw },
+        parsed_values: {
+          approved_budget: mapped.approved_budget, 
+          income_actual: mapped.income_actual, 
+          expense_actual: mapped.expense_actual, 
+          surplus_deficit: mapped.surplus_deficit 
+        }
       });
       
       break;
