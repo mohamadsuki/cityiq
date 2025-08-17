@@ -195,6 +195,8 @@ const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
 
 const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: DebugLog[]) => {
   console.log(`🗂️ mapRowToTable called for table: ${table}`, row);
+  console.log('🐛 DEBUG - Original row sample keys:', Object.keys(row).slice(0, 5));
+  console.log('🐛 DEBUG - Row has project name key:', !!row['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיל לפי פרקי התקציב']);
   
   const mapped: Record<string, any> = {};
   
