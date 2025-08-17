@@ -9,6 +9,16 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
@@ -37,6 +47,11 @@ interface DebugLog {
   message: string;
   details?: any;
   timestamp: Date;
+}
+
+interface ImportOption {
+  mode: 'replace' | 'append';
+  confirmed: boolean;
 }
 
 // Parse collection data from "טיוטת מאזן RAW" Excel file using the new ExcelCellReader
@@ -713,6 +728,15 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
   const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
   const [showDebug, setShowDebug] = useState(false);
   const [headers, setHeaders] = useState<string[]>([]);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importOption, setImportOption] = useState<ImportOption>({ mode: 'replace', confirmed: false });
+
+  const handleConfirmImport = (mode: 'replace' | 'append') => {
+    setImportOption({ mode, confirmed: true });
+    setShowImportDialog(false);
+    // Continue with the import process
+    uploadAndIngest();
+  };
 
   const onFile = async (f: File) => {
     setFile(f);
@@ -857,6 +881,12 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
     if (!file || rows.length === 0) return;
     if (!detected.table) {
       toast({ title: "לא זוהה יעד מתאים", description: "עדכן כותרות עמודות או בחר קובץ אחר", variant: "destructive" });
+      return;
+    }
+
+    // For tabarim, show import dialog if not already confirmed
+    if (detected.table === 'tabarim' && !importOption.confirmed) {
+      setShowImportDialog(true);
       return;
     }
 
@@ -1016,6 +1046,10 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
         toast({ title: "נתוני הגביה נקלטו בהצלחה", description: `${mapped.length} סוגי נכסים` });
         
         onUploadSuccess?.();
+        
+        // Reset import option for next upload
+        setImportOption({ mode: 'replace', confirmed: false });
+        
         setFile(null);
         setRows([]);
         setDetected({ table: null, reason: "" });
@@ -1069,6 +1103,10 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
         toast({ title: "הנתונים נקלטו בהצלחה", description: `${mapped.length} פריטי תקציב` });
         
         onUploadSuccess?.();
+        
+        // Reset import option for next upload
+        setImportOption({ mode: 'replace', confirmed: false });
+        
         setFile(null);
         setRows([]);
         setDetected({ table: null, reason: "" });
@@ -1091,7 +1129,7 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
           ...mappedRow, 
           user_id: userId,
           // Only add department_slug for tables that have this column
-          ...(deptSlug && detected.table !== 'regular_budget' ? { department_slug: deptSlug } : {})
+          ...(deptSlug && !['regular_budget', 'tabarim', 'collection_data'].includes(detected.table!) ? { department_slug: deptSlug } : {})
         };
         
         addProcessingLog('success', `שורה ${index + 1} עובדה בהצלחה`);
@@ -1137,7 +1175,7 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
 
       const tableName = detected.table as 'regular_budget' | 'tabarim' | 'licenses' | 'plans' | 'institutions' | 'projects' | 'grants' | 'welfare_services' | 'activities';
       
-      // For regular_budget table, delete existing data first to replace with new data
+      // Handle data replacement/appending based on table and user choice
       if (tableName === "regular_budget") {
         addProcessingLog('info', 'מוחק נתוני תקציב קיימים');
         const { error: deleteError } = await supabase
@@ -1150,6 +1188,20 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
         } else {
           addProcessingLog('success', 'נתונים קיימים נמחקו בהצלחה');
         }
+      } else if (tableName === "tabarim" && importOption.mode === 'replace') {
+        addProcessingLog('info', 'מוחק תב"רים קיימים');
+        const { error: deleteError } = await supabase
+          .from('tabarim')
+          .delete()
+          .eq('user_id', userId);
+
+        if (deleteError) {
+          addProcessingLog('warning', `שגיאה במחיקת תב"רים קיימים: ${deleteError.message}`);
+        } else {
+          addProcessingLog('success', 'תב"רים קיימים נמחקו בהצלחה');
+        }
+      } else if (tableName === "tabarim" && importOption.mode === 'append') {
+        addProcessingLog('info', 'מוסיף תב"רים לרשימה הקיימת');
       }
 
       addProcessingLog('info', `מכניס ${filtered.length} שורות לטבלה ${tableName}`);
@@ -1171,6 +1223,9 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       
       // Call success callback to refresh parent component
       onUploadSuccess?.();
+      
+      // Reset import option for next upload
+      setImportOption({ mode: 'replace', confirmed: false });
       
       setFile(null);
       setRows([]);
@@ -1324,6 +1379,35 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
           </CardContent>
         </Card>
       )}
+
+      {/* Import Options Dialog for Tabarim */}
+      <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>אפשרויות ייבוא תב"רים</AlertDialogTitle>
+            <AlertDialogDescription>
+              נמצאו תב"רים קיימים במערכת. איך ברצונך להמשיך?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex gap-2">
+            <AlertDialogCancel onClick={() => setShowImportDialog(false)}>
+              ביטול
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => handleConfirmImport('append')}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              הוסף לרשימה הקיימת
+            </AlertDialogAction>
+            <AlertDialogAction 
+              onClick={() => handleConfirmImport('replace')}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              החלף את הרשימה הקיימת
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
