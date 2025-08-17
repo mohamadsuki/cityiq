@@ -222,46 +222,38 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       // Keep domain in Hebrew - now table accepts Hebrew text directly
       mapped.domain = domainValue || 'אחר';
       
-      // Map funding sources according to actual Excel columns with correct normalization
-      const funding1 = row['מקור תקציבי/משרד מממן'] || 
-                       normalizedRow['מקור תקציבי/משרד מממן'] ||
-                       row['__EMPTY_1'] || 
-                       normalizedRow['__empty_1'] || '';
+      // Map funding sources based on actual Excel structure with __EMPTY_X columns
+      // From previous logs: __EMPTY_1, __EMPTY_2, __EMPTY_3 contain funding sources
+      const funding1 = row['__EMPTY_1'] || normalizedRow['__empty_1'] || '';
+      const funding2 = row['__EMPTY_2'] || normalizedRow['__empty_2'] || '';  
+      const funding3 = row['__EMPTY_3'] || normalizedRow['__empty_3'] || '';
       
-      const funding2 = row['מקור תקציב 2'] || 
-                       normalizedRow['מקור תקציב 2'] ||
-                       row['__EMPTY_2'] || 
-                       normalizedRow['__empty_2'] || '';
-      
-      const funding3 = row['מקור תקציב 3'] || 
-                       normalizedRow['מקור תקציב 3'] ||
-                       row['__EMPTY_3'] || 
-                       normalizedRow['__empty_3'] || '';
-      
-      console.log('🔍 Funding sources mapping:', { funding1, funding2, funding3 });
-      console.log('🔍 Available row keys:', Object.keys(row).filter(k => k.includes('מקור') || k.includes('EMPTY')));
+      console.log('🔍 Fixed funding sources mapping:', { funding1, funding2, funding3 });
+      console.log('🔍 Row __EMPTY_1:', row['__EMPTY_1'], 'Row __EMPTY_2:', row['__EMPTY_2'], 'Row __EMPTY_3:', row['__EMPTY_3']);
       
       // Keep funding sources in Hebrew - now table accepts Hebrew text
       mapped.funding_source1 = funding1 || null;
       mapped.funding_source2 = funding2 || null;
       mapped.funding_source3 = funding3 || null;
       
-      // Map numeric fields - check the __empty_4, __empty_5, etc. columns
-      mapped.approved_budget = parseFloat(normalizedRow['__empty_4'] || 
-                                         normalizedRow.approved_budget || 
-                                         normalizedRow['תקציב מאושר'] || '0') || 0;
+      // Map numeric fields - fix the column mapping based on actual Excel structure
+      // From logs: __EMPTY_4 = approved budget, __EMPTY_9 = income, __EMPTY_10 = expense, __EMPTY_13 = surplus
+      mapped.approved_budget = parseFloat(row['__EMPTY_4'] || normalizedRow['__empty_4'] || '0') || 0;
       
-      mapped.income_actual = parseFloat(normalizedRow['__empty_9'] || 
-                                       normalizedRow.income_actual || 
-                                       normalizedRow['הכנסות בפועל'] || '0') || 0;
+      mapped.income_actual = parseFloat(row['__EMPTY_9'] || normalizedRow['__empty_9'] || '0') || 0;
       
-      mapped.expense_actual = parseFloat(normalizedRow['__empty_10'] || 
-                                        normalizedRow.expense_actual || 
-                                        normalizedRow['הוצאות בפועל'] || '0') || 0;
+      mapped.expense_actual = parseFloat(row['__EMPTY_10'] || normalizedRow['__empty_10'] || '0') || 0;
       
-      // Calculate surplus/deficit from __empty_13 or calculate it
-      mapped.surplus_deficit = parseFloat(normalizedRow['__empty_13'] || '0') || 
+      // Calculate surplus/deficit from __EMPTY_13 or calculate it
+      mapped.surplus_deficit = parseFloat(row['__EMPTY_13'] || normalizedRow['__empty_13'] || '0') || 
                               ((mapped.income_actual || 0) - (mapped.expense_actual || 0));
+      
+      console.log('🔍 Fixed numeric mapping:', { 
+        approved_budget: mapped.approved_budget, 
+        income_actual: mapped.income_actual, 
+        expense_actual: mapped.expense_actual, 
+        surplus_deficit: mapped.surplus_deficit 
+      });
       
       break;
       
