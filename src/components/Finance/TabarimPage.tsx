@@ -32,7 +32,6 @@ interface Tabar {
   income_actual: number;
   expense_actual: number;
   surplus_deficit: number;
-  status: string;
   created_at: string;
 }
 
@@ -258,20 +257,6 @@ export default function TabarimPage() {
       },
     },
     {
-      accessorKey: "status",
-      header: "סטטוס",
-      cell: ({ row }) => {
-        const statusLabels: Record<string, string> = {
-          planning: "תכנון",
-          approved: "מאושר", 
-          active: "פעיל",
-          completed: "הושלם",
-          cancelled: "בוטל",
-        };
-        return statusLabels[row.getValue("status") as string] || row.getValue("status");
-      },
-    },
-    {
       id: "actions",
       header: "פעולות",
       cell: ({ row }) => (
@@ -302,11 +287,6 @@ export default function TabarimPage() {
     return acc;
   }, {} as Record<string, number>);
 
-  const statusStats = tabarim.reduce((acc, tabar) => {
-    acc[tabar.status] = (acc[tabar.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
   const totalBudget = tabarim.reduce((sum, tabar) => sum + tabar.approved_budget, 0);
   const totalIncome = tabarim.reduce((sum, tabar) => sum + tabar.income_actual, 0);
   const totalExpense = tabarim.reduce((sum, tabar) => sum + tabar.expense_actual, 0);
@@ -317,7 +297,7 @@ export default function TabarimPage() {
         <div>
           <h1 className="text-3xl font-bold mb-2">תב"רים</h1>
           <p className="text-muted-foreground">
-            ניהול תב"רים עירוניים - הוספה, עריכה ומעקב סטטוס
+            ניהול תב"רים עירוניים - הוספה, עריכה ומעקב
           </p>
         </div>
         <div className="flex gap-2">
@@ -360,7 +340,7 @@ export default function TabarimPage() {
           </CardContent>
         </Card>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
               <CardTitle>תב"רים לפי תחום</CardTitle>
@@ -379,31 +359,6 @@ export default function TabarimPage() {
                   return (
                     <div key={domain} className="flex justify-between items-center py-2 border-b">
                       <span>{domainLabels[domain] || domain}</span>
-                      <span className="font-semibold">{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>תב"רים לפי סטטוס</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {Object.entries(statusStats).map(([status, count]) => {
-                  const statusLabels: Record<string, string> = {
-                    planning: "תכנון",
-                    approved: "מאושר",
-                    active: "פעיל", 
-                    completed: "הושלם",
-                    cancelled: "בוטל",
-                  };
-                  return (
-                    <div key={status} className="flex justify-between items-center py-2 border-b">
-                      <span>{statusLabels[status] || status}</span>
                       <span className="font-semibold">{count}</span>
                     </div>
                   );
@@ -467,7 +422,7 @@ export default function TabarimPage() {
                 onUploadSuccess={handleUploadSuccess}
               />
               <div className="mt-4 text-sm text-muted-foreground">
-                העלה קובץ אקסל עם תב"רים. הקובץ צריך להכיל עמודות: מספר תב"ר, שם תב"ר, תחום, מקורות תקציב, תקציב מאושר, הכנסה בפועל, הוצאה בפועל, סטטוס.
+                העלה קובץ אקסל עם תב"רים. הקובץ צריך להכיל עמודות: מספר תב"ר, שם תב"ר, תחום, מקורות תקציב, תקציב מאושר, הכנסה בפועל, הוצאה בפועל.
               </div>
             </div>
           </DialogContent>

@@ -59,8 +59,7 @@ export const TABARIM_EXCEL_CONFIG: ExcelConfig = {
     G: "funding_source3", // מקור תקציבי 3 (column 7)
     H: "approved_budget", // תקציב מאושר
     I: "income_actual", // הכנסה בפועל
-    J: "expense_actual", // הוצאה בפועל
-    K: "status" // סטטוס
+    J: "expense_actual" // הוצאה בפועל
   }
 };
 
@@ -221,11 +220,6 @@ export class ExcelCellReader {
               // Map domain to standard values
               const domainValue = this.mapDomainValue(String(rawValue).trim());
               rowData[field] = domainValue;
-              hasValidData = true;
-            } else if (field === 'status') {
-              // Map status to standard values
-              const statusValue = this.mapStatusValue(String(rawValue).trim());
-              rowData[field] = statusValue;
               hasValidData = true;
             } else if (field.startsWith('funding_source')) {
               // Map funding sources to standard values - only if not empty

@@ -54,13 +54,6 @@ const FUNDING_SOURCES = [
   { value: "agriculture_ministry", label: "משרד החקלאות" }
 ];
 
-const STATUS_OPTIONS = [
-  { value: "planning", label: "בתכנון" },
-  { value: "active", label: "פעיל" },
-  { value: "closed", label: "סגור" },
-  { value: "delayed", label: "בעיכוב" }
-];
-
 export default function AddTabarDialog({ open, onOpenChange, onSaved, editData }: AddTabarDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -75,8 +68,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved, editData }
     ].filter(Boolean) as string[],
     approved_budget: editData?.approved_budget?.toString() || "",
     income_actual: editData?.income_actual?.toString() || "",
-    expense_actual: editData?.expense_actual?.toString() || "",
-    status: editData?.status || "planning"
+    expense_actual: editData?.expense_actual?.toString() || ""
   });
 
   // Reset form when editData changes
@@ -93,8 +85,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved, editData }
         ].filter(Boolean) as string[],
         approved_budget: editData.approved_budget?.toString() || "",
         income_actual: editData.income_actual?.toString() || "",
-        expense_actual: editData.expense_actual?.toString() || "",
-        status: editData.status || "planning"
+        expense_actual: editData.expense_actual?.toString() || ""
       });
     } else {
       setFormData({
@@ -104,8 +95,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved, editData }
         funding_sources: [],
         approved_budget: "",
         income_actual: "",
-        expense_actual: "",
-        status: "planning"
+        expense_actual: ""
       });
     }
   }, [editData, open]);
@@ -143,8 +133,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved, editData }
         approved_budget: formData.approved_budget ? Number(formData.approved_budget) : null,
         income_actual: formData.income_actual ? Number(formData.income_actual) : null,
         expense_actual: formData.expense_actual ? Number(formData.expense_actual) : null,
-        surplus_deficit,
-        status: (formData.status as any)
+        surplus_deficit
       };
 
       let error;
@@ -175,8 +164,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved, editData }
           funding_sources: [],
           approved_budget: "",
           income_actual: "",
-          expense_actual: "",
-          status: "planning"
+          expense_actual: ""
         });
       }
       
@@ -197,32 +185,14 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved, editData }
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="tabar_number">מספר תב\"ר</Label>
-              <Input
-                id="tabar_number"
-                value={formData.tabar_number}
-                onChange={(e) => setFormData(prev => ({...prev, tabar_number: e.target.value}))}
-                placeholder='מספר תב"ר'
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="status">סטטוס</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({...prev, status: value}))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map(option => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="tabar_number">מספר תב\"ר</Label>
+            <Input
+              id="tabar_number"
+              value={formData.tabar_number}
+              onChange={(e) => setFormData(prev => ({...prev, tabar_number: e.target.value}))}
+              placeholder='מספר תב"ר'
+            />
           </div>
 
           <div>
