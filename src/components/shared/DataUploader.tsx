@@ -897,8 +897,43 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
         }
         
         addProcessingLog('info', `מכניס ${mapped.length} שורות לטבלה ${targetTableName}`);
-        const { error } = await supabase.from(targetTableName).insert(mapped as any);
-        if (error) throw error;
+        
+        // Validate data before insertion
+        const validatedData = mapped.map((row, index) => {
+          const validatedRow = { ...row };
+          
+          // Ensure numeric fields are properly typed
+          ['annual_budget', 'relative_budget', 'actual_collection'].forEach(field => {
+            if (validatedRow[field] !== null && validatedRow[field] !== undefined) {
+              const numValue = Number(validatedRow[field]);
+              if (isNaN(numValue)) {
+                addProcessingLog('warning', `שורה ${index + 1}: ערך לא תקין בשדה ${field}: "${validatedRow[field]}" - הוגדר כ-null`);
+                validatedRow[field] = null;
+              } else {
+                validatedRow[field] = numValue;
+              }
+            } else {
+              validatedRow[field] = null;
+            }
+          });
+          
+          // Ensure property_type is a string
+          if (!validatedRow.property_type || typeof validatedRow.property_type !== 'string') {
+            addProcessingLog('warning', `שורה ${index + 1}: סוג נכס לא תקין: "${validatedRow.property_type}" - הוגדר כ-"לא מוגדר"`);
+            validatedRow.property_type = 'לא מוגדר';
+          }
+          
+          return validatedRow;
+        });
+        
+        const { error } = await supabase.from(targetTableName).insert(validatedData);
+        if (error) {
+          addProcessingLog('error', `שגיאה בהכנסת הנתונים: ${error.message}`);
+          if (error.details) {
+            addProcessingLog('error', `פרטי השגיאה: ${error.details}`);
+          }
+          throw error;
+        }
 
         await supabase.from("ingestion_logs").insert({
           user_id: userId,

@@ -157,6 +157,8 @@ export class ExcelCellReader {
     const results: any[] = [];
     const currentYear = new Date().getFullYear();
     
+    console.log('Starting collection data parsing with improved error handling...');
+    
     // Find the actual data range by scanning for non-empty rows
     let lastDataRow = config.dataStartRow || 13;
     for (let row = lastDataRow; row <= lastDataRow + 50; row++) {
@@ -174,46 +176,62 @@ export class ExcelCellReader {
 
     // Parse each data row
     for (let row = config.dataStartRow || 13; row <= lastDataRow; row++) {
-      const rowData: any = { year: currentYear };
-      let hasValidData = false;
+      try {
+        const rowData: any = { year: currentYear };
+        let hasValidData = false;
 
-      // Extract data from configured columns
-      Object.entries(config.columnMapping).forEach(([col, field]) => {
-        const value = this.readCell(`${col}${row}`);
-        
-        if (field === 'property_type') {
-          // Clean and standardize property type
-          const cleanType = this.standardizePropertyType(value, config.propertyTypeMapping);
-          if (cleanType) {
-            rowData[field] = cleanType;
-            hasValidData = true;
+        // Extract data from configured columns
+        Object.entries(config.columnMapping).forEach(([col, field]) => {
+          const rawValue = this.readCell(`${col}${row}`);
+          console.log(`Row ${row}, Column ${col} (${field}): Raw value = "${rawValue}", Type = ${typeof rawValue}`);
+          
+          if (field === 'property_type') {
+            // Clean and standardize property type
+            const cleanType = this.standardizePropertyType(rawValue, config.propertyTypeMapping);
+            if (cleanType) {
+              rowData[field] = cleanType;
+              hasValidData = true;
+              console.log(`✅ Property type: "${cleanType}"`);
+            }
+          } else {
+            // Handle numeric fields with improved parsing
+            const numValue = this.parseNumericValue(rawValue);
+            if (numValue !== null && numValue !== undefined) {
+              rowData[field] = numValue;
+              hasValidData = true;
+              console.log(`✅ Numeric value for ${field}: ${numValue}`);
+            } else {
+              console.log(`⚠️ Could not parse numeric value for ${field}: "${rawValue}"`);
+              // Set to null instead of undefined to avoid database issues
+              rowData[field] = null;
+            }
           }
+        });
+
+        // Only add rows that have at least property type or numeric data
+        if (hasValidData && (rowData.property_type || rowData.annual_budget || rowData.relative_budget || rowData.actual_collection)) {
+          // Ensure all required fields exist (set to null if missing)
+          rowData.annual_budget = rowData.annual_budget || null;
+          rowData.relative_budget = rowData.relative_budget || null;
+          rowData.actual_collection = rowData.actual_collection || null;
+          
+          // Calculate surplus/deficit (will be handled by database trigger, but calculate for logging)
+          const actualCollection = rowData.actual_collection || 0;
+          const relativeBudget = rowData.relative_budget || 0;
+          rowData.surplus_deficit = actualCollection - relativeBudget;
+          
+          results.push(rowData);
+          console.log(`✅ Added row ${row}:`, rowData);
         } else {
-          // Handle numeric fields
-          const numValue = this.parseNumericValue(value);
-          if (numValue !== null) {
-            rowData[field] = numValue;
-            hasValidData = true;
-          } else if (value !== null && value !== undefined && value !== '') {
-            rowData[field] = value;
-            hasValidData = true;
-          }
+          console.log(`❌ Skipped row ${row} - no valid data found`);
         }
-      });
-
-      // Only add rows that have at least property type or numeric data
-      if (hasValidData && (rowData.property_type || rowData.annual_budget || rowData.relative_budget || rowData.actual_collection)) {
-        // Calculate surplus/deficit
-        const actualCollection = rowData.actual_collection || 0;
-        const relativeBudget = rowData.relative_budget || 0;
-        rowData.surplus_deficit = actualCollection - relativeBudget;
-        
-        results.push(rowData);
-        console.log(`Row ${row}:`, rowData);
+      } catch (error) {
+        console.error(`Error processing row ${row}:`, error);
+        // Continue processing other rows even if one fails
       }
     }
 
-    console.log(`Parsed ${results.length} collection records`);
+    console.log(`✅ Successfully parsed ${results.length} collection records`);
     return results;
   }
 
@@ -247,18 +265,63 @@ export class ExcelCellReader {
    * Parse numeric value from various formats
    */
   private parseNumericValue(value: any): number | null {
+    // Handle null, undefined, or empty values
+    if (value === null || value === undefined || value === '') {
+      return null;
+    }
+    
+    // If already a number, return it
     if (typeof value === 'number' && !isNaN(value)) {
       return value;
     }
     
+    // Handle string values
     if (typeof value === 'string') {
-      // Remove commas, spaces, and currency symbols
-      const cleaned = value.replace(/[,\s₪]/g, '');
+      const trimmed = value.trim();
+      
+      // Skip empty strings after trimming
+      if (trimmed === '') return null;
+      
+      // Skip text headers or labels (Hebrew text that shouldn't be numbers)
+      if (trimmed.includes('תקציב') || 
+          trimmed.includes('ארנונה') || 
+          trimmed.includes('גביה') ||
+          trimmed.includes('סכום') ||
+          trimmed.includes('שנתי') ||
+          trimmed.includes('יחסי') ||
+          trimmed.includes('בפועל') ||
+          trimmed.includes('נומינלי') ||
+          trimmed.includes('תיאור') ||
+          trimmed.includes('סוג') ||
+          trimmed.includes('נכס')) {
+        console.log(`Skipping text value: "${trimmed}"`);
+        return null;
+      }
+      
+      // Remove commas, spaces, currency symbols, and other formatting
+      const cleaned = trimmed
+        .replace(/[,\s₪$€£¥]/g, '') // Remove common currency symbols and formatting
+        .replace(/[^\d.-]/g, ''); // Keep only digits, dots, and minus signs
+      
+      // If nothing left after cleaning, return null
+      if (cleaned === '' || cleaned === '-' || cleaned === '.') {
+        return null;
+      }
+      
       const num = parseFloat(cleaned);
-      return isNaN(num) ? null : num;
+      
+      // Check if the result is a valid number
+      if (isNaN(num) || !isFinite(num)) {
+        console.log(`Could not parse numeric value from: "${value}" -> "${cleaned}"`);
+        return null;
+      }
+      
+      return num;
     }
     
-    return null;
+    // For any other type, try to convert to number
+    const num = Number(value);
+    return isNaN(num) ? null : num;
   }
 
   /**
