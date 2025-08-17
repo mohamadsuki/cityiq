@@ -1264,6 +1264,7 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
           ...(deptSlug && !['regular_budget', 'tabarim', 'collection_data'].includes(detected.table!) ? { department_slug: deptSlug } : {})
         };
         
+        console.log(`📋 Mapped row ${index + 1}:`, result);
         addProcessingLog('success', `שורה ${index + 1} עובדה בהצלחה`);
         return result;
       }).filter(row => row !== null); // Remove null rows first
@@ -1337,11 +1338,27 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       }
 
       addProcessingLog('info', `מכניס ${filtered.length} שורות לטבלה ${tableName}`);
-      console.log('📤 Data being inserted to Supabase:', filtered.slice(0, 3)); // Log first 3 records
+      console.log('📤 Data being inserted to Supabase:');
+      console.log('📤 Table name:', tableName);
+      console.log('📤 User ID:', userId);
+      console.log('📤 Data sample (first 3 records):', filtered.slice(0, 3));
+      console.log('📤 Data sample full fields:', JSON.stringify(filtered.slice(0, 2), null, 2));
+      
+      // Validate user_id in all records
+      const recordsWithoutUserId = filtered.filter(record => !record.user_id);
+      if (recordsWithoutUserId.length > 0) {
+        console.error('❌ Found records without user_id:', recordsWithoutUserId.length);
+        addProcessingLog('error', `נמצאו ${recordsWithoutUserId.length} רשומות ללא user_id`);
+      }
+      
       const { error } = await supabase.from(tableName).insert(filtered as any);
       if (error) {
         console.error('❌ Supabase insert error:', error);
+        console.error('❌ Error details:', JSON.stringify(error, null, 2));
         addProcessingLog('error', `שגיאה בהכנסת נתונים: ${error.message}`);
+        if (error.details) {
+          addProcessingLog('error', `פרטי השגיאה: ${error.details}`);
+        }
         throw error;
       } else {
         console.log('✅ Successfully inserted data to Supabase');
