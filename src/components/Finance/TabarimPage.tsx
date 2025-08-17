@@ -1,12 +1,23 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Trash2, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { DataTable } from "@/components/shared/DataTable";
+import { DataUploader } from "@/components/shared/DataUploader";
 import { ColumnDef } from "@tanstack/react-table";
 import AddTabarDialog from "./AddTabarDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Tabar {
   id: string;
@@ -26,8 +37,11 @@ interface Tabar {
 
 export default function TabarimPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showUploader, setShowUploader] = useState(false);
   const [tabarim, setTabarim] = useState<Tabar[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [tabarToDelete, setTabarToDelete] = useState<string | null>(null);
   const { toast } = useToast();
 
   const loadTabarim = async () => {
@@ -59,6 +73,50 @@ export default function TabarimPage() {
   const handleTabarSaved = () => {
     setShowAddDialog(false);
     loadTabarim(); // רענון הרשימה
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setTabarToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!tabarToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('tabarim')
+        .delete()
+        .eq('id', tabarToDelete);
+
+      if (error) throw error;
+
+      toast({
+        title: "הצלחה",
+        description: "התב\"ר נמחק בהצלחה",
+      });
+
+      loadTabarim(); // רענון הרשימה
+    } catch (error) {
+      console.error('Error deleting tabar:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן למחוק את התב\"ר",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setTabarToDelete(null);
+    }
+  };
+
+  const handleUploadSuccess = () => {
+    setShowUploader(false);
+    loadTabarim(); // רענון הרשימה
+    toast({
+      title: "הצלחה",
+      description: "הקובץ הועלה בהצלחה והנתונים נשמרו",
+    });
   };
 
   const columns: ColumnDef<Tabar>[] = [
@@ -126,6 +184,20 @@ export default function TabarimPage() {
         return statusLabels[row.getValue("status") as string] || row.getValue("status");
       },
     },
+    {
+      id: "actions",
+      header: "פעולות",
+      cell: ({ row }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => handleDeleteClick(row.original.id)}
+          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      ),
+    },
   ];
 
   // חישוב נתונים לגרפים
@@ -152,10 +224,19 @@ export default function TabarimPage() {
             ניהול תב"רים עירוניים - הוספה, עריכה ומעקב סטטוס
           </p>
         </div>
-        <Button onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4 ml-2" />
-          הוסף תב"ר
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowUploader(true)}
+          >
+            <Upload className="h-4 w-4 ml-2" />
+            העלה קובץ אקסל
+          </Button>
+          <Button onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4 ml-2" />
+            הוסף תב"ר
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6">
@@ -270,6 +351,49 @@ export default function TabarimPage() {
         onOpenChange={setShowAddDialog}
         onSaved={handleTabarSaved}
       />
+
+      {showUploader && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-background border rounded-lg shadow-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">העלה קובץ אקסל - תב"רים</h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowUploader(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+              <DataUploader 
+                context="tabarim"
+                onUploadSuccess={handleUploadSuccess}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>מחיקת תב"ר</AlertDialogTitle>
+            <AlertDialogDescription>
+              האם אתה בטוח שברצונך למחוק תב"ר זה? פעולה זו אינה ניתנת לביטול.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              מחק
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

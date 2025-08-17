@@ -12,7 +12,7 @@ import { ChevronDown, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
-import { ExcelCellReader, COLLECTION_EXCEL_CONFIG } from "@/lib/excelCellReader";
+import { ExcelCellReader, COLLECTION_EXCEL_CONFIG, TABARIM_EXCEL_CONFIG } from "@/lib/excelCellReader";
 
 export type UploadContext =
   | "finance"
@@ -57,6 +57,26 @@ function parseCollectionExcelByCellAddresses(sheet: any): { data: any[], summary
   };
 
   console.log(`Parsed ${data.length} collection records with totals:`, summaryCards);
+  
+  return { data, summaryCards };
+}
+
+// Parse Tabarim data from Excel file using the new ExcelCellReader
+function parseTabarimExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
+  console.log('=== TABARIM EXCEL PARSING DEBUG ===');
+  
+  const reader = new ExcelCellReader(sheet);
+  const data = reader.parseTabarimData(TABARIM_EXCEL_CONFIG);
+  
+  // Calculate summary statistics
+  const summaryCards = {
+    totalTabarim: data.length,
+    totalBudget: data.reduce((sum, item) => sum + (item.approved_budget || 0), 0),
+    totalIncome: data.reduce((sum, item) => sum + (item.income_actual || 0), 0),
+    totalExpense: data.reduce((sum, item) => sum + (item.expense_actual || 0), 0)
+  };
+
+  console.log(`Parsed ${data.length} Tabarim records with totals:`, summaryCards);
   
   return { data, summaryCards };
 }
@@ -467,6 +487,26 @@ function mapRowToTable(table: string, row: Record<string, any>, debugLogs?: Debu
   });
 
   switch (table) {
+    case "tabarim":
+      addLog('info', 'מעבד שורת תב"ר');
+      
+      const tabarResult = {
+        tabar_number: norm.tabar_number || norm.number || '',
+        tabar_name: norm.tabar_name || norm.name || '',
+        domain: norm.domain || 'organizational',
+        funding_source1: norm.funding_source1 || norm.funding_source || null,
+        funding_source2: norm.funding_source2 || null,
+        funding_source3: norm.funding_source3 || null,
+        approved_budget: norm.approved_budget ? Number(norm.approved_budget) : 0,
+        income_actual: norm.income_actual ? Number(norm.income_actual) : 0,
+        expense_actual: norm.expense_actual ? Number(norm.expense_actual) : 0,
+        surplus_deficit: (norm.income_actual ? Number(norm.income_actual) : 0) - (norm.expense_actual ? Number(norm.expense_actual) : 0),
+        status: norm.status || 'planning',
+      };
+      
+      addLog('success', `שורת תב"ר מעובדת: ${tabarResult.tabar_name}`, tabarResult);
+      return tabarResult;
+      
     case "collection_data":
       addLog('info', 'מעבד שורת נתוני גביה');
       
@@ -748,6 +788,33 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
         
         setDebugLogs(logs);
         toast({ title: "קובץ נטען בהצלחה", description: `${data.length} סוגי נכסים נמצאו` });
+        return;
+      }
+      
+      // Check if this should be parsed as Tabarim data
+      if (context === 'tabarim') {
+        addLog('info', 'משתמש בפענוח נתוני תב"רים לפי כתובות תאים');
+        const result = parseTabarimExcelByCellAddresses(sheet);
+        const { data, summaryCards } = result;
+        addLog('success', `נמצאו ${data.length} תב"רים`);
+        
+        // Store summary cards in localStorage for the tabarim page
+        if (summaryCards) {
+          localStorage.setItem('tabarim_summary', JSON.stringify(summaryCards));
+          addLog('info', 'נתוני סיכום תב"רים נשמרו:', summaryCards);
+        }
+        
+        setRows(data);
+        setHeaders(['tabar_number', 'tabar_name', 'domain', 'funding_source1', 'approved_budget', 'income_actual', 'expense_actual', 'status']);
+        setDetected({ table: 'tabarim', reason: 'פענוח ישיר נתוני תב"רים מקובץ אקסל' });
+        
+        // Log sample of parsed data
+        if (data.length > 0) {
+          addLog('info', 'דוגמת נתונים שנמצאו:', data.slice(0, 3));
+        }
+        
+        setDebugLogs(logs);
+        toast({ title: "קובץ נטען בהצלחה", description: `${data.length} תב"רים נמצאו` });
         return;
       }
       

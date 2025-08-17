@@ -45,6 +45,25 @@ export const COLLECTION_EXCEL_CONFIG: ExcelConfig = {
   }
 };
 
+// Configuration for Tabarim Excel file
+export const TABARIM_EXCEL_CONFIG: ExcelConfig = {
+  name: "תב\"רים",
+  headerRow: 1, // Headers on first row
+  dataStartRow: 2, // Data starts from row 2
+  columnMapping: {
+    A: "tabar_number", // מספר תב"ר
+    B: "tabar_name", // שם תב"ר
+    C: "domain", // תחום
+    D: "funding_source1", // מקור תקציבי 1
+    E: "funding_source2", // מקור תקציבי 2  
+    F: "funding_source3", // מקור תקציבי 3
+    G: "approved_budget", // תקציב מאושר
+    H: "income_actual", // הכנסה בפועל
+    I: "expense_actual", // הוצאה בפועל
+    J: "status" // סטטוס
+  }
+};
+
 export class ExcelCellReader {
   private sheet: any;
   private options: CellReaderOptions;
@@ -149,6 +168,99 @@ export class ExcelCellReader {
    */
   static getColumnIndex(colLetter: string): number {
     return XLSX.utils.decode_col(colLetter);
+  }
+
+  /**
+   * Parse Tabarim data from an Excel sheet
+   */
+  parseTabarimData(config: ExcelConfig): any[] {
+    console.log('=== TABARIM EXCEL PARSING DEBUG ===');
+    
+    if (!this.sheet) {
+      console.error('❌ No sheet available');
+      return [];
+    }
+
+    const result: any[] = [];
+    const range = XLSX.utils.decode_range(this.sheet['!ref'] || 'A1:J100');
+    
+    // Find the last row with actual data
+    let lastDataRow = config.dataStartRow || 2;
+    for (let row = lastDataRow; row <= range.e.r + 1; row++) {
+      const hasData = Object.keys(config.columnMapping).some(col => {
+        const cellAddress = col + row;
+        const cell = this.sheet[cellAddress];
+        return cell && cell.v && String(cell.v).trim() !== '';
+      });
+      if (hasData) {
+        lastDataRow = row;
+      }
+    }
+
+    console.log(`📊 Processing Tabarim data rows ${config.dataStartRow} to ${lastDataRow}`);
+
+    // Parse each data row
+    for (let row = config.dataStartRow || 2; row <= lastDataRow; row++) {
+      try {
+        const rowData: any = {};
+        let hasValidData = false;
+
+        // Extract data from configured columns
+        Object.entries(config.columnMapping).forEach(([col, field]) => {
+          const cellAddress = col + row;
+          const cell = this.sheet[cellAddress];
+          const rawValue = cell?.v;
+
+          if (rawValue !== null && rawValue !== undefined && String(rawValue).trim() !== '') {
+            if (field === 'tabar_number' || field === 'tabar_name') {
+              rowData[field] = String(rawValue).trim();
+              hasValidData = true;
+            } else if (field === 'domain') {
+              // Map domain to standard values
+              const domainValue = this.mapDomainValue(String(rawValue).trim());
+              rowData[field] = domainValue;
+              hasValidData = true;
+            } else if (field === 'status') {
+              // Map status to standard values
+              const statusValue = this.mapStatusValue(String(rawValue).trim());
+              rowData[field] = statusValue;
+              hasValidData = true;
+            } else if (field.startsWith('funding_source')) {
+              // Map funding sources to standard values
+              const fundingValue = this.mapFundingSourceValue(String(rawValue).trim());
+              rowData[field] = fundingValue;
+              hasValidData = true;
+            } else {
+              // Handle numeric fields
+              const numValue = this.parseNumericValue(rawValue);
+              if (numValue !== null) {
+                rowData[field] = numValue;
+                hasValidData = true;
+              }
+            }
+          }
+        });
+
+        if (hasValidData) {
+          // Set default values for missing fields
+          rowData.approved_budget = rowData.approved_budget || 0;
+          rowData.income_actual = rowData.income_actual || 0;
+          rowData.expense_actual = rowData.expense_actual || 0;
+          
+          // Calculate surplus/deficit
+          rowData.surplus_deficit = (rowData.income_actual || 0) - (rowData.expense_actual || 0);
+          
+          console.log(`✅ Row ${row}: ${rowData.tabar_name} - Budget: ${rowData.approved_budget}`);
+          result.push(rowData);
+        }
+
+      } catch (error) {
+        console.error(`❌ Error processing Tabarim row ${row}:`, error);
+      }
+    }
+
+    console.log(`📈 Successfully parsed ${result.length} Tabarim records`);
+    return result;
   }
 
   /**
@@ -322,6 +434,69 @@ export class ExcelCellReader {
     // If none match, classify as "אחר"
     console.log(`⚠️ No match found for: "${normalizedValue}" -> "אחר"`);
     return 'אחר';
+  }
+
+  /**
+   * Map domain value to standard domain types
+   */
+  private mapDomainValue(value: string): string {
+    const domainMappings: Record<string, string> = {
+      "מבני חינוך": "education_buildings",
+      "חינוך": "education_buildings",
+      "תשתיות": "infrastructure", 
+      "תשתית": "infrastructure",
+      "גנים ופארקים": "parks_gardens",
+      "פארקים": "parks_gardens",
+      "גנים": "parks_gardens",
+      "נוף": "parks_gardens",
+      "תרבות וספורט": "culture_sports",
+      "תרבות": "culture_sports",
+      "ספורט": "culture_sports",
+      "ארגוני": "organizational",
+      "ארגון": "organizational",
+      "רווחה": "welfare"
+    };
+
+    const normalizedValue = value.trim();
+    return domainMappings[normalizedValue] || "organizational";
+  }
+
+  /**
+   * Map status value to standard status types
+   */
+  private mapStatusValue(value: string): string {
+    const statusMappings: Record<string, string> = {
+      "תכנון": "planning",
+      "מאושר": "approved",
+      "פעיל": "active", 
+      "הושלם": "completed",
+      "בוטל": "cancelled"
+    };
+
+    const normalizedValue = value.trim();
+    return statusMappings[normalizedValue] || "planning";
+  }
+
+  /**
+   * Map funding source value to standard funding source types
+   */
+  private mapFundingSourceValue(value: string): string {
+    const fundingMappings: Record<string, string> = {
+      "עיריה": "municipality",
+      "מדינה": "government",
+      "משרד החינוך": "ministry_education",
+      "משרד הפנים": "ministry_interior", 
+      "משרד התחבורה": "ministry_transport",
+      "משרד הבריאות": "ministry_health",
+      "משרד הרווחה": "ministry_welfare",
+      "קרן": "foundation",
+      "תרומות": "donations",
+      "הלוואה": "loan",
+      "אחר": "other"
+    };
+
+    const normalizedValue = value.trim();
+    return fundingMappings[normalizedValue] || "other";
   }
 
   /**
