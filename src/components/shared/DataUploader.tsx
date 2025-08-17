@@ -372,8 +372,14 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
     };
 
     try {
+      // Add debug logging
+      console.log('🔍 Starting upload process...');
+      console.log('🔍 File:', file.name, 'Context:', context);
+      console.log('🔍 Detected table:', detected.table);
+      
       // First, upload the file to Supabase storage with a safe filename
       addLog('info', 'מעלה קובץ לאחסון...');
+      console.log('🔍 About to upload to storage...');
       
       // Create a safe filename by removing non-ASCII characters and replacing them
       const fileExtension = file.name.split('.').pop() || 'xlsx';
@@ -387,6 +393,8 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
         .from('uploads')
         .upload(fileName, file);
 
+      console.log('🔍 Storage upload result:', { uploadData, uploadError });
+
       if (uploadError) {
         console.error('❌ Upload error:', uploadError);
         addLog('error', `שגיאה בהעלאת הקובץ: ${uploadError.message}`);
@@ -395,8 +403,10 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
       }
 
       addLog('success', `קובץ הועלה בהצלחה: ${fileName}`);
+      console.log('✅ File uploaded successfully');
 
       // Log the ingestion event
+      console.log('🔍 About to log ingestion event...');
       const { error: logError } = await supabase
         .from('ingestion_logs')
         .insert({
@@ -409,9 +419,13 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
           user_id: '33333333-3333-3333-3333-333333333333' // Finance demo user
         });
 
+      console.log('🔍 Ingestion log result:', { logError });
+
       if (logError) {
         console.error('❌ Log error:', logError);
         addLog('warning', `שגיאה בתיעוד: ${logError.message}`);
+      } else {
+        console.log('✅ Ingestion logged successfully');
       }
 
       // Clear existing data if replace mode
