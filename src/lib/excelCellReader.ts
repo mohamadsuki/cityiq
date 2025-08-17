@@ -53,14 +53,14 @@ export const TABARIM_EXCEL_CONFIG: ExcelConfig = {
   columnMapping: {
     A: "tabar_number", // מספר תב"ר
     B: "tabar_name", // שם תב"ר
-    C: "funding_source1", // מקור תקציבי 1
-    D: "domain", // תחום
-    E: "funding_source2", // מקור תקציבי 2  
-    F: "funding_source3", // מקור תקציבי 3
-    G: "approved_budget", // תקציב מאושר
-    H: "income_actual", // הכנסה בפועל
-    I: "expense_actual", // הוצאה בפועל
-    J: "status" // סטטוס
+    D: "domain", // תחום (column 4)
+    E: "funding_source1", // מקור תקציבי 1 (column 5)
+    F: "funding_source2", // מקור תקציבי 2 (column 6)
+    G: "funding_source3", // מקור תקציבי 3 (column 7)
+    H: "approved_budget", // תקציב מאושר
+    I: "income_actual", // הכנסה בפועל
+    J: "expense_actual", // הוצאה בפועל
+    K: "status" // סטטוס
   }
 };
 

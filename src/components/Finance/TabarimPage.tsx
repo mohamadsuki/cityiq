@@ -156,6 +156,81 @@ export default function TabarimPage() {
       },
     },
     {
+      accessorKey: "funding_source1",
+      header: "מקור תקציב 1",
+      cell: ({ row }) => {
+        const fundingLabels: Record<string, string> = {
+          municipality: "עיריה",
+          education_ministry: "משרד החינוך",
+          interior_ministry: "משרד הפנים",
+          transportation_ministry: "משרד התחבורה",
+          health_ministry: "משרד הבריאות",
+          culture_ministry: "משרד התרבות",
+          energy_ministry: "משרד האנרגיה",
+          agriculture_ministry: "משרד החקלאות",
+          economy_ministry: "משרד הכלכלה",
+          science_technology_ministry: "משרד המדע",
+          construction_housing_ministry: "משרד הבינוי",
+          environmental_protection_ministry: "משרד להגנת הסביבה",
+          planning_administration: "רשות התכנון",
+          lottery: "מפעל הפיס",
+          loan: "הלוואה",
+        };
+        const value = row.getValue("funding_source1") as string;
+        return value ? (fundingLabels[value] || value) : "-";
+      },
+    },
+    {
+      accessorKey: "funding_source2", 
+      header: "מקור תקציב 2",
+      cell: ({ row }) => {
+        const fundingLabels: Record<string, string> = {
+          municipality: "עיריה",
+          education_ministry: "משרד החינוך",
+          interior_ministry: "משרד הפנים",
+          transportation_ministry: "משרד התחבורה",
+          health_ministry: "משרד הבריאות",
+          culture_ministry: "משרד התרבות",
+          energy_ministry: "משרד האנרגיה",
+          agriculture_ministry: "משרד החקלאות",
+          economy_ministry: "משרד הכלכלה",
+          science_technology_ministry: "משרד המדע",
+          construction_housing_ministry: "משרד הבינוי",
+          environmental_protection_ministry: "משרד להגנת הסביבה",
+          planning_administration: "רשות התכנון",
+          lottery: "מפעל הפיס",
+          loan: "הלוואה",
+        };
+        const value = row.getValue("funding_source2") as string;
+        return value ? (fundingLabels[value] || value) : "-";
+      },
+    },
+    {
+      accessorKey: "funding_source3",
+      header: "מקור תקציב 3", 
+      cell: ({ row }) => {
+        const fundingLabels: Record<string, string> = {
+          municipality: "עיריה",
+          education_ministry: "משרד החינוך",
+          interior_ministry: "משרד הפנים",
+          transportation_ministry: "משרד התחבורה",
+          health_ministry: "משרד הבריאות",
+          culture_ministry: "משרד התרבות",
+          energy_ministry: "משרד האנרגיה",
+          agriculture_ministry: "משרד החקלאות",
+          economy_ministry: "משרד הכלכלה",
+          science_technology_ministry: "משרד המדע",
+          construction_housing_ministry: "משרד הבינוי",
+          environmental_protection_ministry: "משרד להגנת הסביבה",
+          planning_administration: "רשות התכנון",
+          lottery: "מפעל הפיס",
+          loan: "הלוואה",
+        };
+        const value = row.getValue("funding_source3") as string;
+        return value ? (fundingLabels[value] || value) : "-";
+      },
+    },
+    {
       accessorKey: "approved_budget",
       header: "תקציב מאושר",
       cell: ({ row }) => `₪${row.getValue<number>("approved_budget").toLocaleString()}`,
