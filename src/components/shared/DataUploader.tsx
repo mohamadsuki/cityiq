@@ -884,7 +884,9 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       }
       
       // Check if this should be parsed as Tabarim data
+      console.log('🔍 Checking context for Tabarim parsing. Context:', context, 'Detected table:', detected.table);
       if (context === 'tabarim') {
+        console.log('✅ Context is tabarim - using specialized parsing');
         addLog('info', 'משתמש בפענוח נתוני תב"רים לפי כתובות תאים');
         const result = parseTabarimExcelByCellAddresses(sheet);
         const { data, summaryCards } = result;
@@ -910,7 +912,33 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
         return;
       }
       
-      // Fallback to the original method for other contexts
+      // Alternative: check if detected table is tabarim
+      if (detected.table === 'tabarim') {
+        console.log('✅ Detected table is tabarim - using specialized parsing');
+        addLog('info', 'משתמש בפענוח נתוני תב"רים לפי כתובות תאים (זוהה אוטומטית)');
+        const result = parseTabarimExcelByCellAddresses(sheet);
+        const { data, summaryCards } = result;
+        addLog('success', `נמצאו ${data.length} תב"רים`);
+        
+        // Store summary cards in localStorage for the tabarim page
+        if (summaryCards) {
+          localStorage.setItem('tabarim_summary', JSON.stringify(summaryCards));
+          addLog('info', 'נתוני סיכום תב"רים נשמרו:', summaryCards);
+        }
+        
+        setRows(data);
+        setHeaders(['tabar_number', 'tabar_name', 'domain', 'funding_source1', 'approved_budget', 'income_actual', 'expense_actual']);
+        setDetected({ table: 'tabarim', reason: 'פענוח ישיר נתוני תב"רים מקובץ אקסל' });
+        
+        // Log sample of parsed data
+        if (data.length > 0) {
+          addLog('info', 'דוגמת נתונים שנמצאו:', data.slice(0, 3));
+        }
+        
+        setDebugLogs(logs);
+        toast({ title: "קובץ נטען בהצלחה", description: `${data.length} תב"רים נמצאו` });
+        return;
+      }
       const data: any[] = XLSX.utils.sheet_to_json(sheet, { defval: null });
       addLog('success', `נקראו ${data.length} שורות מהקובץ`);
       
