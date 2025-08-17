@@ -273,21 +273,31 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       console.log('🔍 Domain mapping for tabarim:', { domainValue, normalizedRow });
       
       if (domainValue) {
-        // Map Hebrew domain names to enum values
-        if (domainValue.includes('חינוך') || domainValue.includes('education') || domainValue.includes('מוסדות ציבור')) {
-          mapped.domain = 'education';
-        } else if (domainValue.includes('הנדסה') || domainValue.includes('engineering') || domainValue.includes('תכנון')) {
-          mapped.domain = 'engineering';
-        } else if (domainValue.includes('רווחה') || domainValue.includes('welfare')) {
-          mapped.domain = 'welfare';
-        } else if (domainValue.includes('כספים') || domainValue.includes('finance')) {
-          mapped.domain = 'finance';
-        } else if (domainValue.includes('עסקים') || domainValue.includes('business')) {
-          mapped.domain = 'business';
+        // Map Hebrew domain names to enum values based on actual tabar_domain enum
+        if (domainValue.includes('חינוך') || domainValue.includes('מוסדות חינוך')) {
+          mapped.domain = 'education_buildings';
+        } else if (domainValue.includes('מוסדות ציבור') || domainValue.includes('בינוי')) {
+          mapped.domain = 'public_buildings';
         } else if (domainValue.includes('תשתיות') || domainValue.includes('כבישים')) {
-          mapped.domain = 'engineering';
-        } else if (domainValue.includes('בינוי')) {
-          mapped.domain = 'engineering';
+          mapped.domain = 'infrastructure_roads';
+        } else if (domainValue.includes('תכנון')) {
+          mapped.domain = 'planning';
+        } else if (domainValue.includes('רווחה')) {
+          mapped.domain = 'welfare';
+        } else if (domainValue.includes('סביבה') || domainValue.includes('איכות')) {
+          mapped.domain = 'environment';
+        } else if (domainValue.includes('פעילויות') || domainValue.includes('תרבות')) {
+          mapped.domain = 'activities';
+        } else if (domainValue.includes('מרחבים') || domainValue.includes('ציבוריים')) {
+          mapped.domain = 'public_spaces';
+        } else if (domainValue.includes('דיגיטל') || domainValue.includes('טכנולוגיה')) {
+          mapped.domain = 'digital';
+        } else if (domainValue.includes('ארגוני') || domainValue.includes('ניהול')) {
+          mapped.domain = 'organizational';
+        } else if (domainValue.includes('אנרגיה') || domainValue.includes('התייעלות')) {
+          mapped.domain = 'energy';
+        } else if (domainValue.includes('וטרינר')) {
+          mapped.domain = 'veterinary';
         } else {
           mapped.domain = 'other';
         }
