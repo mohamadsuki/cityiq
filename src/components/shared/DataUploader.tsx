@@ -399,7 +399,7 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
       // Clear existing data if replace mode
       if (importOption.mode === 'replace') {
         addLog('info', `מוחק נתונים קיימים מטבלה: ${detected.table}`);
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await (supabase as any)
           .from(detected.table)
           .delete()
           .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
@@ -426,7 +426,7 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
         console.log(`📝 Processing batch ${Math.floor(i/batchSize) + 1}, rows ${i + 1}-${Math.min(i + batchSize, rows.length)}`);
         console.log('📝 Sample mapped row:', mappedBatch[0]);
 
-        const { data: insertData, error: insertError } = await supabase
+        const { data: insertData, error: insertError } = await (supabase as any)
           .from(detected.table)
           .insert(mappedBatch)
           .select();
@@ -443,7 +443,7 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
       }
 
       // Update the ingestion log
-      const { error: updateLogError } = await supabase
+      const { error: updateLogError } = await (supabase as any)
         .from('ingestion_logs')
         .update({
           status: errorCount > 0 ? 'completed_with_errors' : 'completed',
