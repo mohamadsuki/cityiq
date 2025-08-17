@@ -405,7 +405,8 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
           context: context,
           detected_table: detected.table,
           row_count: rows.length,
-          status: 'processing'
+          status: 'processing',
+          user_id: '33333333-3333-3333-3333-333333333333' // Finance demo user
         });
 
       if (logError) {
@@ -438,7 +439,14 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
 
       for (let i = 0; i < rows.length; i += batchSize) {
         const batch = rows.slice(i, i + batchSize);
-        const mappedBatch = batch.map(row => mapRowToTable(detected.table!, row, logs));
+        const mappedBatch = batch.map(row => {
+          const mapped = mapRowToTable(detected.table!, row, logs);
+          // Add user_id for all tables that require it
+          if (detected.table === 'tabarim' || detected.table === 'regular_budget' || detected.table === 'collection_data') {
+            mapped.user_id = '33333333-3333-3333-3333-333333333333'; // Finance demo user
+          }
+          return mapped;
+        });
         
         console.log(`📝 Processing batch ${Math.floor(i/batchSize) + 1}, rows ${i + 1}-${Math.min(i + batchSize, rows.length)}`);
         console.log('📝 Sample mapped row:', mappedBatch[0]);
