@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileSpreadsheet, Upload } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { FileSpreadsheet, Upload, Calendar } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -43,6 +45,12 @@ export default function CollectionPage() {
   const [collectionData, setCollectionData] = useState<CollectionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedEndYear, setSelectedEndYear] = useState<number | null>(null);
+
+  // Generate year options (current year and 10 years back)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 11 }, (_, i) => currentYear - i);
 
   const formatCurrency = (amount: number | null | undefined) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
@@ -55,12 +63,21 @@ export default function CollectionPage() {
     try {
       setLoading(true);
       
-      // Build query - filter by current year and order by property type
+      // Build query - filter by selected year(s) and order by property type
       let query = supabase
         .from('collection_data')
         .select('*')
-        .eq('year', new Date().getFullYear())
         .order('property_type');
+
+      // Apply year filtering
+      if (selectedEndYear && selectedEndYear !== selectedYear) {
+        // Year range selection
+        query = query.gte('year', Math.min(selectedYear, selectedEndYear))
+                     .lte('year', Math.max(selectedYear, selectedEndYear));
+      } else {
+        // Single year selection
+        query = query.eq('year', selectedYear);
+      }
 
       // Add user filter if user is logged in
       if (user?.id) {
@@ -124,7 +141,7 @@ export default function CollectionPage() {
 
   useEffect(() => {
     loadCollectionData();
-  }, []);
+  }, [selectedYear, selectedEndYear]);
 
   const handleUploadSuccess = () => {
     setImportDialogOpen(false);
@@ -253,6 +270,74 @@ export default function CollectionPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Year Selection */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              <Label htmlFor="year-select">שנה:</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select
+                value={selectedYear.toString()}
+                onValueChange={(value) => setSelectedYear(parseInt(value))}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="בחר שנה" />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Label htmlFor="end-year-select">עד שנה (אופציונלי):</Label>
+              <Select
+                value={selectedEndYear?.toString() || ""}
+                onValueChange={(value) => setSelectedEndYear(value ? parseInt(value) : null)}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="בחר שנת סיום" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">ללא</SelectItem>
+                  {yearOptions
+                    .filter(year => year !== selectedYear)
+                    .map((year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedEndYear && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setSelectedEndYear(null)}
+              >
+                איפוס טווח
+              </Button>
+            )}
+            
+            <div className="text-sm text-muted-foreground">
+              {selectedEndYear && selectedEndYear !== selectedYear 
+                ? `מציג נתונים לשנים ${Math.min(selectedYear, selectedEndYear)}-${Math.max(selectedYear, selectedEndYear)}`
+                : `מציג נתונים לשנת ${selectedYear}`
+              }
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary Cards */}
       <div className="grid md:grid-cols-4 gap-6">
