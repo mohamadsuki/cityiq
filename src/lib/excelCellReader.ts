@@ -244,20 +244,72 @@ export class ExcelCellReader {
     const cleanValue = value.trim();
     if (!cleanValue) return null;
     
+    // Remove extra whitespace and normalize
+    const normalizedValue = cleanValue.replace(/\s+/g, ' ');
+    
+    console.log(`Standardizing property type: "${normalizedValue}"`);
+    
     // Use mapping if provided
     if (mapping) {
+      // Try exact match first
+      if (mapping[normalizedValue]) {
+        console.log(`✅ Exact mapping match: "${normalizedValue}" -> "${mapping[normalizedValue]}"`);
+        return mapping[normalizedValue];
+      }
+      
+      // Try partial match
       const mapped = Object.entries(mapping).find(([key]) => 
-        cleanValue.includes(key) || key.includes(cleanValue)
+        normalizedValue.includes(key) || key.includes(normalizedValue)
       );
-      if (mapped) return mapped[1];
+      if (mapped) {
+        console.log(`✅ Partial mapping match: "${normalizedValue}" -> "${mapped[1]}"`);
+        return mapped[1];
+      }
     }
     
-    // Default categorization
-    if (cleanValue.includes('מגור')) return 'מגורים';
-    if (cleanValue.includes('מסחר') || cleanValue.includes('חנו')) return 'מסחר';
-    if (cleanValue.includes('תעשי') || cleanValue.includes('מפעל')) return 'תעשיה';
-    if (cleanValue.includes('משרד')) return 'משרדים';
+    // Enhanced categorization with Hebrew keywords
+    const lowerValue = normalizedValue.toLowerCase();
     
+    // Residential (מגורים)
+    if (lowerValue.includes('מגור') || 
+        lowerValue.includes('דיר') || 
+        lowerValue.includes('בית') || 
+        lowerValue.includes('residential')) {
+      console.log(`✅ Detected residential: "${normalizedValue}" -> "מגורים"`);
+      return 'מגורים';
+    }
+    
+    // Commercial (מסחר)
+    if (lowerValue.includes('מסחר') || 
+        lowerValue.includes('חנו') || 
+        lowerValue.includes('מסעד') || 
+        lowerValue.includes('commercial') ||
+        lowerValue.includes('עסק')) {
+      console.log(`✅ Detected commercial: "${normalizedValue}" -> "מסחר"`);
+      return 'מסחר';
+    }
+    
+    // Industrial (תעשיה)
+    if (lowerValue.includes('תעשי') || 
+        lowerValue.includes('מפעל') || 
+        lowerValue.includes('בית חרושת') ||
+        lowerValue.includes('industrial') ||
+        lowerValue.includes('יצור')) {
+      console.log(`✅ Detected industrial: "${normalizedValue}" -> "תעשיה"`);
+      return 'תעשיה';
+    }
+    
+    // Office (משרדים)
+    if (lowerValue.includes('משרד') || 
+        lowerValue.includes('office') ||
+        lowerValue.includes('עורך דין') ||
+        lowerValue.includes('רופא')) {
+      console.log(`✅ Detected office: "${normalizedValue}" -> "משרדים"`);
+      return 'משרדים';
+    }
+    
+    // If none match, classify as "אחר"
+    console.log(`⚠️ No match found for: "${normalizedValue}" -> "אחר"`);
     return 'אחר';
   }
 

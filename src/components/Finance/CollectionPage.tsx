@@ -85,7 +85,31 @@ export default function CollectionPage() {
         created_at: item.created_at
       }));
 
-      setCollectionData(processedData);
+      // Consolidate duplicate property types by summing their values
+      const consolidatedData: Record<string, CollectionData> = {};
+      
+      processedData.forEach(item => {
+        const standardizedType = PROPERTY_TYPE_LABELS[item.property_type] || item.property_type;
+        
+        if (consolidatedData[standardizedType]) {
+          // Merge with existing entry
+          consolidatedData[standardizedType].annual_budget += item.annual_budget;
+          consolidatedData[standardizedType].relative_budget += item.relative_budget;
+          consolidatedData[standardizedType].actual_collection += item.actual_collection;
+          consolidatedData[standardizedType].surplus_deficit += item.surplus_deficit;
+        } else {
+          // Create new entry
+          consolidatedData[standardizedType] = {
+            ...item,
+            property_type: standardizedType
+          };
+        }
+      });
+
+      const finalData = Object.values(consolidatedData);
+      console.log('Consolidated collection data:', finalData);
+      
+      setCollectionData(finalData);
     } catch (error) {
       console.error('Error loading collection data:', error);
       toast({
@@ -147,30 +171,39 @@ export default function CollectionPage() {
     },
   ];
 
-  // Prepare pie chart data
-  const annualBudgetChartData = collectionData.map((item, index) => ({
-    name: PROPERTY_TYPE_LABELS[item.property_type] || item.property_type,
-    value: item.annual_budget || 0,
-    color: COLORS[index % COLORS.length]
-  })).filter(item => item.value > 0);
+  // Prepare pie chart data by grouping by property type
+  const groupDataByPropertyType = (data: CollectionData[], valueField: keyof CollectionData) => {
+    const grouped: Record<string, number> = {};
+    
+    data.forEach(item => {
+      const propertyType = PROPERTY_TYPE_LABELS[item.property_type] || item.property_type || 'לא מוגדר';
+      const value = Number(item[valueField]) || 0;
+      
+      if (grouped[propertyType]) {
+        grouped[propertyType] += value;
+      } else {
+        grouped[propertyType] = value;
+      }
+    });
+    
+    return Object.entries(grouped)
+      .filter(([_, value]) => value > 0)
+      .map(([name, value], index) => ({
+        name,
+        value,
+        color: COLORS[index % COLORS.length]
+      }));
+  };
 
-  const relativeBudgetChartData = collectionData.map((item, index) => ({
-    name: PROPERTY_TYPE_LABELS[item.property_type] || item.property_type,
-    value: item.relative_budget || 0,
-    color: COLORS[index % COLORS.length]
-  })).filter(item => item.value > 0);
+  const annualBudgetChartData = groupDataByPropertyType(collectionData, 'annual_budget');
+  const relativeBudgetChartData = groupDataByPropertyType(collectionData, 'relative_budget');
+  const actualCollectionChartData = groupDataByPropertyType(collectionData, 'actual_collection');
 
-  const actualCollectionChartData = collectionData.map((item, index) => ({
-    name: PROPERTY_TYPE_LABELS[item.property_type] || item.property_type,
-    value: item.actual_collection || 0,
-    color: COLORS[index % COLORS.length]
-  })).filter(item => item.value > 0);
-
-  // Calculate totals
-  const totalAnnualBudget = collectionData.reduce((sum, item) => sum + (item.annual_budget || 0), 0);
-  const totalRelativeBudget = collectionData.reduce((sum, item) => sum + (item.relative_budget || 0), 0);
-  const totalActualCollection = collectionData.reduce((sum, item) => sum + (item.actual_collection || 0), 0);
-  const totalSurplusDeficit = collectionData.reduce((sum, item) => sum + (item.surplus_deficit || 0), 0);
+  // Calculate totals from grouped data
+  const totalAnnualBudget = annualBudgetChartData.reduce((sum, item) => sum + item.value, 0);
+  const totalRelativeBudget = relativeBudgetChartData.reduce((sum, item) => sum + item.value, 0);
+  const totalActualCollection = actualCollectionChartData.reduce((sum, item) => sum + item.value, 0);
+  const totalSurplusDeficit = totalActualCollection - totalRelativeBudget;
 
   const renderCustomTooltip = (props: any) => {
     if (props.active && props.payload && props.payload.length) {
