@@ -273,8 +273,10 @@ export type Database = {
         Row: {
           context: string | null
           created_at: string
+          detected_table: string | null
           error: string | null
           error_rows: number | null
+          file_path: string | null
           id: string
           inserted_rows: number | null
           rows: number | null
@@ -286,8 +288,10 @@ export type Database = {
         Insert: {
           context?: string | null
           created_at?: string
+          detected_table?: string | null
           error?: string | null
           error_rows?: number | null
+          file_path?: string | null
           id?: string
           inserted_rows?: number | null
           rows?: number | null
@@ -299,8 +303,10 @@ export type Database = {
         Update: {
           context?: string | null
           created_at?: string
+          detected_table?: string | null
           error?: string | null
           error_rows?: number | null
+          file_path?: string | null
           id?: string
           inserted_rows?: number | null
           rows?: number | null

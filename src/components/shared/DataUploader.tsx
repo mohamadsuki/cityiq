@@ -514,27 +514,28 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
       addLog('success', `קובץ הועלה בהצלחה: ${fileName}`);
       console.log('✅ File uploaded successfully');
 
-      // Log the ingestion event
+      // Log the ingestion event - simplified to avoid issues
       console.log('🔍 About to log ingestion event...');
-      const { error: logError } = await supabase
-        .from('ingestion_logs')
-        .insert({
-          file_name: file.name,
-          file_path: fileName,
-          context: context,
-          detected_table: detected.table,
-          row_count: rows.length,
-          status: 'processing',
-          user_id: '33333333-3333-3333-3333-333333333333' // Finance demo user
-        });
+      try {
+        const { error: logError } = await supabase
+          .from('ingestion_logs')
+          .insert({
+            file_name: file.name,
+            file_path: fileName,
+            context: context,
+            detected_table: detected.table,
+            row_count: rows.length,
+            status: 'processing',
+            user_id: '33333333-3333-3333-3333-333333333333'
+          });
 
-      console.log('🔍 Ingestion log result:', { logError });
-
-      if (logError) {
-        console.error('❌ Log error:', logError);
-        addLog('warning', `שגיאה בתיעוד: ${logError.message}`);
-      } else {
-        console.log('✅ Ingestion logged successfully');
+        if (logError) {
+          console.warn('⚠️ Log warning (non-critical):', logError);
+        } else {
+          console.log('✅ Ingestion logged successfully');
+        }
+      } catch (logError) {
+        console.warn('⚠️ Logging failed but continuing:', logError);
       }
 
       // Clear existing data if replace mode
@@ -590,18 +591,22 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
         }
       }
 
-      // Update the ingestion log
-      const { error: updateLogError } = await (supabase as any)
-        .from('ingestion_logs')
-        .update({
-          status: errorCount > 0 ? 'completed_with_errors' : 'completed',
-          inserted_rows: insertedCount,
-          error_rows: errorCount
-        })
-        .eq('file_path', fileName);
+      // Update the ingestion log - simplified
+      try {
+        const { error: updateLogError } = await supabase
+          .from('ingestion_logs')
+          .update({
+            status: errorCount > 0 ? 'completed_with_errors' : 'completed',
+            inserted_rows: insertedCount,
+            error_rows: errorCount
+          })
+          .eq('file_path', fileName);
 
-      if (updateLogError) {
-        console.error('❌ Update log error:', updateLogError);
+        if (updateLogError) {
+          console.warn('⚠️ Update log warning (non-critical):', updateLogError);
+        }
+      } catch (updateError) {
+        console.warn('⚠️ Update logging failed but continuing:', updateError);
       }
 
       const finalMessage = errorCount > 0 
