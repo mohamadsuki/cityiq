@@ -232,10 +232,14 @@ export class ExcelCellReader {
               hasValidData = true;
             } else {
               // Handle numeric fields
+              console.log(`🔍 Processing numeric field ${field} in ${cellAddress}: raw value = "${rawValue}" (type: ${typeof rawValue})`);
               const numValue = this.parseNumericValue(rawValue);
+              console.log(`📊 Parsed numeric value for ${field}: ${numValue}`);
               if (numValue !== null) {
                 rowData[field] = numValue;
                 hasValidData = true;
+              } else {
+                console.log(`⚠️ Failed to parse numeric value for ${field}: "${rawValue}"`);
               }
             }
           }
@@ -250,7 +254,7 @@ export class ExcelCellReader {
           // Calculate surplus/deficit
           rowData.surplus_deficit = (rowData.income_actual || 0) - (rowData.expense_actual || 0);
           
-          console.log(`✅ Row ${row}: ${rowData.tabar_name} - Budget: ${rowData.approved_budget}`);
+          console.log(`✅ Row ${row}: ${rowData.tabar_name} - Budget: ${rowData.approved_budget}, Income: ${rowData.income_actual}, Expense: ${rowData.expense_actual}`);
           result.push(rowData);
         }
 

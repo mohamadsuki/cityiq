@@ -112,7 +112,11 @@ export default function TabarimPage() {
 
   const handleUploadSuccess = () => {
     setShowUploader(false);
-    loadTabarim(); // רענון הרשימה
+    console.log('🔄 Upload success callback - refreshing tabarim list');
+    // Add delay to ensure database has been updated
+    setTimeout(() => {
+      loadTabarim(); // רענון הרשימה
+    }, 1000);
     toast({
       title: "הצלחה",
       description: "הקובץ הועלה בהצלחה והנתונים נשמרו",

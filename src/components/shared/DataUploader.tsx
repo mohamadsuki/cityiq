@@ -1205,8 +1205,16 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       }
 
       addProcessingLog('info', `מכניס ${filtered.length} שורות לטבלה ${tableName}`);
+      console.log('📤 Data being inserted to Supabase:', filtered.slice(0, 3)); // Log first 3 records
       const { error } = await supabase.from(tableName).insert(filtered as any);
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Supabase insert error:', error);
+        addProcessingLog('error', `שגיאה בהכנסת נתונים: ${error.message}`);
+        throw error;
+      } else {
+        console.log('✅ Successfully inserted data to Supabase');
+        addProcessingLog('success', `נתונים הוכנסו בהצלחה לטבלה ${tableName}`);
+      }
 
       await supabase.from("ingestion_logs").insert({
         user_id: userId,
@@ -1226,6 +1234,11 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       
       // Reset import option for next upload
       setImportOption({ mode: 'replace', confirmed: false });
+      
+      // Add a delay to allow database transaction to complete
+      setTimeout(() => {
+        console.log('🔄 Triggering parent refresh after successful import');
+      }, 500);
       
       setFile(null);
       setRows([]);
