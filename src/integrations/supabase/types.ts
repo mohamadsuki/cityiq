@@ -716,7 +716,6 @@ export type Database = {
           funding_source3: Database["public"]["Enums"]["funding_source"] | null
           id: string
           income_actual: number | null
-          status: Database["public"]["Enums"]["tabar_status"] | null
           surplus_deficit: number | null
           tabar_name: string
           tabar_number: string | null
@@ -733,7 +732,6 @@ export type Database = {
           funding_source3?: Database["public"]["Enums"]["funding_source"] | null
           id?: string
           income_actual?: number | null
-          status?: Database["public"]["Enums"]["tabar_status"] | null
           surplus_deficit?: number | null
           tabar_name: string
           tabar_number?: string | null
@@ -750,7 +748,6 @@ export type Database = {
           funding_source3?: Database["public"]["Enums"]["funding_source"] | null
           id?: string
           income_actual?: number | null
-          status?: Database["public"]["Enums"]["tabar_status"] | null
           surplus_deficit?: number | null
           tabar_name?: string
           tabar_number?: string | null

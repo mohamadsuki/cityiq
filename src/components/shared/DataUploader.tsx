@@ -840,8 +840,38 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       const sheet = wb.Sheets[first];
       console.log('📊 Sheet extracted, context check:', context);
       
+      // PRIORITY: Check if this should be parsed as Tabarim data FIRST
+      console.log('🔍 PRIORITY CHECK - Context:', context);
+      if (context === 'tabarim') {
+        console.log('✅ Context is tabarim - using specialized parsing');
+        addLog('info', 'משתמש בפענוח נתוני תב"רים לפי כתובות תאים');
+        console.log('📋 About to call parseTabarimExcelByCellAddresses');
+        const result = parseTabarimExcelByCellAddresses(sheet);
+        console.log('📋 parseTabarimExcelByCellAddresses completed with result:', result);
+        const { data, summaryCards } = result;
+        addLog('success', `נמצאו ${data.length} תב"רים`);
+        
+        // Store summary cards in localStorage for the tabarim page
+        if (summaryCards) {
+          localStorage.setItem('tabarim_summary', JSON.stringify(summaryCards));
+          addLog('info', 'נתוני סיכום תב"רים נשמרו:', summaryCards);
+        }
+        
+        setRows(data);
+        setHeaders(['tabar_number', 'tabar_name', 'domain', 'funding_source1', 'approved_budget', 'income_actual', 'expense_actual']);
+        setDetected({ table: 'tabarim', reason: 'פענוח ישיר נתוני תב"רים מקובץ אקסל' });
+        
+        // Log sample of parsed data
+        if (data.length > 0) {
+          addLog('info', 'דוגמת נתונים שנמצאו:', data.slice(0, 3));
+        }
+        
+        setDebugLogs(logs);
+        toast({ title: "קובץ נטען בהצלחה", description: `${data.length} תב"רים נמצאו` });
+        return;
+      }
+      
       // Check if this should be parsed by cell addresses (for regular budget or collection)
-      if (context === 'regular_budget' || context === 'finance') {
         addLog('info', 'משתמש בפענוח ישיר לפי כתובות תאים');
         const result = parseExcelByCellAddresses(sheet);
         const { data, summaryCards } = result;
