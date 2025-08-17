@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Upload, Plus, Edit } from "lucide-react";
+import { Trash2, Upload, Plus, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -206,7 +206,7 @@ export default function TabarimPage() {
             size="sm"
             onClick={() => handleEditClick(row.original)}
           >
-            <Edit className="h-4 w-4" />
+            <Pencil className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
