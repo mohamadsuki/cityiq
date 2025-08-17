@@ -166,6 +166,7 @@ export type Database = {
           id: string
           property_type: string
           relative_budget: number | null
+          surplus_deficit: number | null
           updated_at: string
           user_id: string
           year: number
@@ -178,6 +179,7 @@ export type Database = {
           id?: string
           property_type: string
           relative_budget?: number | null
+          surplus_deficit?: number | null
           updated_at?: string
           user_id: string
           year?: number
@@ -190,6 +192,7 @@ export type Database = {
           id?: string
           property_type?: string
           relative_budget?: number | null
+          surplus_deficit?: number | null
           updated_at?: string
           user_id?: string
           year?: number
