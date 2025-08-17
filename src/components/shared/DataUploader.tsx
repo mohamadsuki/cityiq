@@ -82,6 +82,10 @@ const detectTarget = (headers: string[], ctx: UploadContext) => {
   console.log('🎯 detectTarget called with headers:', headers, 'context:', ctx);
   
   // Context-based detection first
+  if (ctx === 'tabarim') {
+    return { table: 'tabarim', reason: 'זוהה כנתוני תב"רים על בסיס הקונטקסט' };
+  }
+  
   if (ctx === 'education') {
     return { table: 'institutions', reason: 'זוהה כנתוני חינוך על בסיס הקונטקסט' };
   }
@@ -112,6 +116,11 @@ const detectTarget = (headers: string[], ctx: UploadContext) => {
   
   // Header-based detection as fallback
   const headerStr = headers.join(' ').toLowerCase();
+  
+  // Check for tabarim-specific keywords
+  if (headerStr.includes('תב"ר') || headerStr.includes('תקציב בלתי רגיל') || headerStr.includes('התקבולים והתשלומים')) {
+    return { table: 'tabarim', reason: 'זוהה על בסיס כותרות תב"רים' };
+  }
   
   if (headerStr.includes('institution') || headerStr.includes('מוסד')) {
     return { table: 'institutions', reason: 'זוהה על בסיס כותרות מוסדות חינוך' };
