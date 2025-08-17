@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Trash2, Upload, Plus, Edit } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -38,11 +38,12 @@ interface Tabar {
 
 export default function TabarimPage() {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showUploader, setShowUploader] = useState(false);
   const [tabarim, setTabarim] = useState<Tabar[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [tabarToDelete, setTabarToDelete] = useState<string | null>(null);
+  const [selectedTabar, setSelectedTabar] = useState<Tabar | null>(null);
   const { toast } = useToast();
 
   const loadTabarim = async () => {
@@ -73,22 +74,28 @@ export default function TabarimPage() {
 
   const handleTabarSaved = () => {
     setShowAddDialog(false);
+    setShowEditDialog(false);
     loadTabarim(); // רענון הרשימה
   };
 
-  const handleDeleteClick = (id: string) => {
-    setTabarToDelete(id);
+  const handleEditClick = (tabar: Tabar) => {
+    setSelectedTabar(tabar);
+    setShowEditDialog(true);
+  };
+
+  const handleDeleteClick = (tabar: Tabar) => {
+    setSelectedTabar(tabar);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (!tabarToDelete) return;
+    if (!selectedTabar) return;
 
     try {
       const { error } = await supabase
         .from('tabarim')
         .delete()
-        .eq('id', tabarToDelete);
+        .eq('id', selectedTabar.id);
 
       if (error) throw error;
 
@@ -107,7 +114,7 @@ export default function TabarimPage() {
       });
     } finally {
       setDeleteDialogOpen(false);
-      setTabarToDelete(null);
+      setSelectedTabar(null);
     }
   };
 
@@ -193,14 +200,23 @@ export default function TabarimPage() {
       id: "actions",
       header: "פעולות",
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleDeleteClick(row.original.id)}
-          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleEditClick(row.original)}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDeleteClick(row.original)}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
       ),
     },
   ];
@@ -355,6 +371,13 @@ export default function TabarimPage() {
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onSaved={handleTabarSaved}
+      />
+
+      <AddTabarDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSaved={handleTabarSaved}
+        editData={selectedTabar}
       />
 
       {showUploader && (

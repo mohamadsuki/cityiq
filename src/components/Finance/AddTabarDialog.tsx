@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ interface AddTabarDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
+  editData?: any;
 }
 
 const DOMAINS = [
@@ -60,19 +61,54 @@ const STATUS_OPTIONS = [
   { value: "delayed", label: "בעיכוב" }
 ];
 
-export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabarDialogProps) {
+export default function AddTabarDialog({ open, onOpenChange, onSaved, editData }: AddTabarDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    tabar_number: "",
-    tabar_name: "",
-    domain: "",
-    funding_sources: [] as string[],
-    approved_budget: "",
-    income_actual: "",
-    expense_actual: "",
-    status: "planning"
+    tabar_number: editData?.tabar_number || "",
+    tabar_name: editData?.tabar_name || "",
+    domain: editData?.domain || "",
+    funding_sources: [
+      editData?.funding_source1,
+      editData?.funding_source2,
+      editData?.funding_source3
+    ].filter(Boolean) as string[],
+    approved_budget: editData?.approved_budget?.toString() || "",
+    income_actual: editData?.income_actual?.toString() || "",
+    expense_actual: editData?.expense_actual?.toString() || "",
+    status: editData?.status || "planning"
   });
+
+  // Reset form when editData changes
+  useEffect(() => {
+    if (editData) {
+      setFormData({
+        tabar_number: editData.tabar_number || "",
+        tabar_name: editData.tabar_name || "",
+        domain: editData.domain || "",
+        funding_sources: [
+          editData.funding_source1,
+          editData.funding_source2,
+          editData.funding_source3
+        ].filter(Boolean) as string[],
+        approved_budget: editData.approved_budget?.toString() || "",
+        income_actual: editData.income_actual?.toString() || "",
+        expense_actual: editData.expense_actual?.toString() || "",
+        status: editData.status || "planning"
+      });
+    } else {
+      setFormData({
+        tabar_number: "",
+        tabar_name: "",
+        domain: "",
+        funding_sources: [],
+        approved_budget: "",
+        income_actual: "",
+        expense_actual: "",
+        status: "planning"
+      });
+    }
+  }, [editData, open]);
 
   const handleFundingSourceChange = (source: string, checked: boolean) => {
     setFormData(prev => ({
@@ -96,7 +132,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabar
     try {
       const surplus_deficit = (Number(formData.income_actual) || 0) - (Number(formData.expense_actual) || 0);
 
-      const { error } = await supabase.from("tabarim").insert({
+      const tabarData = {
         user_id: user.id,
         tabar_number: formData.tabar_number || null,
         tabar_name: formData.tabar_name,
@@ -109,25 +145,45 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabar
         expense_actual: formData.expense_actual ? Number(formData.expense_actual) : null,
         surplus_deficit,
         status: (formData.status as any)
-      });
+      };
+
+      let error;
+      if (editData) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from("tabarim")
+          .update(tabarData)
+          .eq('id', editData.id);
+        error = updateError;
+      } else {
+        // Insert new record
+        const { error: insertError } = await supabase
+          .from("tabarim")
+          .insert(tabarData);
+        error = insertError;
+      }
 
       if (error) throw error;
 
-      toast.success("תב\"ר נוסף בהצלחה");
-      setFormData({
-        tabar_number: "",
-        tabar_name: "",
-        domain: "",
-        funding_sources: [],
-        approved_budget: "",
-        income_actual: "",
-        expense_actual: "",
-        status: "planning"
-      });
+      toast.success(editData ? "תב\"ר עודכן בהצלחה" : "תב\"ר נוסף בהצלחה");
+      
+      if (!editData) {
+        setFormData({
+          tabar_number: "",
+          tabar_name: "",
+          domain: "",
+          funding_sources: [],
+          approved_budget: "",
+          income_actual: "",
+          expense_actual: "",
+          status: "planning"
+        });
+      }
+      
       onSaved?.();
     } catch (error) {
-      console.error("Error adding tabar:", error);
-      toast.error("שגיאה בהוספת תב\"ר");
+      console.error("Error saving tabar:", error);
+      toast.error(editData ? "שגיאה בעדכון תב\"ר" : "שגיאה בהוספת תב\"ר");
     } finally {
       setLoading(false);
     }
@@ -137,7 +193,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabar
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
-          <DialogTitle>הוסף תב\"ר חדש</DialogTitle>
+          <DialogTitle>{editData ? "ערוך תב\"ר" : "הוסף תב\"ר חדש"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -259,7 +315,7 @@ export default function AddTabarDialog({ open, onOpenChange, onSaved }: AddTabar
               ביטול
             </Button>
             <Button onClick={handleSubmit} disabled={loading}>
-              {loading ? "שומר..." : "שמור תב\"ר"}
+              {loading ? "שומר..." : (editData ? "עדכן תב\"ר" : "שמור תב\"ר")}
             </Button>
           </div>
         </div>

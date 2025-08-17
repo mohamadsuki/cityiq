@@ -53,8 +53,8 @@ export const TABARIM_EXCEL_CONFIG: ExcelConfig = {
   columnMapping: {
     A: "tabar_number", // מספר תב"ר
     B: "tabar_name", // שם תב"ר
-    C: "domain", // תחום
-    D: "funding_source1", // מקור תקציבי 1
+    C: "funding_source1", // מקור תקציבי 1
+    D: "domain", // תחום
     E: "funding_source2", // מקור תקציבי 2  
     F: "funding_source3", // מקור תקציבי 3
     G: "approved_budget", // תקציב מאושר
@@ -246,16 +246,25 @@ export class ExcelCellReader {
         });
 
         if (hasValidData) {
-          // Set default values for missing fields
-          rowData.approved_budget = rowData.approved_budget || 0;
-          rowData.income_actual = rowData.income_actual || 0;
-          rowData.expense_actual = rowData.expense_actual || 0;
+          // Filter out unwanted header/summary rows
+          const tabarName = rowData.tabar_name || '';
+          const skipPatterns = ['מספר תב"ר', 'סה"כ כללי', 'דו"ח תקופתי', 'ריכוז תקבולים'];
+          const shouldSkip = skipPatterns.some(pattern => tabarName.includes(pattern));
           
-          // Calculate surplus/deficit
-          rowData.surplus_deficit = (rowData.income_actual || 0) - (rowData.expense_actual || 0);
-          
-          console.log(`✅ Row ${row}: ${rowData.tabar_name} - Budget: ${rowData.approved_budget}, Income: ${rowData.income_actual}, Expense: ${rowData.expense_actual}`);
-          result.push(rowData);
+          if (shouldSkip) {
+            console.log(`⏭️ Skipping row ${row}: "${tabarName}" (matches skip pattern)`);
+          } else {
+            // Set default values for missing fields
+            rowData.approved_budget = rowData.approved_budget || 0;
+            rowData.income_actual = rowData.income_actual || 0;
+            rowData.expense_actual = rowData.expense_actual || 0;
+            
+            // Calculate surplus/deficit
+            rowData.surplus_deficit = (rowData.income_actual || 0) - (rowData.expense_actual || 0);
+            
+            console.log(`✅ Row ${row}: ${rowData.tabar_name} - Budget: ${rowData.approved_budget}, Income: ${rowData.income_actual}, Expense: ${rowData.expense_actual}`);
+            result.push(rowData);
+          }
         }
 
       } catch (error) {
