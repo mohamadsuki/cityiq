@@ -186,6 +186,20 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       break;
       
     case 'tabarim':
+      console.log('🐛 FULL TABARIM DEBUG:');
+      console.log('🐛 All row keys:', Object.keys(row));
+      console.log('🐛 All row values (first 15):', Object.entries(row).slice(0, 15));
+      console.log('🐛 Specific columns for funding:');
+      console.log('  __EMPTY_1:', row['__EMPTY_1']);
+      console.log('  __EMPTY_2:', row['__EMPTY_2']); 
+      console.log('  __EMPTY_3:', row['__EMPTY_3']);
+      console.log('🐛 Specific columns for numbers:');
+      console.log('  __EMPTY_4:', row['__EMPTY_4']);
+      console.log('  __EMPTY_5:', row['__EMPTY_5']);
+      console.log('  __EMPTY_9:', row['__EMPTY_9']);
+      console.log('  __EMPTY_10:', row['__EMPTY_10']);
+      console.log('  __EMPTY_13:', row['__EMPTY_13']);
+      
       // CRITICAL FIX: Use original row because normalizeKey lowercases the Hebrew key
       const projectName = row['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיל לפי פרקי התקציב'] || '';
       
