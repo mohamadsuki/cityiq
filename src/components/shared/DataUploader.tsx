@@ -598,37 +598,43 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
         console.log('🔍 About to insert into table:', detected.table);
         console.log('🔍 Batch size:', mappedBatch.length);
         
-        const { data: insertData, error: insertError } = await (supabase as any)
-          .from(detected.table)
-          .insert(mappedBatch)
-          .select();
+        try {
+          const { data: insertData, error: insertError } = await (supabase as any)
+            .from(detected.table)
+            .insert(mappedBatch)
+            .select();
 
-        console.log('📊 Insert result:', { 
-          insertData: insertData?.length || 0, 
-          insertError,
-          errorCode: insertError?.code,
-          errorMessage: insertError?.message,
-          errorDetails: insertError?.details
-        });
+          console.log('📊 Insert result:', { 
+            insertData: insertData?.length || 0, 
+            insertError,
+            errorCode: insertError?.code,
+            errorMessage: insertError?.message,
+            errorDetails: insertError?.details
+          });
 
-        if (insertError) {
-          console.error('❌ Insert error details:', {
-            code: insertError.code,
-            message: insertError.message,
-            details: insertError.details,
-            hint: insertError.hint,
-            batchSample: mappedBatch[0]
-          });
-          addLog('error', `שגיאה בהכנסת נתונים: ${insertError.message}`, { 
-            batch: i/batchSize + 1,
-            code: insertError.code,
-            details: insertError.details
-          });
+          if (insertError) {
+            console.error('❌ Insert error details:', {
+              code: insertError.code,
+              message: insertError.message,
+              details: insertError.details,
+              hint: insertError.hint,
+              batchSample: mappedBatch[0]
+            });
+            addLog('error', `שגיאה בהכנסת נתונים: ${insertError.message}`, { 
+              batch: i/batchSize + 1,
+              code: insertError.code,
+              details: insertError.details
+            });
+            errorCount += batch.length;
+          } else {
+            console.log('✅ Batch inserted successfully:', insertData?.length || 0, 'rows');
+            insertedCount += insertData?.length || 0;
+            addLog('success', `הוכנסו ${insertData?.length || 0} שורות בקבוצה ${Math.floor(i/batchSize) + 1}`);
+          }
+        } catch (insertException) {
+          console.error('💥 Insert exception caught:', insertException);
+          addLog('error', `חריגה בהכנסת נתונים: ${insertException}`, { batch: i/batchSize + 1 });
           errorCount += batch.length;
-        } else {
-          console.log('✅ Batch inserted successfully:', insertData?.length || 0, 'rows');
-          insertedCount += insertData?.length || 0;
-          addLog('success', `הוכנסו ${insertData?.length || 0} שורות בקבוצה ${Math.floor(i/batchSize) + 1}`);
         }
       }
 
@@ -680,6 +686,30 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
           count: verifyData?.length || 0,
           error: verifyError,
           sampleRecord: verifyData?.[0]
+        });
+
+        // Test direct insert as well
+        console.log('🧪 Testing direct insert...');
+        const testRecord = {
+          tabar_name: 'בדיקת מערכת' as const,
+          tabar_number: '999',
+          domain: 'other' as const,
+          approved_budget: 1000,
+          income_actual: 500,
+          expense_actual: 300,
+          surplus_deficit: 200,
+          user_id: '33333333-3333-3333-3333-333333333333'
+        };
+        
+        const { data: testData, error: testError } = await supabase
+          .from('tabarim')
+          .insert(testRecord)
+          .select();
+          
+        console.log('🧪 Test insert result:', {
+          success: !testError,
+          data: testData,
+          error: testError
         });
       }
 

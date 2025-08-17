@@ -276,6 +276,7 @@ export type Database = {
           detected_table: string | null
           error: string | null
           error_rows: number | null
+          file_name: string | null
           file_path: string | null
           id: string
           inserted_rows: number | null
@@ -291,6 +292,7 @@ export type Database = {
           detected_table?: string | null
           error?: string | null
           error_rows?: number | null
+          file_name?: string | null
           file_path?: string | null
           id?: string
           inserted_rows?: number | null
@@ -306,6 +308,7 @@ export type Database = {
           detected_table?: string | null
           error?: string | null
           error_rows?: number | null
+          file_name?: string | null
           file_path?: string | null
           id?: string
           inserted_rows?: number | null
