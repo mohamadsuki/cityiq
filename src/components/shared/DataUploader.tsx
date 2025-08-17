@@ -732,10 +732,14 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
   const [importOption, setImportOption] = useState<ImportOption>({ mode: 'replace', confirmed: false });
 
   const handleConfirmImport = (mode: 'replace' | 'append') => {
+    console.log(`📋 Import confirmed with mode: ${mode}`);
     setImportOption({ mode, confirmed: true });
     setShowImportDialog(false);
     // Continue with the import process
-    uploadAndIngest();
+    setTimeout(() => {
+      console.log('🔄 Continuing import after dialog close');
+      uploadAndIngest();
+    }, 100);
   };
 
   const onFile = async (f: File) => {
@@ -878,18 +882,33 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
   };
 
   const uploadAndIngest = async () => {
-    if (!file || rows.length === 0) return;
+    console.log('🔥 uploadAndIngest called!');
+    console.log('State check:', { 
+      file: !!file, 
+      rowsLength: rows.length, 
+      detectedTable: detected.table,
+      context,
+      importOption: importOption.confirmed
+    });
+
+    if (!file || rows.length === 0) {
+      console.log('❌ No file or rows');
+      return;
+    }
     if (!detected.table) {
+      console.log('❌ No detected table');
       toast({ title: "לא זוהה יעד מתאים", description: "עדכן כותרות עמודות או בחר קובץ אחר", variant: "destructive" });
       return;
     }
 
     // For tabarim, show import dialog if not already confirmed
     if (detected.table === 'tabarim' && !importOption.confirmed) {
+      console.log('📋 Showing import dialog for tabarim');
       setShowImportDialog(true);
       return;
     }
 
+    console.log('✅ Starting import process...');
     setBusy(true);
     try {
       // Check for user - either from session or demo user
@@ -1313,7 +1332,20 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
                 </CollapsibleTrigger>
               </Collapsible>
             )}
-            <Button onClick={uploadAndIngest} disabled={busy || !file}>
+            <Button 
+              onClick={() => {
+                console.log('🚀 Import button clicked!');
+                console.log('Current state:', { 
+                  file: !!file, 
+                  rows: rows.length, 
+                  detected: detected.table,
+                  busy,
+                  context 
+                });
+                uploadAndIngest();
+              }} 
+              disabled={busy || !file}
+            >
               {busy ? "מייבא..." : "ייבוא ושיבוץ"}
             </Button>
           </div>
