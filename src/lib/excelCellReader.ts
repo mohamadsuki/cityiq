@@ -211,6 +211,8 @@ export class ExcelCellReader {
           const cell = this.sheet[cellAddress];
           const rawValue = cell?.v;
 
+          console.log(`🔍 Reading cell ${cellAddress} for field ${field}: "${rawValue}" (type: ${typeof rawValue})`);
+
           if (rawValue !== null && rawValue !== undefined && String(rawValue).trim() !== '') {
             if (field === 'tabar_number' || field === 'tabar_name') {
               rowData[field] = String(rawValue).trim();
@@ -226,10 +228,14 @@ export class ExcelCellReader {
               rowData[field] = statusValue;
               hasValidData = true;
             } else if (field.startsWith('funding_source')) {
-              // Map funding sources to standard values
-              const fundingValue = this.mapFundingSourceValue(String(rawValue).trim());
-              rowData[field] = fundingValue;
-              hasValidData = true;
+              // Map funding sources to standard values - only if not empty
+              const cleanValue = String(rawValue).trim();
+              if (cleanValue && cleanValue !== '' && cleanValue !== '-') {
+                const fundingValue = this.mapFundingSourceValue(cleanValue);
+                rowData[field] = fundingValue;
+                console.log(`💰 Mapping funding source ${field}: "${cleanValue}" -> "${fundingValue}"`);
+                hasValidData = true;
+              }
             } else {
               // Handle numeric fields
               console.log(`🔍 Processing numeric field ${field} in ${cellAddress}: raw value = "${rawValue}" (type: ${typeof rawValue})`);
@@ -248,11 +254,14 @@ export class ExcelCellReader {
         if (hasValidData) {
           // Filter out unwanted header/summary rows
           const tabarName = rowData.tabar_name || '';
-          const skipPatterns = ['מספר תב"ר', 'סה"כ כללי', 'דו"ח תקופתי', 'ריכוז תקבולים'];
-          const shouldSkip = skipPatterns.some(pattern => tabarName.includes(pattern));
+          const tabarNumber = rowData.tabar_number || '';
+          const skipPatterns = ['מספר תב"ר', 'שם תב"ר', 'סה"כ כללי', 'דו"ח תקופתי', 'ריכוז תקבולים'];
+          const shouldSkip = skipPatterns.some(pattern => 
+            tabarName.includes(pattern) || tabarNumber.includes(pattern)
+          );
           
           if (shouldSkip) {
-            console.log(`⏭️ Skipping row ${row}: "${tabarName}" (matches skip pattern)`);
+            console.log(`⏭️ Skipping row ${row}: "${tabarName}" / "${tabarNumber}" (matches skip pattern)`);
           } else {
             // Set default values for missing fields
             rowData.approved_budget = rowData.approved_budget || 0;
@@ -455,22 +464,26 @@ export class ExcelCellReader {
   private mapDomainValue(value: string): string {
     const domainMappings: Record<string, string> = {
       "מבני חינוך": "education_buildings",
+      "בינוי": "education_buildings",
       "חינוך": "education_buildings",
-      "תשתיות": "infrastructure", 
-      "תשתית": "infrastructure",
+      "תשתיות": "infrastructure",
+      "תשתית": "infrastructure", 
       "גנים ופארקים": "parks_gardens",
-      "פארקים": "parks_gardens",
       "גנים": "parks_gardens",
-      "נוף": "parks_gardens",
+      "פארקים": "parks_gardens",
+      "ירוק": "parks_gardens",
       "תרבות וספורט": "culture_sports",
       "תרבות": "culture_sports",
       "ספורט": "culture_sports",
+      "אולם ספורט": "culture_sports",
       "ארגוני": "organizational",
-      "ארגון": "organizational",
-      "רווחה": "welfare"
+      "ניהול": "organizational",
+      "רווחה": "welfare",
+      "שונות": "organizational"
     };
 
     const normalizedValue = value.trim();
+    console.log(`🏷️ Mapping domain value: "${normalizedValue}" -> "${domainMappings[normalizedValue] || "organizational"}"`);
     return domainMappings[normalizedValue] || "organizational";
   }
 
