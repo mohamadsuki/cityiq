@@ -888,7 +888,9 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       if (context === 'tabarim') {
         console.log('✅ Context is tabarim - using specialized parsing');
         addLog('info', 'משתמש בפענוח נתוני תב"רים לפי כתובות תאים');
+        console.log('📋 About to call parseTabarimExcelByCellAddresses');
         const result = parseTabarimExcelByCellAddresses(sheet);
+        console.log('📋 parseTabarimExcelByCellAddresses completed with result:', result);
         const { data, summaryCards } = result;
         addLog('success', `נמצאו ${data.length} תב"רים`);
         
@@ -1024,12 +1026,19 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       // All users now use real database - no demo user logic needed
 
       // Upload raw file to storage for traceability
-      const path = `${userId}/${Date.now()}-${file.name}`;
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const path = `${userId}/${Date.now()}-${sanitizedFileName}`;
+      console.log('📤 Uploading file to storage with path:', path);
       const { error: upErr } = await supabase.storage.from("uploads").upload(path, file, {
         contentType: file.type || "application/octet-stream",
         upsert: false,
       });
-      if (upErr) console.warn("upload warn:", upErr.message);
+      if (upErr) {
+        console.warn("upload error:", upErr.message);
+        // Don't stop the process for storage upload errors - continue with data processing
+      } else {
+        console.log('✅ File uploaded successfully to storage');
+      }
 
       // Map and insert
       const inferDept = (table: string, ctx: UploadContext): 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | null => {

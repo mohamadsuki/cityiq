@@ -173,7 +173,9 @@ export class ExcelCellReader {
    * Parse Tabarim data from an Excel sheet
    */
   parseTabarimData(config: ExcelConfig): any[] {
-    console.log('=== TABARIM EXCEL PARSING WITH HEADER DETECTION ===');
+    console.log('=== TABARIM EXCEL PARSING WITH HEADER DETECTION START ===');
+    console.log('📋 Sheet object keys:', Object.keys(this.sheet).slice(0, 10));
+    console.log('📋 Sheet !ref:', this.sheet['!ref']);
     
     if (!this.sheet) {
       console.error('❌ No sheet available');
