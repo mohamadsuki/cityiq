@@ -17,6 +17,7 @@ interface CollectionData {
   annual_budget: number;
   relative_budget: number;
   actual_collection: number;
+  surplus_deficit: number;
   year: number;
   created_at: string;
 }
@@ -79,6 +80,7 @@ export default function CollectionPage() {
         annual_budget: Number(item.annual_budget) || 0,
         relative_budget: Number(item.relative_budget) || 0,
         actual_collection: Number(item.actual_collection) || 0,
+        surplus_deficit: Number(item.surplus_deficit) || 0,
         year: item.year,
         created_at: item.created_at
       }));
@@ -135,12 +137,10 @@ export default function CollectionPage() {
       accessorKey: "surplus_deficit",
       header: "עודף/גירעון",
       cell: ({ row }) => {
-        const actual = row.getValue<number>("actual_collection") || 0;
-        const relative = row.getValue<number>("relative_budget") || 0;
-        const diff = actual - relative;
+        const surplusDeficit = row.getValue<number>("surplus_deficit") || 0;
         return (
-          <span className={diff >= 0 ? "text-green-600" : "text-red-600"}>
-            {formatCurrency(diff)}
+          <span className={surplusDeficit >= 0 ? "text-green-600" : "text-red-600"}>
+            {formatCurrency(surplusDeficit)}
           </span>
         );
       },
@@ -170,7 +170,7 @@ export default function CollectionPage() {
   const totalAnnualBudget = collectionData.reduce((sum, item) => sum + (item.annual_budget || 0), 0);
   const totalRelativeBudget = collectionData.reduce((sum, item) => sum + (item.relative_budget || 0), 0);
   const totalActualCollection = collectionData.reduce((sum, item) => sum + (item.actual_collection || 0), 0);
-  const totalSurplusDeficit = totalActualCollection - totalRelativeBudget;
+  const totalSurplusDeficit = collectionData.reduce((sum, item) => sum + (item.surplus_deficit || 0), 0);
 
   const renderCustomTooltip = (props: any) => {
     if (props.active && props.payload && props.payload.length) {
