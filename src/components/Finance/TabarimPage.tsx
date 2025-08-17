@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Trash2, Upload } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { DataTable } from "@/components/shared/DataTable";
@@ -111,16 +112,16 @@ export default function TabarimPage() {
   };
 
   const handleUploadSuccess = () => {
-    setShowUploader(false);
     console.log('🔄 Upload success callback - refreshing tabarim list');
-    // Add delay to ensure database has been updated
+    setShowUploader(false);
+    // Add delay to ensure database has been updated  
     setTimeout(() => {
       loadTabarim(); // רענון הרשימה
+      toast({
+        title: "הצלחה",
+        description: "הקובץ הועלה בהצלחה והנתונים נשמרו",
+      });
     }, 1000);
-    toast({
-      title: "הצלחה",
-      description: "הקובץ הועלה בהצלחה והנתונים נשמרו",
-    });
   };
 
   const columns: ColumnDef<Tabar>[] = [
@@ -357,26 +358,22 @@ export default function TabarimPage() {
       />
 
       {showUploader && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-background border rounded-lg shadow-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">העלה קובץ אקסל - תב"רים</h2>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShowUploader(false)}
-                >
-                  ✕
-                </Button>
-              </div>
+        <Dialog open={showUploader} onOpenChange={setShowUploader}>
+          <DialogContent dir="rtl" className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>ייבוא תב"רים מקובץ אקסל</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
               <DataUploader 
                 context="tabarim"
                 onUploadSuccess={handleUploadSuccess}
               />
+              <div className="mt-4 text-sm text-muted-foreground">
+                העלה קובץ אקסל עם תב"רים. הקובץ צריך להכיל עמודות: מספר תב"ר, שם תב"ר, תחום, מקורות תקציב, תקציב מאושר, הכנסה בפועל, הוצאה בפועל, סטטוס.
+              </div>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
