@@ -79,11 +79,17 @@ function parseCollectionExcelByCellAddresses(sheet: any): { data: any[], summary
 // Parse Tabarim data from Excel file using the new ExcelCellReader
 function parseTabarimExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
   console.log('=== TABARIM EXCEL PARSING DEBUG START ===');
-  console.log('📋 Sheet keys:', Object.keys(sheet).slice(0, 20));
+  console.log('📋 Sheet type:', typeof sheet);
+  console.log('📋 Sheet keys sample:', Object.keys(sheet).slice(0, 20));
   console.log('📋 Sheet !ref:', sheet['!ref']);
   
+  if (!sheet) {
+    console.error('❌ No sheet provided to parseTabarimExcelByCellAddresses');
+    return { data: [], summaryCards: { totalTabarim: 0, totalBudget: 0, totalIncome: 0, totalExpense: 0 } };
+  }
+  
   const reader = new ExcelCellReader(sheet);
-  console.log('📋 Created ExcelCellReader');
+  console.log('📋 Created ExcelCellReader instance');
   
   const data = reader.parseTabarimData(TABARIM_EXCEL_CONFIG);
   console.log('📋 Raw parsed data length:', data.length);
@@ -97,7 +103,7 @@ function parseTabarimExcelByCellAddresses(sheet: any): { data: any[], summaryCar
     totalExpense: data.reduce((sum, item) => sum + (item.expense_actual || 0), 0)
   };
 
-  console.log(`Parsed ${data.length} Tabarim records with totals:`, summaryCards);
+  console.log(`📋 Parsed ${data.length} Tabarim records with totals:`, summaryCards);
   console.log('=== TABARIM EXCEL PARSING DEBUG END ===');
   
   return { data, summaryCards };
@@ -806,11 +812,13 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
   };
 
   const onFile = async (f: File) => {
+    console.log('🔥 onFile called with file:', f.name, 'context:', context);
     setFile(f);
     setDebugLogs([]);
     const logs: DebugLog[] = [];
     
     const addLog = (type: DebugLog['type'], message: string, details?: any) => {
+      console.log(`📋 [${type}] ${message}`, details || '');
       logs.push({
         id: Math.random().toString(),
         type,
@@ -822,11 +830,15 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
 
     try {
       addLog('info', `קורא קובץ: ${f.name}`);
+      console.log('📊 Starting file processing...');
       
       const ab = await f.arrayBuffer();
+      console.log('📊 ArrayBuffer created, size:', ab.byteLength);
       const wb = XLSX.read(ab, { type: "array" });
+      console.log('📊 Workbook read, sheets:', wb.SheetNames);
       const first = wb.SheetNames[0];
       const sheet = wb.Sheets[first];
+      console.log('📊 Sheet extracted, context check:', context);
       
       // Check if this should be parsed by cell addresses (for regular budget or collection)
       if (context === 'regular_budget' || context === 'finance') {
