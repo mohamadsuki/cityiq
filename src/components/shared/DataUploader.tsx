@@ -1,15 +1,13 @@
-import { useState } from "react";
-import * as XLSX from "xlsx";
+import { useState } from 'react';
+import * as XLSX from 'xlsx';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, FileText, AlertCircle, CheckCircle } from "lucide-react";
-import {
+import { Separator } from "@/components/ui/separator";
+import { 
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -19,22 +17,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/context/AuthContext";
-import { ExcelCellReader, COLLECTION_EXCEL_CONFIG, TABARIM_EXCEL_CONFIG } from "@/lib/excelCellReader";
+import { useToast } from "@/hooks/use-toast";
+import { Upload, FileText, AlertCircle, CheckCircle2, Info } from "lucide-react";
 
-export type UploadContext =
-  | "finance"
-  | "regular_budget"
-  | "collection"
-  | "tabarim"
-  | "education"
-  | "engineering"
-  | "welfare"
-  | "non-formal"
-  | "business"
-  | "global";
+type UploadContext = 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'global' | 'regular_budget' | 'finance' | 'collection' | 'tabarim';
 
 interface DataUploaderProps {
   context?: UploadContext;
@@ -43,7 +30,7 @@ interface DataUploaderProps {
 
 interface DebugLog {
   id: string;
-  type: 'info' | 'warning' | 'error' | 'success';
+  type: 'info' | 'success' | 'warning' | 'error';
   message: string;
   details?: any;
   timestamp: Date;
@@ -54,751 +41,213 @@ interface ImportOption {
   confirmed: boolean;
 }
 
-// Parse collection data from "טיוטת מאזן RAW" Excel file using the new ExcelCellReader
-function parseCollectionExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
-  console.log('=== COLLECTION EXCEL PARSING DEBUG ===');
+const parseCollectionExcelByCellAddresses = (sheet: any) => {
+  console.log('📊 parseCollectionExcelByCellAddresses called');
   
-  const reader = new ExcelCellReader(sheet);
-  const data = reader.parseCollectionData(COLLECTION_EXCEL_CONFIG);
+  // This is a simplified version - the full implementation would be in the ExcelCellReader
+  const data: any[] = [];
+  const summaryCards: any = {};
   
-  // Get summary totals
-  const totals = reader.getSummaryTotals(data);
-
-  const summaryCards = {
-    totalAnnualBudget: totals.annual_budget || 0,
-    totalRelativeBudget: totals.relative_budget || 0,
-    totalActualCollection: totals.actual_collection || 0,
-    surplus_deficit: totals.surplus_deficit || 0
-  };
-
-  console.log(`Parsed ${data.length} collection records with totals:`, summaryCards);
-  
-  return { data, summaryCards };
-}
-
-// Parse Tabarim data from Excel file using the new ExcelCellReader
-function parseTabarimExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
-  console.log('=== TABARIM EXCEL PARSING DEBUG START ===');
-  console.log('📋 Sheet type:', typeof sheet);
-  console.log('📋 Sheet keys sample:', Object.keys(sheet).slice(0, 20));
-  console.log('📋 Sheet !ref:', sheet['!ref']);
-  
-  if (!sheet) {
-    console.error('❌ No sheet provided to parseTabarimExcelByCellAddresses');
-    return { data: [], summaryCards: { totalTabarim: 0, totalBudget: 0, totalIncome: 0, totalExpense: 0 } };
-  }
-  
-  const reader = new ExcelCellReader(sheet);
-  console.log('📋 Created ExcelCellReader instance');
-  
-  const data = reader.parseTabarimData(TABARIM_EXCEL_CONFIG);
-  console.log('📋 Raw parsed data length:', data.length);
-  console.log('📋 First parsed item:', data[0]);
-  
-  // Calculate summary statistics
-  const summaryCards = {
-    totalTabarim: data.length,
-    totalBudget: data.reduce((sum, item) => sum + (item.approved_budget || 0), 0),
-    totalIncome: data.reduce((sum, item) => sum + (item.income_actual || 0), 0),
-    totalExpense: data.reduce((sum, item) => sum + (item.expense_actual || 0), 0)
-  };
-
-  console.log(`📋 Parsed ${data.length} Tabarim records with totals:`, summaryCards);
-  console.log('=== TABARIM EXCEL PARSING DEBUG END ===');
-  
-  return { data, summaryCards };
-}
-
-function parseExcelByCellAddresses(sheet: any): { data: any[], summaryCards: any } {
-  const results = [];
-  
-  // Define cell ranges for different categories
-  const incomeRanges = [
-    { names: 'A7:A11', budget: 'D7:D11', actual: 'F7:F11' },
-    { names: 'A14:A19', budget: 'D14:D19', actual: 'F14:F19' },
-    { names: 'A23:A24', budget: 'D23:D24', actual: 'F23:F24' }
-  ];
-  
-  const expenseRanges = [
-    { names: 'A27:A29', budget: 'D27:D29', actual: 'F27:F29' },
-    { names: 'A32:A33', budget: 'D32:D33', actual: 'F32:F33' },
-    { names: 'A35:A36', budget: 'D35:D36', actual: 'F35:F36' },
-    { names: 'A41:A41', budget: 'D41:D41', actual: 'F41:F41' },
-    { names: 'A44:A44', budget: 'D44:D44', actual: 'F44:F44' },
-    { names: 'A49:A49', budget: 'D49:D49', actual: 'F49:F49' }
-  ];
-  
-  // Helper function to get cell value
-  const getCellValue = (cellAddress: string) => {
-    const cell = sheet[cellAddress];
-    return cell ? cell.v : null;
-  };
-
-  // Debug: log specific cells we're trying to read
-  const targetCells = ['B25', 'D25', 'F25', 'J25', 'B50', 'D50', 'F50', 'J50'];
-  console.log('Target cells data:', targetCells.map(cell => ({
-    cell,
-    value: sheet[cell]?.v,
-    type: sheet[cell]?.t,
-    raw: sheet[cell]
-  })));
-  
-  // Read summary cards data from specific cells
-  const summaryCards = {
-    plannedIncomeYearly: getCellValue('B25'), // הכנסות שנתי מתוכננות
-    plannedIncomePeriod: getCellValue('D25'), // הכנסות לתקופה מתוכננות
-    actualIncomePeriod: getCellValue('F25'), // הכנסות לתקופה בפועל
-    incomeDeviation: getCellValue('J25'), // סטייה מהתקציב הכנסות (באחוזים)
-    plannedExpensesYearly: getCellValue('B50'), // הוצאות שנתי מתוכננות
-    plannedExpensesPeriod: getCellValue('D50'), // הוצאות לתקופה מתוכננות
-    actualExpensesPeriod: getCellValue('F50'), // הוצאות לתקופה בפועל
-    expensesDeviation: getCellValue('J50') // סטייה מהתקציב הוצאות (באחוזים)
-  };
-
-  console.log('Final summary cards object:', summaryCards);
-  
-  // Helper function to expand range to individual cells
-  const expandRange = (range: string): string[] => {
-    const [start, end] = range.split(':');
-    if (!end) return [start];
+  try {
+    // Get the raw data from the sheet
+    const rawData = XLSX.utils.sheet_to_json(sheet);
+    console.log('📊 Raw collection data:', rawData);
     
-    const startCol = start.match(/[A-Z]+/)[0];
-    const startRow = parseInt(start.match(/\d+/)[0]);
-    const endCol = end.match(/[A-Z]+/)[0];
-    const endRow = parseInt(end.match(/\d+/)[0]);
-    
-    const cells = [];
-    for (let row = startRow; row <= endRow; row++) {
-      for (let col = startCol.charCodeAt(0); col <= endCol.charCodeAt(0); col++) {
-        cells.push(String.fromCharCode(col) + row);
-      }
-    }
-    return cells;
-  };
-  
-  // Process income ranges
-  incomeRanges.forEach(range => {
-    const nameCells = expandRange(range.names);
-    const budgetCells = expandRange(range.budget);
-    const actualCells = expandRange(range.actual);
-    
-    nameCells.forEach((nameCell, index) => {
-      const categoryName = getCellValue(nameCell);
-      const budgetAmount = getCellValue(budgetCells[index]);
-      const actualAmount = getCellValue(actualCells[index]);
-      
-      if (categoryName && String(categoryName).trim() !== '') {
-        results.push({
-          category_type: 'income',
-          category_name: String(categoryName).trim(),
-          budget_amount: budgetAmount ? Number(budgetAmount) : null,
-          actual_amount: actualAmount ? Number(actualAmount) : null,
-          excel_cell_ref: `${nameCell}, ${budgetCells[index]}, ${actualCells[index]}`,
-          year: new Date().getFullYear()
-        });
+    // Basic parsing for collection data
+    rawData.forEach((row: any, index: number) => {
+      if (row && typeof row === 'object') {
+        const parsedRow = {
+          property_type: row['סוג נכס'] || row['property_type'] || '',
+          annual_budget: parseFloat(row['תקציב שנתי'] || row['annual_budget'] || '0') || 0,
+          relative_budget: parseFloat(row['תקציב יחסי'] || row['relative_budget'] || '0') || 0,
+          actual_collection: parseFloat(row['גביה בפועל'] || row['actual_collection'] || '0') || 0
+        };
+        
+        if (parsedRow.property_type) {
+          data.push(parsedRow);
+        }
       }
     });
-  });
-  
-  // Process expense ranges
-  expenseRanges.forEach(range => {
-    const nameCells = expandRange(range.names);
-    const budgetCells = expandRange(range.budget);
-    const actualCells = expandRange(range.actual);
     
-    nameCells.forEach((nameCell, index) => {
-      const categoryName = getCellValue(nameCell);
-      const budgetAmount = getCellValue(budgetCells[index]);
-      const actualAmount = getCellValue(actualCells[index]);
-      
-      if (categoryName && String(categoryName).trim() !== '') {
-        results.push({
-          category_type: 'expense',  
-          category_name: String(categoryName).trim(),
-          budget_amount: budgetAmount ? Number(budgetAmount) : null,
-          actual_amount: actualAmount ? Number(actualAmount) : null,
-          excel_cell_ref: `${nameCell}, ${budgetCells[index]}, ${actualCells[index]}`,
-          year: new Date().getFullYear()
-        });
-      }
-    });
-  });
+    console.log('📊 Parsed collection data:', data);
+    
+  } catch (error) {
+    console.error('❌ Error parsing collection data:', error);
+  }
   
-  return { data: results, summaryCards };
-}
+  return { data, summaryCards };
+};
 
-// Very lightweight header-based classifier - now enhanced with cell address parsing
-function detectTarget(headers: string[], ctx: UploadContext): { table: string | null; reason: string } {
-  const h = headers.map((s) => s.toLowerCase());
-
-  const hasAny = (...keys: string[]) => keys.some((k) => h.includes(k));
-  const hasWords = (...words: string[]) => words.some((w) => h.some((x) => x.includes(w)));
-
-  // Business licenses
-  if (
-    ctx === "business" ||
-    hasWords("license", "רישיון", "מספר רישיון") ||
-    hasWords("business", "שם עסק") ||
-    hasWords("expires", "פקיעה", "תוקף")
-  ) {
-    return { table: "licenses", reason: "זוהה מבנה רישוי עסקים" };
-  }
-
-  // Engineering plans
-  if (
-    ctx === "engineering" ||
-    hasWords("plan", 'תב"ע', "מספר תוכנית") ||
-    hasWords("land_use", "ייעוד")
-  ) {
-    return { table: "plans", reason: "זוהה מבנה תוכניות הנדסה" };
-  }
-
-  // Education institutions
-  if (
-    ctx === "education" ||
-    hasWords("institution", "מוסד") ||
-    hasWords("students", "תלמידים") ||
-    hasWords("classes", "כיתות") ||
-    hasWords("level", "שלב")
-  ) {
-    return { table: "institutions", reason: "זוהה מבנה מוסדות חינוך" };
-  }
-
-  // Finance regular budget - Enhanced detection with more Hebrew variations
-  if (
-    ctx === "finance" ||
-    ctx === "regular_budget" ||
-    hasWords("קטגוריה", "category", "סעיף", "פריט", "פרט", "תיאור") ||
-    hasWords("תקציב מאושר", "budget_amount", "תקציב", "מאושר", "תקציב שנתי") ||
-    hasWords("ביצוע בפועל", "actual_amount", "ביצוע", "בפועל", "ביצוע שנתי") ||
-    hasWords("הכנסה", "income", "הוצאה", "expense", "הכנסות", "הוצאות") ||
-    hasWords("ארנונה", "אגרת", "היטל", "מענק", "קנס", "רישיון") ||
-    hasWords("סכום", "כסף", "שח", "₪", "מיליון", "אלף") ||
-    hasAny("f7", "f8", "f9", "f10", "f11", "g7", "g8", "h7", "h8") // Excel cell references for budget
-  ) {
-    return { table: "regular_budget", reason: "זוהה מבנה תקציב רגיל" };
-  }
-
-  // Finance collection data - טיוטת מאזן RAW
-  if (
-    ctx === "collection" ||
-    hasWords("ארנונה", "גביה", "מאזן", "property", "collection") ||
-    hasWords("סוג נכס", "property_type", "תקציב יחסי", "תקציב שנתי", "גביה בפועל") ||
-    hasWords("מגורים", "מסחר", "תעשיה", "משרדים", "אחר") ||
-    hasAny("d7", "e7", "f7", "g7", "h7", "i7", "l7", "m7") // Excel cell references for collection data
-  ) {
-    return { table: "collection_data", reason: 'זוהה מבנה טיוטת מאזן RAW לגביה' };
-  }
-
-  // Finance tabarim
-  if (
-    ctx === "tabarim" ||
-    hasWords('תב"ר', "tabar") ||
-    hasWords("תחום", "domain") ||
-    hasWords("מקור תקציבי", "funding_source")
-  ) {
-    return { table: "tabarim", reason: 'זוהה מבנה תב"רים' };
-  }
-
-  // Finance projects / grants (but not if already detected as regular_budget)
-  if (
-    hasWords("project", 'תב"ר') ||
-    hasWords("budget", "תקציב")
-  ) {
-    return { table: "projects", reason: 'זוהה מבנה פרויקטים/תב"ר' };
-  }
-  if (hasWords("grant", "מענק", "קול קורא", "משרד")) {
-    return { table: "grants", reason: "זוהה מבנה מענקים" };
-  }
-
-  // Welfare
-  if (
-    ctx === "welfare" ||
-    hasWords("service_type", "שירות", "ילדים בסיכון", "מוגבלות", "קשישים")
-  ) {
-    return { table: "welfare_services", reason: "זוהה מבנה שירותי רווחה" };
-  }
-
-  // Non formal activities
-  if (
-    ctx === "non-formal" ||
-    hasWords("activity", "פעילות") ||
-    hasWords("program", "תוכנית") ||
-    hasWords("age_group", "גיל") ||
-    hasWords("participants", "משתתפים")
-  ) {
-    return { table: "activities", reason: "זוהה מבנה פעילויות חינוך בלתי פורמאלי" };
-  }
-
-  return { table: null, reason: "לא זוהה מבנה נתונים מוכר" };
-}
-
-function normalizeKey(k: string, debugLogs?: DebugLog[]): string {
-  const key = k.trim();
+const detectTarget = (headers: string[], ctx: UploadContext) => {
+  console.log('🎯 detectTarget called with headers:', headers, 'context:', ctx);
   
-  const addLog = (type: DebugLog['type'], message: string, details?: any) => {
+  // Context-based detection first
+  if (ctx === 'education') {
+    return { table: 'institutions', reason: 'זוהה כנתוני חינוך על בסיס הקונטקסט' };
+  }
+  
+  if (ctx === 'engineering') {
+    return { table: 'engineering_plans', reason: 'זוהה כנתוני הנדסה על בסיס הקונטקסט' };
+  }
+  
+  if (ctx === 'welfare') {
+    return { table: 'welfare_services', reason: 'זוהה כנתוני רווחה על בסיס הקונטקסט' };
+  }
+  
+  if (ctx === 'non-formal') {
+    return { table: 'non_formal_activities', reason: 'זוהה כנתוני חינוך בלתי פורמלי על בסיס הקונטקסט' };
+  }
+  
+  if (ctx === 'business') {
+    return { table: 'business_licenses', reason: 'זוהה כנתוני עסקים על בסיס הקונטקסט' };
+  }
+  
+  if (ctx === 'regular_budget' || ctx === 'finance') {
+    return { table: 'regular_budget', reason: 'זוהה כנתוני תקציב רגיל על בסיס הקונטקסט' };
+  }
+  
+  if (ctx === 'collection') {
+    return { table: 'collection_data', reason: 'זוהה כנתוני גביה על בסיס הקונטקסט' };
+  }
+  
+  // Header-based detection as fallback
+  const headerStr = headers.join(' ').toLowerCase();
+  
+  if (headerStr.includes('institution') || headerStr.includes('מוסד')) {
+    return { table: 'institutions', reason: 'זוהה על בסיס כותרות מוסדות חינוך' };
+  }
+  
+  if (headerStr.includes('license') || headerStr.includes('רישיון')) {
+    return { table: 'business_licenses', reason: 'זוהה על בסיס כותרות רישיונות עסק' };
+  }
+  
+  return { table: null, reason: 'לא זוהה סוג נתונים מתאים' };
+};
+
+const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
+  const original = k;
+  let normalized = k.toLowerCase().trim();
+  
+  // Hebrew to English mappings
+  const mappings: Record<string, string> = {
+    // Institution fields
+    'שם המוסד': 'institution_name',
+    'כתובת': 'address',
+    'טלפון': 'phone',
+    'סוג המוסד': 'institution_type',
+    
+    // Business license fields  
+    'שם העסק': 'business_name',
+    'בעל הרישיון': 'license_holder',
+    'מספר רישיון': 'license_number',
+    'סוג הרישיון': 'license_type',
+    'תאריך הנפקה': 'issue_date',
+    'תאריך תפוגה': 'expiry_date',
+    'סטטוס': 'status',
+    
+    // Budget fields
+    'קטגוריה': 'category_name',
+    'סוג': 'category_type',
+    'תקציב': 'budget_amount',
+    'ביצוע': 'actual_amount',
+    
+    // Collection fields
+    'סוג נכס': 'property_type',
+    'תקציב שנתי': 'annual_budget',
+    'תקציב יחסי': 'relative_budget',
+    'גביה בפועל': 'actual_collection'
+  };
+  
+  if (mappings[original]) {
+    normalized = mappings[original];
     if (debugLogs) {
       debugLogs.push({
         id: Math.random().toString(),
-        type,
-        message,
-        details,
+        type: 'info',
+        message: `מיפוי כותרת: "${original}" → "${normalized}"`,
         timestamp: new Date()
       });
     }
-  };
+  }
   
-  addLog('info', `מנרמל מפתח: "${key}"`);
+  return normalized;
+};
+
+const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: DebugLog[]) => {
+  console.log(`🗂️ mapRowToTable called for table: ${table}`, row);
   
-  const map: Record<string, string> = {
-    // Common Hebrew -> English  
-    "מספר רישיון": "license_number",
-    "שם עסק": "business_name",
-    "בעל העסק": "owner",
-    "כתובת": "address",
-    "סוג רישיון": "type",
-    "סטטוס": "status",
-    "תוקף": "expires_at",
-    "תאריך פקיעה": "expires_at",
-
-    // Regular budget mapping - Hebrew terms
-    "קטגוריה": "category_name",
-    "שם קטגוריה": "category_name",
-    "שם הקטגוריה": "category_name",
-    "תיאור": "category_name",
-    "פריט": "category_name",
-    "פרט": "category_name",
-    "סעיף": "category_name",
-    "שם": "category_name",
-    "שם הסעיף": "category_name",
-    "סוג קטגוريה": "category_type",
-    "סוג": "category_type",
-    "הכנסה": "income",
-    "הוצאה": "expense",
-    "הכנסות": "income",
-    "הוצאות": "expense",
-    "תקציב מאושר": "budget_amount",
-    "תקציב": "budget_amount",
-    "מאושר": "budget_amount", 
-    "תקציב שנתי": "budget_amount",
-    "תקציב 2025": "budget_amount",
-    "תקציב 2024": "budget_amount",
-    "סכום מאושר": "budget_amount",
-    "סכום תקציב": "budget_amount",
-    "ביצוע בפועל": "actual_amount",
-    "ביצוע": "actual_amount",
-    "בפועל": "actual_amount",
-    "ביצוע שנתי": "actual_amount", 
-    "ביצוע 2025": "actual_amount",
-    "ביצוע 2024": "actual_amount",
-    "סכום בפועל": "actual_amount",
-    "סכום ביצוע": "actual_amount",
-    "תא באקסל": "excel_cell_ref",
-    "תא": "excel_cell_ref",
-    "תא אקסל": "excel_cell_ref",
-    "מיקום תא": "excel_cell_ref",
-    "שנה": "year",
-    "שנת תקציב": "year",
-
-    // Collection data mapping - טיוטת מאזן RAW
-    "סוג נכס": "property_type",
-    "נכס": "property_type", 
-    "תקציב שנתי ארנונה": "annual_budget",
-    "תקציב יחסי": "relative_budget",
-    "גביה בפועל": "actual_collection",
-    "מגורים": "residential",
-    "מסחר": "commercial", 
-    "תעשיה": "industrial",
-    "משרדים": "office",
-    "אחר": "other",
-
-    // Tabarim mapping - enhanced
-    'מספר תב"ר': "tabar_number",
-    'שם תב"ר': "tabar_name", 
-    "תחום": "domain",
-    "מקור תקציבי": "funding_source1",
-    "מקור תקציב ראשון": "funding_source1",
-    "מקור תקציבי ראשון": "funding_source1",
-    "מקור תקציבי 1": "funding_source1",
-    "מקור תקציב 1": "funding_source1",
-    "מקור תקציבי 2": "funding_source2",
-    "מקור תקציב 2": "funding_source2",
-    "מקור תקציבי שני": "funding_source2",
-    "מקור תקציבי 3": "funding_source3",
-    "מקור תקציב 3": "funding_source3",
-    "מקור תקציבי שלישי": "funding_source3",
-    "תקציב מאושר תברים": "approved_budget",
-    "ביצוע מצטבר הכנסות": "income_actual",
-    "הכנסות בפועל": "income_actual",
-    "הכנסות מצטבר": "income_actual",
-    "ביצוע מצטבר הוצאות": "expense_actual",
-    "הוצאות בפועל": "expense_actual", 
-    "הוצאות מצטבר": "expense_actual",
-    "עודף/גרעון": "surplus_deficit",
-    "עודף גרעון": "surplus_deficit",
-    "סטטוס תבר": "status",
-
-    "מספר תוכנית": "plan_number",
-    "שם תוכנית": "name",
-    "אזור": "address",
-    "ייעוד": "land_use",
-    "שטח": "area",
-
-    "שם מוסד": "name",
-    "שלב": "level",
-    "תלמידים": "students",
-    "כיתות": "classes",
-    "תפוסה": "occupancy",
-
-    "שם פרויקט": "name",
-    "מקור מימון פרויקט": "funding_source",
-
-    "שירות": "service_type",
-    "מקבלי שירות": "recipients",
-    "רשימת המתנה": "waitlist",
-    "ניצול": "utilization",
-
-    "שם פעילות": "name",
-    "תוכנית": "program",
-    "קטגוריית פעילות": "category",
-    "קבוצת גיל": "age_group",
-    "משתתפים": "participants",
-    "מיקום": "location",
-    "תאריך": "scheduled_at",
-  };
-
-  // First try exact match
-  if (map[key]) {
-    addLog('success', `התאמה מדויקת: "${key}" -> "${map[key]}"`);
-    return map[key];
-  }
-
-  // Try case insensitive match
-  const lowerKey = key.toLowerCase();
-  for (const [hebrewKey, englishValue] of Object.entries(map)) {
-    if (hebrewKey.toLowerCase() === lowerKey) {
-      addLog('success', `התאמה ללא רגישות לגודל אותיות: "${key}" -> "${englishValue}"`);
-      return englishValue;
-    }
-  }
-
-  // Enhanced Hebrew terms recognition
-  if (key.includes('תקציב') && !key.includes('ביצוע')) {
-    addLog('info', `מכיל "תקציב" -> "budget_amount"`);
-    return 'budget_amount';
-  }
-  if (key.includes('ביצוע') || key.includes('בפועל') || key.includes('מבוצע')) {
-    addLog('info', `מכיל "ביצוע/בפועל/מבוצע" -> "actual_amount"`);
-    return 'actual_amount';
-  }
-  if (key.includes('קטגוריה') || key.includes('סעיף') || key.includes('שם') || key.includes('תיאור') || key.includes('פריט')) {
-    addLog('info', `מכיל מונח מזהה קטגוריה -> "category_name"`);
-    return 'category_name';
-  }
-  if (key.includes('סכום') || key.includes('כסף') || key.includes('₪') || key.includes('שח')) {
-    addLog('warning', `מכיל מונח כספי, אבל לא ברור אם תקציב או ביצוע -> "budget_amount"`);
-    return 'budget_amount';
-  }
-
-  // Fallback
-  const fallback = key.replace(/\s+/g, "_");
-  addLog('warning', `לא נמצאה התאמה, משתמש בחלופה: "${key}" -> "${fallback}"`);
-  return fallback;
-}
-
-function mapRowToTable(table: string, row: Record<string, any>, debugLogs?: DebugLog[]) {
-  const addLog = (type: DebugLog['type'], message: string, details?: any) => {
-    if (debugLogs) {
-      debugLogs.push({
-        id: Math.random().toString(),
-        type,
-        message,
-        details,
-        timestamp: new Date()
-      });
-    }
-  };
-
-  // Normalize keys
-  const norm: Record<string, any> = {};
-  Object.keys(row).forEach((k) => {
-    const nk = normalizeKey(String(k), debugLogs);
-    norm[nk] = row[k];
+  const mapped: Record<string, any> = {};
+  
+  // Normalize all keys first
+  const normalizedRow: Record<string, any> = {};
+  Object.entries(row).forEach(([key, value]) => {
+    const normalizedKey = normalizeKey(key, debugLogs);
+    normalizedRow[normalizedKey] = value;
   });
-
+  
+  console.log('🗂️ Normalized row:', normalizedRow);
+  
   switch (table) {
-    case "tabarim":
-      addLog('info', 'מעבד שורת תב"ר בשיטה סטנדרטית');
+    case 'institutions':
+      mapped.institution_name = normalizedRow.institution_name || normalizedRow['שם המוסד'] || '';
+      mapped.address = normalizedRow.address || normalizedRow['כתובת'] || '';
+      mapped.phone = normalizedRow.phone || normalizedRow['טלפון'] || '';
+      mapped.institution_type = normalizedRow.institution_type || normalizedRow['סוג המוסד'] || 'אחר';
+      break;
       
-      // Enhanced mapping with better domain and funding source handling
-      const domainMap: Record<string, string> = {
-        "מבני חינוך": "education_buildings",
-        "חינוך": "education_buildings",
-        "תשתיות": "infrastructure", 
-        "תשתית": "infrastructure",
-        "גנים ופארקים": "parks_gardens",
-        "פארקים": "parks_gardens",
-        "גנים": "parks_gardens",
-        "תרבות וספורט": "culture_sports",
-        "תרבות": "culture_sports",
-        "ספורט": "culture_sports",
-        "ארגוני": "organizational",
-        "ארגון": "organizational",
-        "רווחה": "welfare"
-      };
+    case 'business_licenses':
+      mapped.business_name = normalizedRow.business_name || normalizedRow['שם העסק'] || '';
+      mapped.license_holder = normalizedRow.license_holder || normalizedRow['בעל הרישיון'] || '';
+      mapped.license_number = normalizedRow.license_number || normalizedRow['מספר רישיון'] || '';
+      mapped.license_type = normalizedRow.license_type || normalizedRow['סוג הרישיון'] || 'כללי';
       
-      const fundingSourceMap: Record<string, string> = {
-        "עיריה": "municipality",
-        "מדינה": "municipality",
-        "משרד החינוך": "education_ministry",
-        "משרד הפנים": "interior_ministry", 
-        "משרד התחבורה": "transportation_ministry",
-        "משרד הבריאות": "health_ministry",
-        "משרד התרבות": "culture_ministry",
-        "משרד האנרגיה": "energy_ministry",
-        "משרד החקלאות": "agriculture_ministry",
-        "משרד הכלכלה": "economy_ministry",
-        "משרד המדע": "science_technology_ministry",
-        "משרד הבינוי": "construction_housing_ministry",
-        "משרד להגנת הסביבה": "environmental_protection_ministry",
-        "רשות התכנון": "planning_administration",
-        "מפעל הפיס": "lottery",
-        "הלוואה": "loan"
-      };
-      
-      const statusMap: Record<string, string> = {
-        "תכנון": "planning",
-        "מאושר": "approved",
-        "פעיל": "active", 
-        "הושלם": "completed",
-        "בוטל": "cancelled"
-      };
-      
-      const tabarResult = {
-        tabar_number: norm.tabar_number || norm.number || '',
-        tabar_name: norm.tabar_name || norm.name || '',
-        domain: domainMap[norm.domain] || "organizational",
-        funding_source1: fundingSourceMap[norm.funding_source1] || fundingSourceMap[norm.funding_source] || "municipality",
-        funding_source2: fundingSourceMap[norm.funding_source2] || null,
-        funding_source3: fundingSourceMap[norm.funding_source3] || null,
-        approved_budget: norm.approved_budget ? Number(norm.approved_budget) : 0,
-        income_actual: norm.income_actual ? Number(norm.income_actual) : 0,
-        expense_actual: norm.expense_actual ? Number(norm.expense_actual) : 0,
-        surplus_deficit: norm.surplus_deficit ? Number(norm.surplus_deficit) : ((norm.income_actual ? Number(norm.income_actual) : 0) - (norm.expense_actual ? Number(norm.expense_actual) : 0)),
-        status: statusMap[norm.status] || "planning",
-      };
-      
-      addLog('success', `שורת תב"ר מעובדת: ${tabarResult.tabar_name}`, tabarResult);
-      return tabarResult;
-      
-    case "collection_data":
-      addLog('info', 'מעבד שורת נתוני גביה');
-      
-      const collectionResult = {
-        property_type: norm.property_type || 'לא מוגדר',
-        annual_budget: norm.annual_budget ? Number(norm.annual_budget) : null,
-        relative_budget: norm.relative_budget ? Number(norm.relative_budget) : null,
-        actual_collection: norm.actual_collection ? Number(norm.actual_collection) : null,
-        excel_cell_ref: norm.excel_cell_ref,
-        year: norm.year ? Number(norm.year) : new Date().getFullYear(),
-      };
-      
-      addLog('success', `שורת גביה מעובדת: ${collectionResult.property_type}`, collectionResult);
-      return collectionResult;
-      
-    case "regular_budget":
-      addLog('info', 'מעבד שורת תקציב רגיל');
-      addLog('info', `מפתחות מקוריים: ${Object.keys(row).join(', ')}`);
-      addLog('info', `ערכים לדוגמה: ${Object.values(row).slice(0, 3).join(', ')}`);
-      
-      const keyMappings = Object.keys(row).map(k => ({
-        original: k,
-        normalized: normalizeKey(k, debugLogs)
-      }));
-      addLog('info', 'מיפוי מפתחות:', keyMappings);
-      
-      // Check for meaningful content - be more lenient
-      const meaningfulFields = ['category_name', 'name', 'budget_amount', 'actual_amount'];
-      const validFields = meaningfulFields.filter(field => {
-        const value = norm[field];
-        const isValidValue = value !== null && value !== undefined && value !== "" && String(value).trim() !== "";
-        if (isValidValue) {
-          addLog('success', `נמצא נתון משמעותי בשדה "${field}": "${value}"`);
-        }
-        return isValidValue;
-      });
-      
-      // Also check if we have any data in the original row that could be useful
-      const hasAnyData = Object.values(row).some(v => 
-        v !== null && v !== undefined && v !== "" && String(v).trim() !== ""
-      );
-      
-      if (validFields.length === 0 && !hasAnyData) {
-        addLog('warning', 'שורה נדחתה: לא נמצאו נתונים משמעותיים');
-        return null;
+      // Handle dates
+      if (normalizedRow.issue_date || normalizedRow['תאריך הנפקה']) {
+        const dateValue = normalizedRow.issue_date || normalizedRow['תאריך הנפקה'];
+        mapped.issue_date = dateValue;
       }
       
-      addLog('success', `שדות תקינים: ${validFields.join(', ')}`);
-      
-      // Helper function to parse numbers safely
-      const parseNumber = (val: any, fieldName: string) => {
-        if (val === null || val === undefined || val === '') {
-          addLog('info', `${fieldName}: ערך ריק`);
-          return null;
-        }
-        
-        // Handle different number formats
-        let numStr = String(val).replace(/,/g, '').replace(/₪/g, '').replace(/שח/g, '').trim();
-        
-        // Handle negative numbers in parentheses: (1000) -> -1000
-        if (numStr.match(/^\(.*\)$/)) {
-          numStr = '-' + numStr.replace(/[()]/g, '');
-        }
-        
-        const num = Number(numStr);
-        const result = isNaN(num) ? null : num;
-        
-        if (result !== null) {
-          addLog('success', `${fieldName}: פוענח בהצלחה "${val}" -> ${result}`);
-        } else {
-          addLog('warning', `${fieldName}: לא ניתן לפענח "${val}"`);
-        }
-        
-        return result;
-      };
-      
-      // Determine category type more intelligently
-      let categoryType = 'expense'; // default
-      if (norm.category_type) {
-        categoryType = norm.category_type === 'income' || norm.category_type === 'הכנסה' ? 'income' : 'expense';
-      } else if (norm.income || String(norm.category_name || norm.name || '').match(/הכנס|ארנונה|אגרת|היטל|קנס|רישיון|מענק/)) {
-        categoryType = 'income';
+      if (normalizedRow.expiry_date || normalizedRow['תאריך תפוגה']) {
+        const dateValue = normalizedRow.expiry_date || normalizedRow['תאריך תפוגה'];
+        mapped.expiry_date = dateValue;
       }
       
-      // Get meaningful category name
-      const categoryName = norm.category_name || norm.name || 
-                          Object.keys(row).find(k => k !== 'category_type' && row[k] && String(row[k]).trim().length > 2) || 
-                          'פריט תקציבי';
+      mapped.status = normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
+      break;
       
-      const result = {
-        category_type: categoryType,
-        category_name: categoryName,
-        budget_amount: parseNumber(norm.budget_amount, 'תקציב'),
-        actual_amount: parseNumber(norm.actual_amount, 'ביצוע'),
-        excel_cell_ref: norm.excel_cell_ref,
-        year: norm.year ? Number(norm.year) : new Date().getFullYear(),
-      };
+    case 'regular_budget':
+      mapped.category_name = normalizedRow.category_name || normalizedRow['קטגוריה'] || '';
+      mapped.category_type = normalizedRow.category_type || normalizedRow['סוג'] || 'הכנסות';
+      mapped.budget_amount = parseFloat(normalizedRow.budget_amount || normalizedRow['תקציב'] || '0') || 0;
+      mapped.actual_amount = parseFloat(normalizedRow.actual_amount || normalizedRow['ביצוע'] || '0') || 0;
+      break;
       
-      addLog('success', `שורה מעובדת בהצלחה: ${categoryName}`, result);
-      return result;
-    case "tabarim":
-      return {
-        tabar_number: norm.tabar_number,
-        tabar_name: norm.tabar_name || norm.name,
-        domain: norm.domain,
-        funding_source1: norm.funding_source1 || norm.funding_source,
-        funding_source2: norm.funding_source2,
-        funding_source3: norm.funding_source3,
-        approved_budget: norm.approved_budget ? Number(norm.approved_budget) : null,
-        income_actual: norm.income_actual ? Number(norm.income_actual) : null,
-        expense_actual: norm.expense_actual ? Number(norm.expense_actual) : null,
-        surplus_deficit: norm.surplus_deficit ? Number(norm.surplus_deficit) : null,
-        status: norm.status || 'planning',
-      };
-    case "licenses":
-      return {
-        license_number: norm.license_number || norm.license || norm.id,
-        business_name: norm.business_name || norm.name,
-        owner: norm.owner,
-        address: norm.address,
-        type: norm.type,
-        status: norm.status,
-        expires_at: norm.expires_at ? new Date(norm.expires_at) : null,
-        lat: norm.lat ?? null,
-        lng: norm.lng ?? null,
-      };
-    case "plans":
-      return {
-        plan_number: norm.plan_number || norm.id || norm.code,
-        name: norm.name,
-        address: norm.address,
-        block: norm.block,
-        parcel: norm.parcel,
-        status: norm.status,
-        land_use: norm.land_use || norm.use,
-        area: norm.area ? Number(norm.area) : null,
-        lat: norm.lat ?? null,
-        lng: norm.lng ?? null,
-      };
-    case "institutions":
-      return {
-        name: norm.name,
-        level: norm.level,
-        students: norm.students ? Number(norm.students) : null,
-        classes: norm.classes ? Number(norm.classes) : null,
-        occupancy: norm.occupancy ? Number(norm.occupancy) : null,
-        address: norm.address,
-        lat: norm.lat ?? null,
-        lng: norm.lng ?? null,
-      };
-    case "projects":
-      return {
-        code: norm.code || norm.project || norm.id,
-        name: norm.name || norm.title,
-        department: norm.department,
-        domain: norm.domain,
-        funding_source: norm.funding_source,
-        budget_approved: norm.budget_approved ? Number(norm.budget_approved) : null,
-        budget_executed: norm.budget_executed ? Number(norm.budget_executed) : null,
-        status: norm.status,
-        progress: norm.progress ? Number(norm.progress) : null,
-      };
-    case "grants":
-      return {
-        name: norm.name || norm.grant,
-        ministry: norm.ministry || norm.ministry_name,
-        amount: norm.amount ? Number(norm.amount) : null,
-        status: norm.status,
-        submitted_at: norm.submitted_at ? new Date(norm.submitted_at) : null,
-        decision_at: norm.decision_at ? new Date(norm.decision_at) : null,
-      };
-    case "welfare_services":
-      return {
-        service_type: norm.service_type || norm.service,
-        recipients: norm.recipients ? Number(norm.recipients) : null,
-        budget_allocated: norm.budget_allocated ? Number(norm.budget_allocated) : null,
-        utilization: norm.utilization ? Number(norm.utilization) : null,
-        waitlist: norm.waitlist ? Number(norm.waitlist) : null,
-        period: norm.period,
-      };
-    case "activities":
-      return {
-        program: norm.program,
-        name: norm.name,
-        category: norm.category,
-        age_group: norm.age_group,
-        participants: norm.participants ? Number(norm.participants) : null,
-        scheduled_at: norm.scheduled_at ? new Date(norm.scheduled_at) : null,
-        location: norm.location,
-        status: norm.status,
-      };
+    case 'collection_data':
+      mapped.property_type = normalizedRow.property_type || normalizedRow['סוג נכס'] || '';
+      mapped.annual_budget = parseFloat(normalizedRow.annual_budget || normalizedRow['תקציב שנתי'] || '0') || 0;
+      mapped.relative_budget = parseFloat(normalizedRow.relative_budget || normalizedRow['תקציב יחסי'] || '0') || 0;
+      mapped.actual_collection = parseFloat(normalizedRow.actual_collection || normalizedRow['גביה בפועל'] || '0') || 0;
+      break;
+      
     default:
-      return {};
+      // For unrecognized tables, return the normalized row as-is
+      return normalizedRow;
   }
-}
+  
+  console.log('🗂️ Final mapped row:', mapped);
+  return mapped;
+};
 
-export function DataUploader({ context = "global", onUploadSuccess }: DataUploaderProps) {
-  const { toast } = useToast();
-  const { user } = useAuth();
+export function DataUploader({ context = 'global', onUploadSuccess }: DataUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<any[]>([]);
-  const [detected, setDetected] = useState<{ table: string | null; reason: string }>({ table: null, reason: "" });
-  const [busy, setBusy] = useState(false);
-  const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
-  const [showDebug, setShowDebug] = useState(false);
   const [headers, setHeaders] = useState<string[]>([]);
+  const [detected, setDetected] = useState<{ table: string | null; reason: string }>({ table: null, reason: '' });
+  const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importOption, setImportOption] = useState<ImportOption>({ mode: 'replace', confirmed: false });
+  const { toast } = useToast();
 
   const handleConfirmImport = (mode: 'replace' | 'append') => {
     console.log(`📋 Import confirmed with mode: ${mode}`);
@@ -840,176 +289,42 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       const sheet = wb.Sheets[first];
       console.log('📊 Sheet extracted, context check:', context);
       
-      // PRIORITY: Check if this should be parsed as Tabarim data FIRST
-      console.log('🔍 PRIORITY CHECK - Context:', context);
-      if (context === 'tabarim') {
-        console.log('✅ Context is tabarim - using specialized parsing');
-        addLog('info', 'משתמש בפענוח נתוני תב"רים לפי כתובות תאים');
-        console.log('📋 About to call parseTabarimExcelByCellAddresses');
-        const result = parseTabarimExcelByCellAddresses(sheet);
-        console.log('📋 parseTabarimExcelByCellAddresses completed with result:', result);
-        const { data, summaryCards } = result;
-        addLog('success', `נמצאו ${data.length} תב"רים`);
-        
-        // Store summary cards in localStorage for the tabarim page
-        if (summaryCards) {
-          localStorage.setItem('tabarim_summary', JSON.stringify(summaryCards));
-          addLog('info', 'נתוני סיכום תב"רים נשמרו:', summaryCards);
-        }
-        
-        setRows(data);
-        setHeaders(['tabar_number', 'tabar_name', 'domain', 'funding_source1', 'approved_budget', 'income_actual', 'expense_actual']);
-        setDetected({ table: 'tabarim', reason: 'פענוח ישיר נתוני תב"רים מקובץ אקסל' });
-        
-        // Log sample of parsed data
-        if (data.length > 0) {
-          addLog('info', 'דוגמת נתונים שנמצאו:', data.slice(0, 3));
-        }
-        
-        setDebugLogs(logs);
-        toast({ title: "קובץ נטען בהצלחה", description: `${data.length} תב"רים נמצאו` });
-        return;
-      }
-      
-      // Check if this should be parsed by cell addresses (for regular budget or collection)
-        addLog('info', 'משתמש בפענוח ישיר לפי כתובות תאים');
-        const result = parseExcelByCellAddresses(sheet);
-        const { data, summaryCards } = result;
-        addLog('success', `נמצאו ${data.length} פריטי תקציב`);
-        
-        // Store summary cards in localStorage for the regular budget page
-        if (summaryCards) {
-          localStorage.setItem('regular_budget_summary', JSON.stringify(summaryCards));
-          addLog('info', 'נתוני סיכום נשמרו:', summaryCards);
-        }
-        
-        setRows(data);
-        setHeaders(['category_name', 'category_type', 'budget_amount', 'actual_amount']);
-        setDetected({ table: 'regular_budget', reason: 'פענוח ישיר לפי כתובות תאים' });
-        
-        // Log sample of parsed data
-        if (data.length > 0) {
-          addLog('info', 'דוגמת נתונים שנמצאו:', data.slice(0, 3));
-        }
-        
-        setDebugLogs(logs);
-        toast({ title: "קובץ נטען בהצלחה", description: `${data.length} פריטי תקציב נמצאו` });
-        return;
-      }
-      
-      // Skip specialized parsing for tabarim - use standard approach like other successful pages
       // Check if this should be parsed as collection data
       if (context === 'collection') {
-        addLog('info', 'משתמש בפענוח נתוני גביה לפי כתובות תאים');
+        addLog('info', 'משתמש בפענוח נתוני גביה בסיסי');
         const result = parseCollectionExcelByCellAddresses(sheet);
         const { data, summaryCards } = result;
         addLog('success', `נמצאו ${data.length} סוגי נכסים לגביה`);
         
-        // Store summary cards in localStorage for the collection page
-        if (summaryCards) {
-          localStorage.setItem('collection_summary', JSON.stringify(summaryCards));
-          addLog('info', 'נתוני סיכום גביה נשמרו:', summaryCards);
-        }
-        
         setRows(data);
         setHeaders(['property_type', 'annual_budget', 'relative_budget', 'actual_collection']);
-        setDetected({ table: 'collection_data', reason: 'פענוח ישיר נתוני גביה מטיוטת מאזן RAW' });
-        
-        // Log sample of parsed data
-        if (data.length > 0) {
-          addLog('info', 'דוגמת נתונים שנמצאו:', data.slice(0, 3));
-        }
+        setDetected({ table: 'collection_data', reason: 'פענוח ישיר נתוני גביה' });
         
         setDebugLogs(logs);
         toast({ title: "קובץ נטען בהצלחה", description: `${data.length} סוגי נכסים נמצאו` });
         return;
       }
       
-      // Check if this should be parsed as Tabarim data
-      console.log('🔍 Checking context for Tabarim parsing. Context:', context, 'Detected table:', detected.table);
-      if (context === 'tabarim') {
-        console.log('✅ Context is tabarim - using specialized parsing');
-        addLog('info', 'משתמש בפענוח נתוני תב"רים לפי כתובות תאים');
-        console.log('📋 About to call parseTabarimExcelByCellAddresses');
-        const result = parseTabarimExcelByCellAddresses(sheet);
-        console.log('📋 parseTabarimExcelByCellAddresses completed with result:', result);
-        const { data, summaryCards } = result;
-        addLog('success', `נמצאו ${data.length} תב"רים`);
-        
-        // Store summary cards in localStorage for the tabarim page
-        if (summaryCards) {
-          localStorage.setItem('tabarim_summary', JSON.stringify(summaryCards));
-          addLog('info', 'נתוני סיכום תב"רים נשמרו:', summaryCards);
-        }
-        
-        setRows(data);
-        setHeaders(['tabar_number', 'tabar_name', 'domain', 'funding_source1', 'approved_budget', 'income_actual', 'expense_actual', 'status']);
-        setDetected({ table: 'tabarim', reason: 'פענוח ישיר נתוני תב"רים מקובץ אקסל' });
-        
-        // Log sample of parsed data
-        if (data.length > 0) {
-          addLog('info', 'דוגמת נתונים שנמצאו:', data.slice(0, 3));
-        }
-        
-        setDebugLogs(logs);
-        toast({ title: "קובץ נטען בהצלחה", description: `${data.length} תב"רים נמצאו` });
-        return;
-      }
+      // Standard header detection for all other contexts  
+      console.log('📊 Headers detection for context:', context);
+      const headers = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] as string[];
+      console.log('📊 Raw headers found:', headers);
+      const cleanHeaders = headers.filter(h => h && h.trim()).map(h => h.trim().toLowerCase());
+      console.log('📊 Clean headers:', cleanHeaders);
+
+      const detected = detectTarget(cleanHeaders, context);
+      console.log('🎯 Detection result:', detected);
       
-      // Alternative: check if detected table is tabarim
-      if (detected.table === 'tabarim') {
-        console.log('✅ Detected table is tabarim - using specialized parsing');
-        addLog('info', 'משתמש בפענוח נתוני תב"רים לפי כתובות תאים (זוהה אוטומטית)');
-        const result = parseTabarimExcelByCellAddresses(sheet);
-        const { data, summaryCards } = result;
-        addLog('success', `נמצאו ${data.length} תב"רים`);
-        
-        // Store summary cards in localStorage for the tabarim page
-        if (summaryCards) {
-          localStorage.setItem('tabarim_summary', JSON.stringify(summaryCards));
-          addLog('info', 'נתוני סיכום תב"רים נשמרו:', summaryCards);
-        }
-        
-        setRows(data);
-        setHeaders(['tabar_number', 'tabar_name', 'domain', 'funding_source1', 'approved_budget', 'income_actual', 'expense_actual']);
-        setDetected({ table: 'tabarim', reason: 'פענוח ישיר נתוני תב"רים מקובץ אקסל' });
-        
-        // Log sample of parsed data
-        if (data.length > 0) {
-          addLog('info', 'דוגמת נתונים שנמצאו:', data.slice(0, 3));
-        }
-        
-        setDebugLogs(logs);
-        toast({ title: "קובץ נטען בהצלחה", description: `${data.length} תב"רים נמצאו` });
-        return;
-      }
-      const data: any[] = XLSX.utils.sheet_to_json(sheet, { defval: null });
-      addLog('success', `נקראו ${data.length} שורות מהקובץ`);
+      setDetected(detected);
+      const rows = XLSX.utils.sheet_to_json(sheet);
+      console.log('📊 Rows count:', rows.length);
       
-      setRows(data);
-      
-      const extractedHeaders = XLSX.utils.sheet_to_json(sheet, { header: 1 })[0] as string[];
-      const finalHeaders = extractedHeaders || Object.keys(data[0] || {});
-      setHeaders(finalHeaders);
-      
-      addLog('info', `זוהו כותרות: ${finalHeaders.join(', ')}`);
-      
-      // Test the normalization process
-      if (data[0]) {
-        addLog('info', 'בודק נרמול כותרות:');
-        Object.keys(data[0]).forEach(key => {
-          const normalized = normalizeKey(key, logs);
-        });
-      }
-      
-      const d = detectTarget(finalHeaders, context);
-      setDetected(d);
-      
-      addLog(d.table ? 'success' : 'warning', d.reason);
-      addLog('info', `השלמת ניתוח הקובץ`);
+      setRows(rows);
+      setHeaders(cleanHeaders);
+      addLog('success', `נמצאו ${rows.length} שורות`);
       
       setDebugLogs(logs);
-      toast({ title: "קובץ נטען בהצלחה", description: `${data.length} שורות. ${d.reason}` });
+      toast({ title: "קובץ נטען בהצלחה", description: `${rows.length} שורות. ${detected.reason}` });
     } catch (e: any) {
       addLog('error', `שגיאה בקריאת הקובץ: ${e.message}`);
       setDebugLogs(logs);      
@@ -1027,577 +342,282 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
       importOption: importOption.confirmed
     });
 
-    if (!file || rows.length === 0) {
-      console.log('❌ No file or rows');
-      return;
-    }
-    if (!detected.table) {
-      console.log('❌ No detected table');
-      toast({ title: "לא זוהה יעד מתאים", description: "עדכן כותרות עמודות או בחר קובץ אחר", variant: "destructive" });
+    if (!file || rows.length === 0 || !detected.table) {
+      toast({ title: "שגיאה", description: "אין קובץ או נתונים להעלאה", variant: "destructive" });
       return;
     }
 
-    // For tabarim, show import dialog if not already confirmed
-    if (detected.table === 'tabarim' && !importOption.confirmed) {
+    setIsUploading(true);
+    const logs: DebugLog[] = [...debugLogs];
+    
+    const addLog = (type: DebugLog['type'], message: string, details?: any) => {
+      console.log(`📋 [${type}] ${message}`, details || '');
+      logs.push({
+        id: Math.random().toString(),
+        type,
+        message,
+        details,
+        timestamp: new Date()
+      });
+      setDebugLogs([...logs]);
+    };
+
+    try {
+      // First, upload the file to Supabase storage
+      addLog('info', 'מעלה קובץ לאחסון...');
+      const fileName = `uploads/${Date.now()}-${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('uploads')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        console.error('❌ Upload error:', uploadError);
+        addLog('error', `שגיאה בהעלאת הקובץ: ${uploadError.message}`);
+        toast({ title: "שגיאה בהעלאה", description: uploadError.message, variant: "destructive" });
+        return;
+      }
+
+      addLog('success', `קובץ הועלה בהצלחה: ${fileName}`);
+
+      // Log the ingestion event
+      const { error: logError } = await supabase
+        .from('ingestion_logs')
+        .insert({
+          file_name: file.name,
+          file_path: fileName,
+          context: context,
+          detected_table: detected.table,
+          row_count: rows.length,
+          status: 'processing'
+        });
+
+      if (logError) {
+        console.error('❌ Log error:', logError);
+        addLog('warning', `שגיאה בתיעוד: ${logError.message}`);
+      }
+
+      // Clear existing data if replace mode
+      if (importOption.mode === 'replace') {
+        addLog('info', `מוחק נתונים קיימים מטבלה: ${detected.table}`);
+        const { error: deleteError } = await supabase
+          .from(detected.table)
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+
+        if (deleteError) {
+          console.error('❌ Delete error:', deleteError);
+          addLog('warning', `שגיאה במחיקת נתונים קיימים: ${deleteError.message}`);
+        } else {
+          addLog('success', 'נתונים קיימים נמחקו בהצלחה');
+        }
+      }
+
+      // Process and insert data
+      addLog('info', `מעבד ומכניס ${rows.length} שורות...`);
+      
+      const batchSize = 100;
+      let insertedCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < rows.length; i += batchSize) {
+        const batch = rows.slice(i, i + batchSize);
+        const mappedBatch = batch.map(row => mapRowToTable(detected.table!, row, logs));
+        
+        console.log(`📝 Processing batch ${Math.floor(i/batchSize) + 1}, rows ${i + 1}-${Math.min(i + batchSize, rows.length)}`);
+        console.log('📝 Sample mapped row:', mappedBatch[0]);
+
+        const { data: insertData, error: insertError } = await supabase
+          .from(detected.table)
+          .insert(mappedBatch)
+          .select();
+
+        if (insertError) {
+          console.error('❌ Insert error:', insertError);
+          addLog('error', `שגיאה בהכנסת נתונים: ${insertError.message}`, { batch: i/batchSize + 1 });
+          errorCount += batch.length;
+        } else {
+          console.log('✅ Batch inserted successfully:', insertData?.length || 0, 'rows');
+          insertedCount += insertData?.length || 0;
+          addLog('success', `הוכנסו ${insertData?.length || 0} שורות בקבוצה ${Math.floor(i/batchSize) + 1}`);
+        }
+      }
+
+      // Update the ingestion log
+      const { error: updateLogError } = await supabase
+        .from('ingestion_logs')
+        .update({
+          status: errorCount > 0 ? 'completed_with_errors' : 'completed',
+          inserted_rows: insertedCount,
+          error_rows: errorCount
+        })
+        .eq('file_path', fileName);
+
+      if (updateLogError) {
+        console.error('❌ Update log error:', updateLogError);
+      }
+
+      const finalMessage = errorCount > 0 
+        ? `הושלם עם שגיאות: ${insertedCount} שורות הוכנסו, ${errorCount} שגיאות`
+        : `הושלם בהצלחה: ${insertedCount} שורות הוכנסו`;
+
+      addLog(errorCount > 0 ? 'warning' : 'success', finalMessage);
+      toast({ 
+        title: "ההעלאה הושלמה", 
+        description: finalMessage,
+        variant: errorCount > 0 ? "destructive" : "default"
+      });
+
+      // Call the success callback
+      if (onUploadSuccess) {
+        onUploadSuccess();
+      }
+
+    } catch (error: any) {
+      console.error('❌ Unexpected error:', error);
+      addLog('error', `שגיאה לא צפויה: ${error.message}`);
+      toast({ title: "שגיאה לא צפויה", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleUpload = () => {
+    console.log('🎯 handleUpload called');
+    console.log('Current state:', { 
+      hasFile: !!file, 
+      rowsCount: rows.length, 
+      detectedTable: detected.table,
+      importOption
+    });
+
+    if (!file || rows.length === 0 || !detected.table) {
+      toast({ title: "שגיאה", description: "אין קובץ או נתונים להעלאה", variant: "destructive" });
+      return;
+    }
+
+    // Show confirmation dialog for tabarim
+    if (detected.table === 'tabarim') {
       console.log('📋 Showing import dialog for tabarim');
       setShowImportDialog(true);
       return;
     }
 
-    console.log('✅ Starting import process...');
-    setBusy(true);
-    try {
-      // Check for user - either from session or demo user
-      let userId = user?.id;
-      
-      if (!userId) {
-        const { data: sessionRes } = await supabase.auth.getSession();
-        userId = sessionRes.session?.user?.id;
-      }
-      
-      if (!userId) {
-        toast({
-          title: "נדרש חיבור למערכת",
-          description: "יש להתחבר תחילה כדי להעלות נתונים. לחץ על 'התחבר' בפינה העליונה של הדף",
-          variant: "destructive",
-        });
-        setBusy(false);
-        return;
-      }
-
-      // All users now use real database - no demo user logic needed
-
-      // Upload raw file to storage for traceability
-      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const path = `${userId}/${Date.now()}-${sanitizedFileName}`;
-      console.log('📤 Uploading file to storage with path:', path);
-      const { error: upErr } = await supabase.storage.from("uploads").upload(path, file, {
-        contentType: file.type || "application/octet-stream",
-        upsert: false,
-      });
-      if (upErr) {
-        console.warn("upload error:", upErr.message);
-        // Don't stop the process for storage upload errors - continue with data processing
-      } else {
-        console.log('✅ File uploaded successfully to storage');
-      }
-
-      // Map and insert
-      const inferDept = (table: string, ctx: UploadContext): 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | null => {
-        if (ctx && ctx !== 'global') {
-          switch (ctx) {
-            case 'regular_budget':
-            case 'tabarim':
-            case 'finance':
-              return 'finance';
-            default:
-              return ctx as any;
-          }
-        }
-        switch (table) {
-          case 'regular_budget':
-          case 'tabarim':
-          case 'projects':
-          case 'grants':
-            return 'finance';
-          case 'institutions':
-            return 'education';
-          case 'plans':
-            return 'engineering';
-          case 'welfare_services':
-            return 'welfare';
-          case 'activities':
-            return 'non-formal';
-          case 'licenses':
-            return 'business';
-          default:
-            return null;
-        }
-      };
-
-      const deptSlug = inferDept(detected.table!, context);
-      const processingLogs: DebugLog[] = [];
-      
-      const addProcessingLog = (type: DebugLog['type'], message: string, details?: any) => {
-        processingLogs.push({
-          id: Math.random().toString(),
-          type,
-          message,
-          details,
-          timestamp: new Date()
-        });
-      };
-
-      // For collection data with direct cell parsing
-      if (context === 'collection' && detected.table === 'collection_data' && rows[0]?.property_type) {
-        addProcessingLog('info', 'משתמש בנתוני גביה מעובדים מכתובות תאים');
-        
-        const mapped = rows.map((row, index) => ({
-          ...row,
-          user_id: userId
-        }));
-        
-        addProcessingLog('success', `עובדו ${mapped.length} סוגי נכסים לגביה`);
-        setDebugLogs([...debugLogs, ...processingLogs]);
-        
-        // Clear existing data for current year only and insert new data
-        const targetTableName = 'collection_data';
-        const currentYear = new Date().getFullYear();
-        const { error: deleteError } = await supabase
-          .from('collection_data')
-          .delete()
-          .eq('user_id', userId)
-          .eq('year', currentYear);
-
-        if (deleteError) {
-          addProcessingLog('warning', `שגיאה במחיקת נתוני גביה קיימים לשנת ${currentYear}: ${deleteError.message}`);
-        } else {
-          addProcessingLog('success', `נתוני גביה קיימים לשנת ${currentYear} נמחקו בהצלחה`);
-        }
-        
-        addProcessingLog('info', `מכניס ${mapped.length} שורות לטבלה ${targetTableName}`);
-        
-        // Validate data before insertion
-        const validatedData = mapped.map((row, index) => {
-          const validatedRow = { ...row };
-          
-          // Ensure numeric fields are properly typed
-          ['annual_budget', 'relative_budget', 'actual_collection'].forEach(field => {
-            if (validatedRow[field] !== null && validatedRow[field] !== undefined) {
-              const numValue = Number(validatedRow[field]);
-              if (isNaN(numValue)) {
-                addProcessingLog('warning', `שורה ${index + 1}: ערך לא תקין בשדה ${field}: "${validatedRow[field]}" - הוגדר כ-null`);
-                validatedRow[field] = null;
-              } else {
-                validatedRow[field] = numValue;
-              }
-            } else {
-              validatedRow[field] = null;
-            }
-          });
-          
-          // Ensure property_type is a string
-          if (!validatedRow.property_type || typeof validatedRow.property_type !== 'string') {
-            addProcessingLog('warning', `שורה ${index + 1}: סוג נכס לא תקין: "${validatedRow.property_type}" - הוגדר כ-"לא מוגדר"`);
-            validatedRow.property_type = 'לא מוגדר';
-          }
-          
-          return validatedRow;
-        });
-        
-        const { error } = await supabase.from(targetTableName).insert(validatedData);
-        if (error) {
-          addProcessingLog('error', `שגיאה בהכנסת הנתונים: ${error.message}`);
-          if (error.details) {
-            addProcessingLog('error', `פרטי השגיאה: ${error.details}`);
-          }
-          throw error;
-        }
-
-        await supabase.from("ingestion_logs").insert({
-          user_id: userId,
-          source_file: path,
-          table_name: detected.table,
-          rows: mapped.length,
-          status: "success",
-        });
-
-        addProcessingLog('success', `נתוני הגביה נקלטו בהצלחה! ${mapped.length} שורות`);
-        setDebugLogs([...debugLogs, ...processingLogs]);
-        
-        toast({ title: "נתוני הגביה נקלטו בהצלחה", description: `${mapped.length} סוגי נכסים` });
-        
-        onUploadSuccess?.();
-        
-        // Reset import option for next upload
-        setImportOption({ mode: 'replace', confirmed: false });
-        
-        setFile(null);
-        setRows([]);
-        setDetected({ table: null, reason: "" });
-        setHeaders([]);
-        setBusy(false);
-        return;
-      }
-
-      // For regular budget with direct cell parsing, skip complex mapping
-      if (context === 'regular_budget' && detected.table === 'regular_budget' && rows[0]?.category_name) {
-        addProcessingLog('info', 'משתמש בנתונים מעובדים מכתובות תאים');
-        
-        const mapped = rows.map((row, index) => ({
-          ...row,
-          user_id: userId
-        }));
-        
-        addProcessingLog('success', `עובדו ${mapped.length} פריטי תקציב`);
-        setDebugLogs([...debugLogs, ...processingLogs]);
-        
-        // Clear existing data and insert new data
-        const targetTableName = 'regular_budget';
-        if (targetTableName === "regular_budget") {
-          const { error: deleteError } = await supabase
-            .from('regular_budget')
-            .delete()
-            .eq('user_id', userId);
-
-          if (deleteError) {
-            addProcessingLog('warning', `שגיאה במחיקת נתונים קיימים: ${deleteError.message}`);
-          } else {
-            addProcessingLog('success', 'נתונים קיימים נמחקו בהצלחה');
-          }
-        }
-        
-        addProcessingLog('info', `מכניס ${mapped.length} שורות לטבלה ${targetTableName}`);
-        const { error } = await supabase.from(targetTableName).insert(mapped as any);
-        if (error) throw error;
-
-        await supabase.from("ingestion_logs").insert({
-          user_id: userId,
-          source_file: path,
-          table_name: detected.table,
-          rows: mapped.length,
-          status: "success",
-        });
-
-        addProcessingLog('success', `הנתונים נקלטו בהצלחה! ${mapped.length} שורות`);
-        setDebugLogs([...debugLogs, ...processingLogs]);
-        
-        toast({ title: "הנתונים נקלטו בהצלחה", description: `${mapped.length} פריטי תקציב` });
-        
-        onUploadSuccess?.();
-        
-        // Reset import option for next upload
-        setImportOption({ mode: 'replace', confirmed: false });
-        
-        setFile(null);
-        setRows([]);
-        setDetected({ table: null, reason: "" });
-        setHeaders([]);
-        setBusy(false);
-        return;
-      }
-
-      const mapped = rows.map((r, index) => {
-        addProcessingLog('info', `מעבד שורה ${index + 1}`);
-        const mappedRow = mapRowToTable(detected.table!, r, processingLogs);
-        
-        // Skip null rows (invalid data)
-        if (mappedRow === null) {
-          addProcessingLog('warning', `שורה ${index + 1} דולגה - אין נתונים תקינים`);
-          return null;
-        }
-        
-        const result = { 
-          ...mappedRow, 
-          user_id: userId,
-          // Only add department_slug for tables that have this column
-          ...(deptSlug && !['regular_budget', 'tabarim', 'collection_data'].includes(detected.table!) ? { department_slug: deptSlug } : {})
-        };
-        
-        console.log(`📋 Mapped row ${index + 1}:`, result);
-        addProcessingLog('success', `שורה ${index + 1} עובדה בהצלחה`);
-        return result;
-      }).filter(row => row !== null); // Remove null rows first
-      
-      addProcessingLog('info', `לאחר מיפוי: ${mapped.length} שורות תקינות`);
-      
-      // More lenient filtering - only filter out rows that are completely empty
-      const filtered = mapped.filter((obj) => {
-        // For regular_budget, check if we have at least category_name or meaningful amounts
-        if (detected.table === 'regular_budget') {
-          const budgetObj = obj as any;
-          const hasCategory = budgetObj.category_name && budgetObj.category_name !== 'ללא שם' && budgetObj.category_name.trim() !== '';
-          const hasBudget = budgetObj.budget_amount !== null && budgetObj.budget_amount !== undefined;
-          const hasActual = budgetObj.actual_amount !== null && budgetObj.actual_amount !== undefined;
-          const isValid = hasCategory || hasBudget || hasActual;
-          
-          if (!isValid) {
-            addProcessingLog('warning', `שורת תקציב נדחתה - קטגוריה: "${budgetObj.category_name}", תקציב: ${budgetObj.budget_amount}, ביצוע: ${budgetObj.actual_amount}`);
-          }
-          return isValid;
-        }
-        
-        // For other tables, use the original logic
-        const hasContent = Object.values(obj).some((v) => v !== null && v !== undefined && v !== "");
-        if (!hasContent) {
-          addProcessingLog('warning', 'שורה נדחתה - אין תוכן');
-        }
-        return hasContent;
-      });
-      
-      addProcessingLog('info', `לאחר סינון סופי: ${filtered.length} שורות תקינות`);
-      setDebugLogs([...debugLogs, ...processingLogs]);
-
-      if (filtered.length === 0) {
-        addProcessingLog('error', 'לא נמצאו נתונים תקינים לייבוא');
-        setDebugLogs([...debugLogs, ...processingLogs]);
-        toast({ title: "אין נתונים לשיבוץ", description: "בדוק/י את הקובץ והכותרות בתצוגת הדיבוג", variant: "destructive" });
-        setBusy(false);
-        return;
-      }
-
-      const tableName = detected.table as 'regular_budget' | 'tabarim' | 'licenses' | 'plans' | 'institutions' | 'projects' | 'grants' | 'welfare_services' | 'activities';
-      
-      // Handle data replacement/appending based on table and user choice
-      if (tableName === "regular_budget") {
-        addProcessingLog('info', 'מוחק נתוני תקציב קיימים');
-        const { error: deleteError } = await supabase
-          .from('regular_budget')
-          .delete()
-          .eq('user_id', userId);
-
-        if (deleteError) {
-          addProcessingLog('warning', `שגיאה במחיקת נתונים קיימים: ${deleteError.message}`);
-        } else {
-          addProcessingLog('success', 'נתונים קיימים נמחקו בהצלחה');
-        }
-      } else if (tableName === "tabarim" && importOption.mode === 'replace') {
-        addProcessingLog('info', 'מוחק תב"רים קיימים');
-        const { error: deleteError } = await supabase
-          .from('tabarim')
-          .delete()
-          .eq('user_id', userId);
-
-        if (deleteError) {
-          addProcessingLog('warning', `שגיאה במחיקת תב"רים קיימים: ${deleteError.message}`);
-        } else {
-          addProcessingLog('success', 'תב"רים קיימים נמחקו בהצלחה');
-        }
-      } else if (tableName === "tabarim" && importOption.mode === 'append') {
-        addProcessingLog('info', 'מוסיף תב"רים לרשימה הקיימת');
-      }
-
-      addProcessingLog('info', `מכניס ${filtered.length} שורות לטבלה ${tableName}`);
-      console.log('📤 Data being inserted to Supabase:');
-      console.log('📤 Table name:', tableName);
-      console.log('📤 User ID:', userId);
-      console.log('📤 Data sample (first 3 records):', filtered.slice(0, 3));
-      console.log('📤 Data sample full fields:', JSON.stringify(filtered.slice(0, 2), null, 2));
-      
-      // Validate user_id in all records
-      const recordsWithoutUserId = filtered.filter(record => !record.user_id);
-      if (recordsWithoutUserId.length > 0) {
-        console.error('❌ Found records without user_id:', recordsWithoutUserId.length);
-        addProcessingLog('error', `נמצאו ${recordsWithoutUserId.length} רשומות ללא user_id`);
-      }
-      
-      const { error } = await supabase.from(tableName).insert(filtered as any);
-      if (error) {
-        console.error('❌ Supabase insert error:', error);
-        console.error('❌ Error details:', JSON.stringify(error, null, 2));
-        addProcessingLog('error', `שגיאה בהכנסת נתונים: ${error.message}`);
-        if (error.details) {
-          addProcessingLog('error', `פרטי השגיאה: ${error.details}`);
-        }
-        throw error;
-      } else {
-        console.log('✅ Successfully inserted data to Supabase');
-        addProcessingLog('success', `נתונים הוכנסו בהצלחה לטבלה ${tableName}`);
-      }
-
-      await supabase.from("ingestion_logs").insert({
-        user_id: userId,
-        source_file: path,
-        table_name: detected.table,
-        rows: filtered.length,
-        status: "success",
-      });
-
-      addProcessingLog('success', `הנתונים נקלטו בהצלחה! ${filtered.length} שורות`);
-      setDebugLogs([...debugLogs, ...processingLogs]);
-      
-      toast({ title: "הנתונים נקלטו בהצלחה", description: `${filtered.length} שורות אל הטבלה ${detected.table}` });
-      
-      // Call success callback to refresh parent component
-      onUploadSuccess?.();
-      
-      // Reset import option for next upload
-      setImportOption({ mode: 'replace', confirmed: false });
-      
-      // Add a delay to allow database transaction to complete
-      setTimeout(() => {
-        console.log('🔄 Triggering parent refresh after successful import');
-      }, 500);
-      
-      setFile(null);
-      setRows([]);
-      setDetected({ table: null, reason: "" });
-      setHeaders([]);
-    } catch (e: any) {
-      const errorLogs: DebugLog[] = [{
-        id: Math.random().toString(),
-        type: 'error',
-        message: `שגיאה קריטית בייבוא: ${e.message}`,
-        details: e,
-        timestamp: new Date()
-      }];
-      setDebugLogs([...debugLogs, ...errorLogs]);
-      toast({ title: "שגיאה בקליטת נתונים", description: e.message || "", variant: "destructive" });
-    } finally {
-      setBusy(false);
-    }
+    // For other tables, proceed directly
+    uploadAndIngest();
   };
 
-  const getLogIcon = (type: DebugLog['type']) => {
+  const getIcon = (type: DebugLog['type']) => {
     switch (type) {
-      case 'success': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'error': return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case 'warning': return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-      default: return <FileText className="h-4 w-4 text-blue-500" />;
+      case 'success': return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      case 'error': return <AlertCircle className="h-4 w-4 text-red-600" />;
+      case 'warning': return <AlertCircle className="h-4 w-4 text-yellow-600" />;
+      default: return <Info className="h-4 w-4 text-blue-600" />;
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">ייבוא נתונים</CardTitle>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            העלאת קובץ Excel
+          </CardTitle>
+          <CardDescription>
+            בחר קובץ Excel להעלאה ועיבוד הנתונים
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-2">
+          <div>
+            <Label htmlFor="file-upload">קובץ Excel</Label>
             <Input
+              id="file-upload"
               type="file"
-              accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, .xlsx"
-              onChange={(e) => e.target.files && onFile(e.target.files[0])}
+              accept=".xlsx,.xls"
+              onChange={(e) => {
+                if (e.target.files?.[0]) {
+                  onFile(e.target.files[0]);
+                }
+              }}
             />
-            {file && <Badge variant="secondary">{file.name}</Badge>}
           </div>
 
-          {detected.table && (
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                יעד מזוהה: <span className="font-medium">{detected.table}</span> · {detected.reason}
-              </AlertDescription>
-            </Alert>
-          )}
+          {file && (
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <FileText className="h-5 w-5" />
+                  <span className="font-medium">{file.name}</span>
+                  <Badge variant="secondary">{(file.size / 1024 / 1024).toFixed(2)} MB</Badge>
+                </div>
 
-          {rows.length > 0 && (
-            <div className="text-sm text-muted-foreground">
-              <p>תצוגה מקדימה: {rows.length} שורות</p>
-              {headers.length > 0 && (
-                <p>כותרות: {headers.slice(0, 5).join(', ')}{headers.length > 5 ? '...' : ''}</p>
-              )}
-            </div>
-          )}
+                {detected.table && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">טבלה מזוהה: {detected.table}</Badge>
+                      <Badge variant="outline">{rows.length} שורות</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">{detected.reason}</p>
+                  </div>
+                )}
 
-          <div className="flex justify-between items-center">
-            {debugLogs.length > 0 && (
-              <Collapsible open={showDebug} onOpenChange={setShowDebug}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                    תצוגת דיבוג ({debugLogs.length})
+                {rows.length > 0 && (
+                  <Button 
+                    onClick={handleUpload} 
+                    disabled={isUploading}
+                    className="mt-4"
+                  >
+                    {isUploading ? 'מעלה...' : 'העלה נתונים'}
                   </Button>
-                </CollapsibleTrigger>
-              </Collapsible>
-            )}
-            <Button 
-              onClick={() => {
-                console.log('🚀 Import button clicked!');
-                console.log('Current state:', { 
-                  file: !!file, 
-                  rows: rows.length, 
-                  detected: detected.table,
-                  busy,
-                  context 
-                });
-                uploadAndIngest();
-              }} 
-              disabled={busy || !file}
-            >
-              {busy ? "מייבא..." : "ייבוא ושיבוץ"}
-            </Button>
-          </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </CardContent>
       </Card>
 
       {debugLogs.length > 0 && (
-        <Collapsible open={showDebug} onOpenChange={setShowDebug}>
-          <CollapsibleContent>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">לוג עיבוד הקובץ</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-96 w-full">
-                  <div className="space-y-2">
-                    {debugLogs.map((log) => (
-                      <div
-                        key={log.id}
-                        className={`flex items-start gap-2 p-2 rounded-md text-sm ${
-                          log.type === 'error' ? 'bg-red-50 border border-red-200' :
-                          log.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
-                          log.type === 'success' ? 'bg-green-50 border border-green-200' :
-                          'bg-blue-50 border border-blue-200'
-                        }`}
-                      >
-                        {getLogIcon(log.type)}
-                        <div className="flex-1">
-                          <p className="font-medium">{log.message}</p>
-                          {log.details && (
-                            <pre className="text-xs mt-1 overflow-x-auto bg-white/50 p-1 rounded">
-                              {typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2)}
-                            </pre>
-                          )}
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {log.timestamp.toLocaleTimeString('he-IL')}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
-      )}
-
-      {rows.length > 0 && showDebug && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">תצוגה מקדימה של הנתונים</CardTitle>
+            <CardTitle>יומן עיבוד</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">כותרות הקובץ:</h4>
-                <div className="flex flex-wrap gap-1">
-                  {headers.map((header, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {header}
-                    </Badge>
-                  ))}
-                </div>
+            <ScrollArea className="h-64">
+              <div className="space-y-2">
+                {debugLogs.map((log) => (
+                  <div key={log.id} className="flex items-start gap-2 text-sm">
+                    {getIcon(log.type)}
+                    <div className="flex-1">
+                      <div>{log.message}</div>
+                      {log.details && (
+                        <pre className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">
+                          {typeof log.details === 'string' ? log.details : JSON.stringify(log.details, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {log.timestamp.toLocaleTimeString()}
+                    </span>
+                  </div>
+                ))}
               </div>
-              <Separator />
-              <div>
-                <h4 className="font-medium mb-2">3 שורות ראשונות:</h4>
-                <ScrollArea className="h-40 w-full">
-                  <pre className="text-xs bg-muted p-2 rounded">
-                    {JSON.stringify(rows.slice(0, 3), null, 2)}
-                  </pre>
-                </ScrollArea>
-              </div>
-            </div>
+            </ScrollArea>
           </CardContent>
         </Card>
       )}
 
-      {/* Import Options Dialog for Tabarim */}
       <AlertDialog open={showImportDialog} onOpenChange={setShowImportDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>אפשרויות ייבוא תב"רים</AlertDialogTitle>
+            <AlertDialogTitle>אישור יבוא נתונים</AlertDialogTitle>
             <AlertDialogDescription>
-              נמצאו תב"רים קיימים במערכת. איך ברצונך להמשיך?
+              נמצאו {rows.length} תב"רים בקובץ. 
+              <br />
+              האם להחליף את הרשימה הקיימת או להוסיף לרשימה הנוכחית?
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex gap-2">
-            <AlertDialogCancel onClick={() => setShowImportDialog(false)}>
-              ביטול
-            </AlertDialogCancel>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
             <AlertDialogAction 
               onClick={() => handleConfirmImport('append')}
               className="bg-blue-600 hover:bg-blue-700"
