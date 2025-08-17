@@ -300,14 +300,14 @@ export default function CollectionPage() {
             <div className="flex items-center gap-2">
               <Label htmlFor="end-year-select">עד שנה (אופציונלי):</Label>
               <Select
-                value={selectedEndYear?.toString() || ""}
-                onValueChange={(value) => setSelectedEndYear(value ? parseInt(value) : null)}
+                value={selectedEndYear?.toString() || "none"}
+                onValueChange={(value) => setSelectedEndYear(value === "none" ? null : parseInt(value))}
               >
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="בחר שנת סיום" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">ללא</SelectItem>
+                  <SelectItem value="none">ללא</SelectItem>
                   {yearOptions
                     .filter(year => year !== selectedYear)
                     .map((year) => (
