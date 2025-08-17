@@ -210,7 +210,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
                             normalizedRow['מספר'] || 
                             String(normalizedRow['__empty'] || '');
       
-      // Map domain field - from logs it's in "נכון לחודש 6/2025" column
+      // Map domain field - KEEP IN HEBREW as requested
       const domainValue = normalizedRow['נכון לחודש 6/2025'] || 
                          row['נכון לחודש 6/2025'] ||
                          normalizedRow.domain || 
@@ -219,61 +219,28 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
       console.log('🔍 Domain mapping for tabarim:', { domainValue, projectName });
       
-      if (domainValue) {
-        // Map Hebrew domain names to enum values based on actual tabar_domain enum
-        if (domainValue.includes('חינוך') || domainValue.includes('מוסדות חינוך')) {
-          mapped.domain = 'education_buildings';
-        } else if (domainValue.includes('מוסדות ציבור') || domainValue.includes('בינוי')) {
-          mapped.domain = 'public_buildings';
-        } else if (domainValue.includes('תשתיות') || domainValue.includes('כבישים')) {
-          mapped.domain = 'infrastructure_roads';
-        } else if (domainValue.includes('תכנון')) {
-          mapped.domain = 'planning';
-        } else if (domainValue.includes('רווחה')) {
-          mapped.domain = 'welfare';
-        } else if (domainValue.includes('סביבה') || domainValue.includes('איכות')) {
-          mapped.domain = 'environment';
-        } else if (domainValue.includes('פעילויות') || domainValue.includes('תרבות')) {
-          mapped.domain = 'activities';
-        } else if (domainValue.includes('מרחבים') || domainValue.includes('ציבוריים')) {
-          mapped.domain = 'public_spaces';
-        } else if (domainValue.includes('דיגיטל') || domainValue.includes('טכנולוגיה')) {
-          mapped.domain = 'digital';
-        } else if (domainValue.includes('ארגוני') || domainValue.includes('ניהול')) {
-          mapped.domain = 'organizational';
-        } else if (domainValue.includes('אנרגיה') || domainValue.includes('התייעלות')) {
-          mapped.domain = 'energy';
-        } else if (domainValue.includes('וטרינר')) {
-          mapped.domain = 'veterinary';
-        } else {
-          mapped.domain = 'other';
-        }
-      } else {
-        mapped.domain = 'other';
-      }
+      // Keep domain in Hebrew instead of translating to English
+      mapped.domain = domainValue || 'אחר';
       
-      // Map funding sources - check multiple possible columns  
-      const funding1 = normalizedRow['__empty_1'] || 
-                       normalizedRow['__empty_2'] ||
-                       normalizedRow.funding_source1 || 
-                       normalizedRow['מקור מימון 1'] || 
-                       normalizedRow['מקור מימון'] || '';
-                       
-      if (funding1) {
-        if (funding1.includes('משרד') || funding1.includes('ministry')) {
-          mapped.funding_source1 = 'ministry';
-        } else if (funding1.includes('רשות') || funding1.includes('authority')) {
-          mapped.funding_source1 = 'authority';
-        } else if (funding1.includes('עצמי') || funding1.includes('self')) {
-          mapped.funding_source1 = 'self';
-        } else if (funding1.includes('הלוואה') || funding1.includes('loan')) {
-          mapped.funding_source1 = 'other';
-        } else if (funding1.includes('עירייה') || funding1.includes('municipality')) {
-          mapped.funding_source1 = 'self';
-        } else {
-          mapped.funding_source1 = 'other';
-        }
-      }
+      // Map funding sources according to actual Excel columns
+      const funding1 = row['מקור תקציבי/משרד מממן'] || 
+                       normalizedRow['מקור תקציבי/משרד מממן'] ||
+                       normalizedRow['__empty_1'] || '';
+      
+      const funding2 = row['מקור תקציב 2'] || 
+                       normalizedRow['מקור תקציב 2'] ||
+                       normalizedRow['__empty_2'] || '';
+      
+      const funding3 = row['מקור תקציב 3'] || 
+                       normalizedRow['מקור תקציב 3'] ||
+                       normalizedRow['__empty_3'] || '';
+      
+      console.log('🔍 Funding sources mapping:', { funding1, funding2, funding3 });
+      
+      // Keep funding sources in Hebrew
+      mapped.funding_source1 = funding1 || null;
+      mapped.funding_source2 = funding2 || null;
+      mapped.funding_source3 = funding3 || null;
       
       // Map numeric fields - check the __empty_4, __empty_5, etc. columns
       mapped.approved_budget = parseFloat(normalizedRow['__empty_4'] || 
