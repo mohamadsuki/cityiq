@@ -487,20 +487,29 @@ export class ExcelCellReader {
   private mapFundingSourceValue(value: string): string {
     const fundingMappings: Record<string, string> = {
       "עיריה": "municipality",
-      "מדינה": "government",
-      "משרד החינוך": "ministry_education",
-      "משרד הפנים": "ministry_interior", 
-      "משרד התחבורה": "ministry_transport",
-      "משרד הבריאות": "ministry_health",
-      "משרד הרווחה": "ministry_welfare",
-      "קרן": "foundation",
-      "תרומות": "donations",
+      "מדינה": "municipality", // fallback to municipality
+      "משרד החינוך": "education_ministry",
+      "משרד הפנים": "interior_ministry", 
+      "משרד התחבורה": "transportation_ministry",
+      "משרד הבריאות": "health_ministry",
+      "משרד הרווחה": "interior_ministry", // no welfare ministry enum, fallback
+      "משרד התרבות": "culture_ministry",
+      "משרד האנרגיה": "energy_ministry",
+      "משרד החקלאות": "agriculture_ministry",
+      "משרד הכלכלה": "economy_ministry",
+      "משרד המדע": "science_technology_ministry",
+      "משרד הבינוי": "construction_housing_ministry",
+      "משרד להגנת הסביבה": "environmental_protection_ministry",
+      "רשות התכנון": "planning_administration",
+      "מפעל הפיס": "lottery",
+      "קרן": "lottery", // fallback to lottery
+      "תרומות": "municipality", // fallback to municipality
       "הלוואה": "loan",
-      "אחר": "other"
+      "אחר": "municipality" // fallback to municipality instead of "other"
     };
 
     const normalizedValue = value.trim();
-    return fundingMappings[normalizedValue] || "other";
+    return fundingMappings[normalizedValue] || "municipality"; // default fallback
   }
 
   /**

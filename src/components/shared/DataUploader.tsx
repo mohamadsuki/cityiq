@@ -399,19 +399,31 @@ function normalizeKey(k: string, debugLogs?: DebugLog[]): string {
     "משרדים": "office",
     "אחר": "other",
 
-    // Tabarim mapping
+    // Tabarim mapping - enhanced
     'מספר תב"ר': "tabar_number",
-    'שם תב"ר': "tabar_name",
+    'שם תב"ר': "tabar_name", 
     "תחום": "domain",
     "מקור תקציבי": "funding_source1",
     "מקור תקציב ראשון": "funding_source1",
+    "מקור תקציבי ראשון": "funding_source1",
+    "מקור תקציבי 1": "funding_source1",
+    "מקור תקציב 1": "funding_source1",
     "מקור תקציבי 2": "funding_source2",
     "מקור תקציב 2": "funding_source2",
+    "מקור תקציבי שני": "funding_source2",
     "מקור תקציבי 3": "funding_source3",
     "מקור תקציב 3": "funding_source3",
+    "מקור תקציבי שלישי": "funding_source3",
+    "תקציב מאושר תברים": "approved_budget",
     "ביצוע מצטבר הכנסות": "income_actual",
+    "הכנסות בפועל": "income_actual",
+    "הכנסות מצטבר": "income_actual",
     "ביצוע מצטבר הוצאות": "expense_actual",
+    "הוצאות בפועל": "expense_actual", 
+    "הוצאות מצטבר": "expense_actual",
     "עודף/גרעון": "surplus_deficit",
+    "עודף גרעון": "surplus_deficit",
+    "סטטוס תבר": "status",
 
     "מספר תוכנית": "plan_number",
     "שם תוכנית": "name",
@@ -503,20 +515,64 @@ function mapRowToTable(table: string, row: Record<string, any>, debugLogs?: Debu
 
   switch (table) {
     case "tabarim":
-      addLog('info', 'מעבד שורת תב"ר');
+      addLog('info', 'מעבד שורת תב"ר בשיטה סטנדרטית');
+      
+      // Enhanced mapping with better domain and funding source handling
+      const domainMap: Record<string, string> = {
+        "מבני חינוך": "education_buildings",
+        "חינוך": "education_buildings",
+        "תשתיות": "infrastructure", 
+        "תשתית": "infrastructure",
+        "גנים ופארקים": "parks_gardens",
+        "פארקים": "parks_gardens",
+        "גנים": "parks_gardens",
+        "תרבות וספורט": "culture_sports",
+        "תרבות": "culture_sports",
+        "ספורט": "culture_sports",
+        "ארגוני": "organizational",
+        "ארגון": "organizational",
+        "רווחה": "welfare"
+      };
+      
+      const fundingSourceMap: Record<string, string> = {
+        "עיריה": "municipality",
+        "מדינה": "municipality",
+        "משרד החינוך": "education_ministry",
+        "משרד הפנים": "interior_ministry", 
+        "משרד התחבורה": "transportation_ministry",
+        "משרד הבריאות": "health_ministry",
+        "משרד התרבות": "culture_ministry",
+        "משרד האנרגיה": "energy_ministry",
+        "משרד החקלאות": "agriculture_ministry",
+        "משרד הכלכלה": "economy_ministry",
+        "משרד המדע": "science_technology_ministry",
+        "משרד הבינוי": "construction_housing_ministry",
+        "משרד להגנת הסביבה": "environmental_protection_ministry",
+        "רשות התכנון": "planning_administration",
+        "מפעל הפיס": "lottery",
+        "הלוואה": "loan"
+      };
+      
+      const statusMap: Record<string, string> = {
+        "תכנון": "planning",
+        "מאושר": "approved",
+        "פעיל": "active", 
+        "הושלם": "completed",
+        "בוטל": "cancelled"
+      };
       
       const tabarResult = {
         tabar_number: norm.tabar_number || norm.number || '',
         tabar_name: norm.tabar_name || norm.name || '',
-        domain: norm.domain || 'organizational',
-        funding_source1: norm.funding_source1 || norm.funding_source || null,
-        funding_source2: norm.funding_source2 || null,
-        funding_source3: norm.funding_source3 || null,
+        domain: domainMap[norm.domain] || "organizational",
+        funding_source1: fundingSourceMap[norm.funding_source1] || fundingSourceMap[norm.funding_source] || "municipality",
+        funding_source2: fundingSourceMap[norm.funding_source2] || null,
+        funding_source3: fundingSourceMap[norm.funding_source3] || null,
         approved_budget: norm.approved_budget ? Number(norm.approved_budget) : 0,
         income_actual: norm.income_actual ? Number(norm.income_actual) : 0,
         expense_actual: norm.expense_actual ? Number(norm.expense_actual) : 0,
-        surplus_deficit: (norm.income_actual ? Number(norm.income_actual) : 0) - (norm.expense_actual ? Number(norm.expense_actual) : 0),
-        status: norm.status || 'planning',
+        surplus_deficit: norm.surplus_deficit ? Number(norm.surplus_deficit) : ((norm.income_actual ? Number(norm.income_actual) : 0) - (norm.expense_actual ? Number(norm.expense_actual) : 0)),
+        status: statusMap[norm.status] || "planning",
       };
       
       addLog('success', `שורת תב"ר מעובדת: ${tabarResult.tabar_name}`, tabarResult);
@@ -792,6 +848,7 @@ export function DataUploader({ context = "global", onUploadSuccess }: DataUpload
         return;
       }
       
+      // Skip specialized parsing for tabarim - use standard approach like other successful pages
       // Check if this should be parsed as collection data
       if (context === 'collection') {
         addLog('info', 'משתמש בפענוח נתוני גביה לפי כתובות תאים');
