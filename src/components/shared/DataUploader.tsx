@@ -372,9 +372,17 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
     };
 
     try {
-      // First, upload the file to Supabase storage
+      // First, upload the file to Supabase storage with a safe filename
       addLog('info', 'מעלה קובץ לאחסון...');
-      const fileName = `uploads/${Date.now()}-${file.name}`;
+      
+      // Create a safe filename by removing non-ASCII characters and replacing them
+      const fileExtension = file.name.split('.').pop() || 'xlsx';
+      const safeFileName = `tabarim_${Date.now()}.${fileExtension}`;
+      const fileName = `uploads/${safeFileName}`;
+      
+      console.log('📁 Original filename:', file.name);
+      console.log('📁 Safe filename:', fileName);
+      
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('uploads')
         .upload(fileName, file);
