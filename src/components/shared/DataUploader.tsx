@@ -574,15 +574,38 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
         
         console.log(`📝 Processing batch ${Math.floor(i/batchSize) + 1}, rows ${i + 1}-${Math.min(i + batchSize, rows.length)}`);
         console.log('📝 Sample mapped row:', mappedBatch[0]);
+        console.log('📝 Full batch sample (first 3 rows):', mappedBatch.slice(0, 3));
 
+        // Add detailed logging before insert
+        console.log('🔍 About to insert into table:', detected.table);
+        console.log('🔍 Batch size:', mappedBatch.length);
+        
         const { data: insertData, error: insertError } = await (supabase as any)
           .from(detected.table)
           .insert(mappedBatch)
           .select();
 
+        console.log('📊 Insert result:', { 
+          insertData: insertData?.length || 0, 
+          insertError,
+          errorCode: insertError?.code,
+          errorMessage: insertError?.message,
+          errorDetails: insertError?.details
+        });
+
         if (insertError) {
-          console.error('❌ Insert error:', insertError);
-          addLog('error', `שגיאה בהכנסת נתונים: ${insertError.message}`, { batch: i/batchSize + 1 });
+          console.error('❌ Insert error details:', {
+            code: insertError.code,
+            message: insertError.message,
+            details: insertError.details,
+            hint: insertError.hint,
+            batchSample: mappedBatch[0]
+          });
+          addLog('error', `שגיאה בהכנסת נתונים: ${insertError.message}`, { 
+            batch: i/batchSize + 1,
+            code: insertError.code,
+            details: insertError.details
+          });
           errorCount += batch.length;
         } else {
           console.log('✅ Batch inserted successfully:', insertData?.length || 0, 'rows');
