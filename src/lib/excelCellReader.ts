@@ -173,7 +173,7 @@ export class ExcelCellReader {
    * Parse Tabarim data from an Excel sheet
    */
   parseTabarimData(config: ExcelConfig): any[] {
-    console.log('=== TABARIM EXCEL PARSING DEBUG ===');
+    console.log('=== TABARIM EXCEL PARSING WITH HEADER DETECTION ===');
     
     if (!this.sheet) {
       console.error('❌ No sheet available');
@@ -181,31 +181,90 @@ export class ExcelCellReader {
     }
 
     const result: any[] = [];
-    const range = XLSX.utils.decode_range(this.sheet['!ref'] || 'A1:J100');
     
-    // Find the last row with actual data
-    let lastDataRow = config.dataStartRow || 2;
-    for (let row = lastDataRow; row <= range.e.r + 1; row++) {
-      const hasData = Object.keys(config.columnMapping).some(col => {
+    // First, find the header row and detect column positions
+    const headerMappings: Record<string, string> = {};
+    let headerRow = 1;
+    
+    // Search for headers in the first few rows
+    for (let row = 1; row <= 5; row++) {
+      const rowCells: Record<string, any> = {};
+      
+      // Read all cells in this row (columns A to Z)
+      for (let colIndex = 0; colIndex < 26; colIndex++) {
+        const col = String.fromCharCode(65 + colIndex); // A, B, C, etc.
+        const cellAddress = col + row;
+        const cell = this.sheet[cellAddress];
+        if (cell?.v) {
+          rowCells[col] = String(cell.v).trim();
+        }
+      }
+      
+      // Check if this row contains our expected headers
+      const foundHeaders = Object.values(rowCells);
+      console.log(`🔍 Row ${row} headers:`, foundHeaders);
+      
+      if (foundHeaders.some(header => 
+        header.includes('תחום') || 
+        header.includes('מקור תקציבי') || 
+        header.includes('מספר תב"ר') ||
+        header.includes('שם תב"ר')
+      )) {
+        headerRow = row;
+        console.log(`📍 Found headers in row ${row}`);
+        
+        // Map the actual column positions
+        Object.entries(rowCells).forEach(([col, header]) => {
+          if (header.includes('מספר תב"ר')) {
+            headerMappings[col] = 'tabar_number';
+          } else if (header.includes('שם תב"ר')) {
+            headerMappings[col] = 'tabar_name';
+          } else if (header === 'תחום' || header.includes('תחום')) {
+            headerMappings[col] = 'domain';
+          } else if (header.includes('מקור תקציבי/משרד מממן') || (header.includes('מקור תקציבי') && !header.includes('2') && !header.includes('3'))) {
+            headerMappings[col] = 'funding_source1';
+          } else if (header.includes('מקור תקציב 2')) {
+            headerMappings[col] = 'funding_source2';
+          } else if (header.includes('מקור תקציב 3')) {
+            headerMappings[col] = 'funding_source3';
+          } else if (header.includes('תקציב מאושר')) {
+            headerMappings[col] = 'approved_budget';
+          } else if (header.includes('הכנסה בפועל') || header.includes('ביצוע מצטבר הכנסות')) {
+            headerMappings[col] = 'income_actual';
+          } else if (header.includes('הוצאה בפועל') || header.includes('ביצוע מצטבר הוצאות')) {
+            headerMappings[col] = 'expense_actual';
+          }
+        });
+        break;
+      }
+    }
+    
+    console.log('📋 Header mappings found:', headerMappings);
+    
+    // Find data range
+    let lastDataRow = headerRow + 1;
+    for (let row = headerRow + 1; row <= headerRow + 100; row++) {
+      const hasData = Object.keys(headerMappings).some(col => {
         const cellAddress = col + row;
         const cell = this.sheet[cellAddress];
         return cell && cell.v && String(cell.v).trim() !== '';
       });
+      
       if (hasData) {
         lastDataRow = row;
       }
     }
-
-    console.log(`📊 Processing Tabarim data rows ${config.dataStartRow} to ${lastDataRow}`);
+    
+    console.log(`📊 Processing Tabarim data rows ${headerRow + 1} to ${lastDataRow}`);
 
     // Parse each data row
-    for (let row = config.dataStartRow || 2; row <= lastDataRow; row++) {
+    for (let row = headerRow + 1; row <= lastDataRow; row++) {
       try {
         const rowData: any = {};
         let hasValidData = false;
 
-        // Extract data from configured columns
-        Object.entries(config.columnMapping).forEach(([col, field]) => {
+        // Extract data from detected column positions
+        Object.entries(headerMappings).forEach(([col, field]) => {
           const cellAddress = col + row;
           const cell = this.sheet[cellAddress];
           const rawValue = cell?.v;
@@ -265,7 +324,7 @@ export class ExcelCellReader {
             // Calculate surplus/deficit
             rowData.surplus_deficit = (rowData.income_actual || 0) - (rowData.expense_actual || 0);
             
-            console.log(`✅ Row ${row}: ${rowData.tabar_name} - Budget: ${rowData.approved_budget}, Income: ${rowData.income_actual}, Expense: ${rowData.expense_actual}`);
+            console.log(`✅ Row ${row}: ${rowData.tabar_name} - Domain: ${rowData.domain}, Funding1: ${rowData.funding_source1}, Budget: ${rowData.approved_budget}, Income: ${rowData.income_actual}, Expense: ${rowData.expense_actual}`);
             result.push(rowData);
           }
         }
