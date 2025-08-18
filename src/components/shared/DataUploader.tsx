@@ -202,11 +202,13 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
       console.log('🐛 FIXED: Extracted project name from original row:', projectName);
       
-      // Skip if this looks like a header row or empty row
+      // Skip if this looks like a header row or empty row or unwanted test entries
       if (!projectName || 
           projectName.includes('דו"ח תקופתי') || 
           projectName.includes('שם תב"ר') ||
           projectName.includes('כולל קליטה') ||
+          projectName.includes('בדיקת מערכת') ||
+          projectName.includes('סה"כ כללי') ||
           projectName.length < 3) {
         console.log('🚫 Skipping header/empty row:', projectName);
         return null; // Skip this row
@@ -215,7 +217,14 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.tabar_name = projectName;
       
       // Map tabar number from the " " (space) column 
-      mapped.tabar_number = row[' '] || row['__EMPTY'] || String(normalizedRow['__empty'] || '');
+      const tabarNumber = row[' '] || row['__EMPTY'] || String(normalizedRow['__empty'] || '');
+      mapped.tabar_number = tabarNumber;
+      
+      // Skip rows without valid tabar number or with test numbers
+      if (!tabarNumber || tabarNumber === '999' || tabarNumber.trim() === '') {
+        console.log('🚫 Skipping row without valid tabar number:', tabarNumber);
+        return null; // Skip this row
+      }
       
       // Map domain field - now accepts Hebrew text directly
       const domainValue = row['נכון לחודש 6/2025'] || 
@@ -229,12 +238,19 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       // Keep domain in Hebrew - now table accepts Hebrew text directly
       mapped.domain = domainValue || 'אחר';
       
-      // Map funding sources - FIXED: No __EMPTY_1,2,3 exist in this Excel structure
-      // Based on logs, there are no funding source columns in the current Excel structure
-      console.log('🔍 Funding sources - Excel structure has no funding columns');
-      mapped.funding_source1 = null;
-      mapped.funding_source2 = null;
-      mapped.funding_source3 = null;
+      // Map funding sources - CORRECTED: Use __EMPTY_4, __EMPTY_5, __EMPTY_6
+      const funding1 = row['__EMPTY_4'] && String(row['__EMPTY_4']).trim() !== 'null' ? String(row['__EMPTY_4']).trim() : null;
+      const funding2 = row['__EMPTY_5'] && String(row['__EMPTY_5']).trim() !== 'null' ? String(row['__EMPTY_5']).trim() : null;
+      const funding3 = row['__EMPTY_6'] && String(row['__EMPTY_6']).trim() !== 'null' ? String(row['__EMPTY_6']).trim() : null;
+      
+      console.log('🔍 Funding sources mapping:', { 
+        domainValue: domainValue,
+        projectName: projectName
+      });
+      
+      mapped.funding_source1 = funding1;
+      mapped.funding_source2 = funding2;
+      mapped.funding_source3 = funding3;
       
       // Map numeric fields - CORRECTED based on actual Excel structure from logs
       // __EMPTY_7 = approved budget, __EMPTY_9 = income, __EMPTY_10 = expense, __EMPTY_13 = surplus
