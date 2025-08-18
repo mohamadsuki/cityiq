@@ -140,6 +140,7 @@ export default function TasksApp() {
   // Modal state
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   // Form state
   const [form, setForm] = useState<Partial<Task>>({
@@ -708,7 +709,7 @@ export default function TasksApp() {
 
             <div>
               <Label>דד-ליין</Label>
-              <Popover>
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -719,67 +720,25 @@ export default function TasksApp() {
                     disabled={isManager && !managerEditable("due_at")}
                   >
                     <CalendarIcon className="ml-2 h-4 w-4" />
-                    {form.due_at ? format(new Date(form.due_at), "dd/MM/yyyy HH:mm") : <span>בחר תאריך ושעה</span>}
+                    {form.due_at ? format(new Date(form.due_at), "dd/MM/yyyy") : <span>בחר תאריך</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <div className="p-3">
-                    <Calendar
-                      mode="single"
-                      selected={form.due_at ? new Date(form.due_at) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          // Preserve existing time or set to current time
-                          const existingTime = form.due_at ? new Date(form.due_at) : new Date();
-                          date.setHours(existingTime.getHours());
-                          date.setMinutes(existingTime.getMinutes());
-                          setForm((f) => ({ ...f, due_at: date.toISOString() }));
-                        } else {
-                          setForm((f) => ({ ...f, due_at: "" }));
-                        }
-                      }}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                    {form.due_at && (
-                      <div className="flex gap-2 mt-3 pt-3 border-t">
-                        <div className="flex-1">
-                          <Label className="text-xs">שעה</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="23"
-                            value={form.due_at ? new Date(form.due_at).getHours().toString().padStart(2, '0') : "00"}
-                            onChange={(e) => {
-                              if (form.due_at) {
-                                const date = new Date(form.due_at);
-                                date.setHours(parseInt(e.target.value) || 0);
-                                setForm((f) => ({ ...f, due_at: date.toISOString() }));
-                              }
-                            }}
-                            className="h-8"
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <Label className="text-xs">דקות</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="59"
-                            value={form.due_at ? new Date(form.due_at).getMinutes().toString().padStart(2, '0') : "00"}
-                            onChange={(e) => {
-                              if (form.due_at) {
-                                const date = new Date(form.due_at);
-                                date.setMinutes(parseInt(e.target.value) || 0);
-                                setForm((f) => ({ ...f, due_at: date.toISOString() }));
-                              }
-                            }}
-                            className="h-8"
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <Calendar
+                    mode="single"
+                    selected={form.due_at ? new Date(form.due_at) : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setForm((f) => ({ ...f, due_at: date.toISOString() }));
+                      } else {
+                        setForm((f) => ({ ...f, due_at: "" }));
+                      }
+                      // Close popover automatically
+                      setDatePickerOpen(false);
+                    }}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
                 </PopoverContent>
               </Popover>
             </div>
