@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { Trash2, Upload, Plus, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -294,20 +296,26 @@ export default function TabarimPage() {
     },
   ];
 
-  // חישוב נתונים לגרפים
+  // חישוב נתונים לתחומים
   const domainLabels: Record<string, string> = {
-    "תשתיות וכבישים": "תשתיות וכבישים",
-    "מבני ציבור": "מבני ציבור", 
-    "חינוך": "חינוך",
+    "מבני חינוך": "מבני חינוך",
+    "תשתיות": "תשתיות", 
+    "גנים ופארקים": "גנים ופארקים",
     "תרבות וספורט": "תרבות וספורט",
+    "ארגוני": "ארגוני",
     "רווחה": "רווחה",
-    "איכות הסביבה": "איכות הסביבה",
     "אחר": "אחר",
   };
 
-  const domainColors = [
-    "#8884d8", "#82ca9d", "#ffc658", "#ff7c7c", "#8dd1e1", "#d084d0", "#82d982"
-  ];
+  const domainColors: Record<string, string> = {
+    "מבני חינוך": "hsl(var(--chart-1))",
+    "תשתיות": "hsl(var(--chart-2))", 
+    "גנים ופארקים": "hsl(var(--chart-3))",
+    "תרבות וספורט": "hsl(var(--chart-4))",
+    "ארגוני": "hsl(var(--chart-5))",
+    "רווחה": "hsl(var(--primary))",
+    "אחר": "hsl(var(--muted-foreground))",
+  };
 
   const domainStats = tabarim.reduce((acc, tabar) => {
     const domain = tabar.domain || "אחר";
@@ -323,21 +331,19 @@ export default function TabarimPage() {
   const totalIncome = tabarim.reduce((sum, tabar) => sum + tabar.income_actual, 0);
   const totalExpense = tabarim.reduce((sum, tabar) => sum + tabar.expense_actual, 0);
 
-  const chartData = Object.entries(domainStats).map(([domain, stats]) => ({
-    name: domainLabels[domain] || domain,
-    count: stats.count,
-    budgetMillion: Math.round(stats.budget / 1000000 * 10) / 10,
-    countPercentage: ((stats.count / tabarim.length) * 100),
-    budgetPercentage: totalBudget > 0 ? ((stats.budget / totalBudget) * 100) : 0
-  }));
-
-  // נתוני Lollipop Chart - מיון לפי תקציב
-  const lollipopData = chartData
-    .sort((a, b) => b.budgetMillion - a.budgetMillion)
-    .map((item, index) => ({
-      ...item,
-      index: index
-    }));
+  // נתונים עבור הטבלה הויזואלית - מיון לפי תקציב
+  const domainSummaryData = Object.entries(domainStats)
+    .map(([domain, stats]) => ({
+      domain: domainLabels[domain] || domain,
+      originalDomain: domain,
+      count: stats.count,
+      budget: stats.budget,
+      budgetMillion: Math.round(stats.budget / 1000000 * 10) / 10,
+      countPercentage: tabarim.length > 0 ? Math.round((stats.count / tabarim.length) * 100) : 0,
+      budgetPercentage: totalBudget > 0 ? Math.round((stats.budget / totalBudget) * 100) : 0,
+      color: domainColors[domain] || domainColors["אחר"]
+    }))
+    .sort((a, b) => b.budget - a.budget);
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -372,79 +378,54 @@ export default function TabarimPage() {
             </CardHeader>
             <CardContent>
               {tabarim.length > 0 ? (
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart
-                      layout="horizontal"
-                      data={lollipopData}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 100,
-                        bottom: 5,
-                      }}
+                <div className="space-y-4">
+                  {domainSummaryData.map((item) => (
+                    <div 
+                      key={item.originalDomain} 
+                      className="border rounded-lg p-4 bg-card hover:bg-accent/50 transition-colors"
                     >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis 
-                        type="category" 
-                        dataKey="name"
-                        width={100}
-                        tick={{ fontSize: 12 }}
-                      />
-                      <Tooltip 
-                        formatter={(value: number, name: string) => {
-                          if (name === 'count') {
-                            return [`${value} תב"רים`, 'מספר תב"רים'];
-                          }
-                          if (name === 'budgetMillion') {
-                            return [`₪${value}M`, 'תקציב (מיליון ₪)'];
-                          }
-                          return [value, name];
-                        }}
-                        labelFormatter={(label) => `${label}`}
-                      />
-                      <Legend />
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-4 h-4 rounded-full" 
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <span className="font-medium text-base">{item.domain}</span>
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {item.countPercentage}% מהתב"רים
+                        </Badge>
+                      </div>
                       
-                      {/* Lollipop stems for count */}
-                      <Bar 
-                        dataKey="count" 
-                        fill="transparent" 
-                        stroke="#8884d8"
-                        strokeWidth={2}
-                        name="מספר תב״רים"
-                        barSize={2}
-                      />
-                      
-                      {/* Lollipop stems for budget */}
-                      <Bar 
-                        dataKey="budgetMillion" 
-                        fill="transparent"
-                        stroke="#82ca9d" 
-                        strokeWidth={2}
-                        name="תקציב (מיליון ₪)"
-                        barSize={2}
-                      />
-                      
-                      {/* Circles for count */}
-                      <Bar 
-                        dataKey="count" 
-                        fill="#8884d8"
-                        name="מספר תב״רים (נקודות)"
-                        barSize={8}
-                        radius={[4, 4, 4, 4]}
-                      />
-                      
-                      {/* Circles for budget */}  
-                      <Bar 
-                        dataKey="budgetMillion" 
-                        fill="#82ca9d"
-                        name="תקציב (נקודות)"
-                        barSize={8}
-                        radius={[4, 4, 4, 4]}
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* מספר תב"רים */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">מספר תב"רים</span>
+                            <span className="font-semibold">{item.count}</span>
+                          </div>
+                          <Progress 
+                            value={item.countPercentage} 
+                            className="h-2"
+                          />
+                        </div>
+                        
+                        {/* תקציב */}
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">תקציב</span>
+                            <span className="font-semibold">
+                              ₪{item.budgetMillion}M ({item.budgetPercentage}%)
+                            </span>
+                          </div>
+                          <Progress 
+                            value={item.budgetPercentage} 
+                            className="h-2"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
