@@ -298,23 +298,21 @@ export default function TabarimPage() {
 
   // חישוב נתונים לתחומים
   const domainLabels: Record<string, string> = {
-    "מבני חינוך": "מבני חינוך",
-    "תשתיות": "תשתיות", 
-    "גנים ופארקים": "גנים ופארקים",
-    "תרבות וספורט": "תרבות וספורט",
-    "ארגוני": "ארגוני",
-    "רווחה": "רווחה",
-    "אחר": "אחר",
+    education_buildings: "מבני חינוך",
+    infrastructure: "תשתיות",
+    parks_gardens: "גנים ופארקים",
+    culture_sports: "תרבות וספורט",
+    organizational: "ארגוני",
+    welfare: "רווחה",
   };
 
   const domainColors: Record<string, string> = {
-    "מבני חינוך": "hsl(var(--chart-1))",
-    "תשתיות": "hsl(var(--chart-2))", 
-    "גנים ופארקים": "hsl(var(--chart-3))",
-    "תרבות וספורט": "hsl(var(--chart-4))",
-    "ארגוני": "hsl(var(--chart-5))",
-    "רווחה": "hsl(var(--primary))",
-    "אחר": "hsl(var(--muted-foreground))",
+    education_buildings: "hsl(var(--chart-1))",
+    infrastructure: "hsl(var(--chart-2))", 
+    parks_gardens: "hsl(var(--chart-3))",
+    culture_sports: "hsl(var(--chart-4))",
+    organizational: "hsl(var(--chart-5))",
+    welfare: "hsl(var(--primary))",
   };
 
   const domainStats = tabarim.reduce((acc, tabar) => {
@@ -341,7 +339,7 @@ export default function TabarimPage() {
       budgetMillion: Math.round(stats.budget / 1000000 * 10) / 10,
       countPercentage: tabarim.length > 0 ? Math.round((stats.count / tabarim.length) * 100) : 0,
       budgetPercentage: totalBudget > 0 ? Math.round((stats.budget / totalBudget) * 100) : 0,
-      color: domainColors[domain] || domainColors["אחר"]
+      color: domainColors[domain] || "hsl(var(--muted-foreground))"
     }))
     .sort((a, b) => b.count - a.count); // מיון לפי מספר תב"רים מהגבוה לנמוך
 
