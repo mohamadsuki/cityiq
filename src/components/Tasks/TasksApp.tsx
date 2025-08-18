@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
+import { Eye } from "lucide-react";
 import type { DepartmentSlug } from "@/lib/demoAccess";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 
@@ -109,6 +110,11 @@ export default function TasksApp() {
   const { role, departments, user, session } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
+  
+  // Task detail modal for highlighted task from banner
+  const taskId = searchParams.get("taskId");
+  const [highlightedTask, setHighlightedTask] = useState<Task | null>(null);
+  const [taskDetailOpen, setTaskDetailOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -229,6 +235,17 @@ export default function TasksApp() {
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  // Handle taskId from URL parameter (from banner click)
+  useEffect(() => {
+    if (taskId && tasks.length > 0) {
+      const task = tasks.find(t => t.id === taskId);
+      if (task) {
+        setHighlightedTask(task);
+        setTaskDetailOpen(true);
+      }
+    }
+  }, [taskId, tasks]);
 
   // Realtime updates for tasks
   useEffect(() => {
@@ -385,6 +402,20 @@ export default function TasksApp() {
   const isManager = role === "manager";
   const managerEditable = (key: string) => {
     return ["status", "progress_percent", "progress_notes"].includes(key);
+  };
+
+  const acknowledgeTask = async (task: Task) => {
+    if (!user?.id) return;
+    const { error } = await supabase.from('task_acknowledgements').insert({ 
+      task_id: task.id, 
+      manager_user_id: user.id 
+    });
+    if (!error) {
+      setAckIds(prev => [...prev, task.id]);
+      toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
+    } else {
+      toast({ title: "שגיאה", description: "לא ניתן לאשר את המשימה", variant: "destructive" });
+    }
   };
 
   return (
@@ -629,6 +660,98 @@ export default function TasksApp() {
             <Button variant="outline" onClick={() => setOpen(false)}>ביטול</Button>
             <Button onClick={saveTask}>{editing ? "עדכון" : "יצירה"}</Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Task Detail Modal */}
+      <Dialog open={taskDetailOpen} onOpenChange={setTaskDetailOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>פרטי המשימה</DialogTitle>
+            <DialogDescription>משימה מההנהלה למחלקה</DialogDescription>
+          </DialogHeader>
+
+          {highlightedTask && (
+            <div className="space-y-4">
+              <div className="p-4 bg-warning/10 border border-warning/40 rounded-md">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge variant="outline" className="border-warning text-warning">
+                    משימה מההנהלה
+                  </Badge>
+                  <Badge variant={priorityBadgeVariant(highlightedTask.priority)}>
+                    {PRIORITY_LABELS[highlightedTask.priority]}
+                  </Badge>
+                  <Badge variant={statusBadgeVariant(highlightedTask.status)}>
+                    {STATUS_LABELS[highlightedTask.status]}
+                  </Badge>
+                </div>
+                <h3 className="font-bold text-lg mb-2">{highlightedTask.title}</h3>
+                {highlightedTask.description && (
+                  <p className="text-muted-foreground mb-3">{highlightedTask.description}</p>
+                )}
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">מחלקה:</span> {DEPARTMENT_LABELS[highlightedTask.department_slug]}
+                  </div>
+                  <div>
+                    <span className="font-medium">דד-ליין:</span>{" "}
+                    {highlightedTask.due_at 
+                      ? new Date(highlightedTask.due_at).toLocaleDateString('he-IL')
+                      : '—'
+                    }
+                  </div>
+                  <div>
+                    <span className="font-medium">נוצרה:</span>{" "}
+                    {new Date(highlightedTask.created_at).toLocaleDateString('he-IL')}
+                  </div>
+                  <div>
+                    <span className="font-medium">התקדמות:</span> {highlightedTask.progress_percent ?? 0}%
+                  </div>
+                </div>
+
+                {highlightedTask.progress_notes && (
+                  <div className="mt-3">
+                    <span className="font-medium text-sm">הערות התקדמות:</span>
+                    <p className="text-sm text-muted-foreground mt-1">{highlightedTask.progress_notes}</p>
+                  </div>
+                )}
+
+                {highlightedTask.tags && highlightedTask.tags.length > 0 && (
+                  <div className="mt-3">
+                    <span className="font-medium text-sm">תגיות:</span>
+                    <div className="flex gap-1 mt-1">
+                      {highlightedTask.tags.map((tag, i) => (
+                        <Badge key={i} variant="outline" className="text-xs">{tag}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-muted-foreground">
+                  לצפיה בכל המשימות, עבור לרשימת המשימות המלאה
+                </div>
+                <div className="flex gap-2">
+                  {isManager && !ackIds.includes(highlightedTask.id) && (
+                    <Button onClick={() => acknowledgeTask(highlightedTask)} variant="secondary">
+                      <Eye className="h-4 w-4 ml-1" />
+                      אישור צפייה
+                    </Button>
+                  )}
+                  {ackIds.includes(highlightedTask.id) && (
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      ✓ נצפתה
+                    </Badge>
+                  )}
+                  <Button onClick={() => setTaskDetailOpen(false)} variant="outline">
+                    סגירה
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

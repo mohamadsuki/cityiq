@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import type { DepartmentSlug } from "@/lib/demoAccess";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, Megaphone } from "lucide-react";
+import { Eye, Megaphone, ArrowLeft } from "lucide-react";
 
 interface Props {
   department: DepartmentSlug;
@@ -13,6 +14,7 @@ interface Props {
 
 export default function ExecutiveTasksBanner({ department }: Props) {
   const { role, user, session, departments } = useAuth();
+  const navigate = useNavigate();
   const isManager = role === 'manager';
   const canSee = (
     (isManager && !!user?.id && !!session && departments?.includes(department)) ||
@@ -55,6 +57,10 @@ export default function ExecutiveTasksBanner({ department }: Props) {
     if (!error) setAckIds(prev => [...prev, taskId]);
   };
 
+  const viewTaskDetails = (taskId: string) => {
+    navigate(`/tasks?taskId=${taskId}`);
+  };
+
   if (!canSee || pending.length === 0) return null;
 
   return (
@@ -67,7 +73,7 @@ export default function ExecutiveTasksBanner({ department }: Props) {
       </CardHeader>
       <CardContent className="space-y-2">
         {pending.slice(0, 5).map((t) => (
-          <div key={t.id} className="rounded-md border border-warning p-3 bg-warning/12">
+          <div key={t.id} className="rounded-md border border-warning p-3 bg-warning/12 cursor-pointer hover:bg-warning/16 transition-colors" onClick={() => viewTaskDetails(t.id)}>
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="font-medium truncate text-warning-foreground" title={t.title}>{t.title}</div>
@@ -75,7 +81,26 @@ export default function ExecutiveTasksBanner({ department }: Props) {
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="border-warning text-warning">{departmentLabel(department)}</Badge>
-                <Button size="sm" variant="secondary" onClick={() => acknowledge(t.id)} className="gap-1">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    viewTaskDetails(t.id);
+                  }} 
+                  className="gap-1 border-warning text-warning hover:bg-warning/10"
+                >
+                  <ArrowLeft className="h-4 w-4" /> פרטים
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="secondary" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    acknowledge(t.id);
+                  }} 
+                  className="gap-1"
+                >
                   <Eye className="h-4 w-4" /> אישור צפייה
                 </Button>
               </div>
