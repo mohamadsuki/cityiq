@@ -418,45 +418,20 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.funding_source2 = funding2;
       mapped.funding_source3 = funding3;
       
-      // Map numeric fields using __EMPTY_ columns (similar to approved_budget)
+      // Map numeric fields using specific __EMPTY_ columns as requested
+      // User specified: Income=Column M (__EMPTY_12), Expense=Column N (__EMPTY_13), Surplus=Column Q (__EMPTY_16)
       console.log('🐛 All EMPTY keys already found above:', allEmptyKeys);
       
-      // Based on Excel structure - find the correct __EMPTY_ columns for each field
-      // We'll need to identify which __EMPTY_ column contains income, expense, surplus
       const approvedBudgetRaw = row['__EMPTY_7'] || '0';
+      const incomeActualRaw = row['__EMPTY_12'] || '0';  // Column M - "ביצוע מצטבר הכנסות"
+      const expenseActualRaw = row['__EMPTY_13'] || '0'; // Column N - "ביצוע מצטבר הוצאות"  
+      const surplusDeficitRaw = row['__EMPTY_16'] || '0'; // Column Q - "עודף/גירעון"
       
-      // Try different __EMPTY_ columns to find income, expense, surplus
-      // Usually they appear after the approved budget column
-      let incomeActualRaw = '0';
-      let expenseActualRaw = '0';
-      let surplusDeficitRaw = '0';
-      
-      // Check columns 8-15 for numeric values that could be income/expense/surplus
-      for (let i = 8; i <= 15; i++) {
-        const columnKey = `__EMPTY_${i}`;
-        const value = row[columnKey];
-        console.log(`🔍 Checking ${columnKey}: "${value}"`);
-        
-        if (value && !isNaN(parseFloat(String(value))) && parseFloat(String(value)) !== 0) {
-          // Found a non-zero numeric value - let's map it based on position
-          if (i === 8 || i === 9) {
-            incomeActualRaw = value || '0';
-            console.log(`✅ Found potential income at ${columnKey}: ${value}`);
-          } else if (i === 10 || i === 11) {
-            expenseActualRaw = value || '0';
-            console.log(`✅ Found potential expense at ${columnKey}: ${value}`);
-          } else if (i === 12 || i === 13 || i === 14) {
-            surplusDeficitRaw = value || '0';
-            console.log(`✅ Found potential surplus at ${columnKey}: ${value}`);
-          }
-        }
-      }
-      
-      console.log('🔍 Final values found:', {
-        approved: approvedBudgetRaw,
-        income: incomeActualRaw,
-        expense: expenseActualRaw,
-        surplus: surplusDeficitRaw
+      console.log('🔍 Using specified columns:', {
+        approved_budget: `__EMPTY_7 = "${approvedBudgetRaw}"`,
+        income_actual: `__EMPTY_12 (Column M) = "${incomeActualRaw}"`,
+        expense_actual: `__EMPTY_13 (Column N) = "${expenseActualRaw}"`,
+        surplus_deficit: `__EMPTY_16 (Column Q) = "${surplusDeficitRaw}"`
       });
       
       // Clean numbers (remove commas if they exist)
