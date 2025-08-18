@@ -331,7 +331,7 @@ export default function TabarimPage() {
   const totalIncome = tabarim.reduce((sum, tabar) => sum + tabar.income_actual, 0);
   const totalExpense = tabarim.reduce((sum, tabar) => sum + tabar.expense_actual, 0);
 
-  // נתונים עבור הטבלה הויזואלית - מיון לפי תקציב
+  // נתונים עבור הטבלה הויזואלית - מיון לפי מספר תב"רים
   const domainSummaryData = Object.entries(domainStats)
     .map(([domain, stats]) => ({
       domain: domainLabels[domain] || domain,
@@ -343,7 +343,7 @@ export default function TabarimPage() {
       budgetPercentage: totalBudget > 0 ? Math.round((stats.budget / totalBudget) * 100) : 0,
       color: domainColors[domain] || domainColors["אחר"]
     }))
-    .sort((a, b) => b.budget - a.budget);
+    .sort((a, b) => b.count - a.count); // מיון לפי מספר תב"רים מהגבוה לנמוך
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -378,29 +378,66 @@ export default function TabarimPage() {
             </CardHeader>
             <CardContent>
               {tabarim.length > 0 ? (
-                <div className="space-y-3">
-                  {domainSummaryData.map((item) => (
+                <div className="space-y-2">
+                  {/* כותרת עמודות */}
+                  <div className="grid grid-cols-12 gap-2 pb-2 border-b text-xs text-muted-foreground font-medium">
+                    <div className="col-span-4">תחום</div>
+                    <div className="col-span-3 text-center">תב"רים</div>
+                    <div className="col-span-5 text-center">תקציב (מיליון ₪)</div>
+                  </div>
+                  
+                  {domainSummaryData.map((item, index) => (
                     <div 
                       key={item.originalDomain} 
-                      className="flex items-center justify-between py-2 border-b last:border-b-0"
+                      className="grid grid-cols-12 gap-2 py-2 hover:bg-accent/30 rounded-md transition-colors items-center"
                     >
-                      <div className="flex items-center gap-2 flex-1">
-                        <div 
-                          className="w-3 h-3 rounded-full flex-shrink-0" 
-                          style={{ backgroundColor: item.color }}
-                        />
+                      {/* שם התחום */}
+                      <div className="col-span-4 flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
+                          <div 
+                            className="w-3 h-3 rounded-full flex-shrink-0" 
+                            style={{ backgroundColor: item.color }}
+                          />
+                        </div>
                         <span className="text-sm font-medium truncate">{item.domain}</span>
                       </div>
                       
-                      <div className="flex items-center gap-4 text-sm">
-                        <div className="text-left min-w-[80px]">
-                          <div className="font-semibold">{item.count} תב"רים</div>
-                          <div className="text-xs text-muted-foreground">{item.countPercentage}%</div>
+                      {/* מספר תב"רים עם עמודה */}
+                      <div className="col-span-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <Progress 
+                              value={item.countPercentage} 
+                              className="h-3"
+                              style={{ 
+                                backgroundColor: 'hsl(var(--muted))',
+                              }}
+                            />
+                          </div>
+                          <div className="text-xs min-w-[45px] text-left">
+                            <div className="font-semibold">{item.count}</div>
+                            <div className="text-muted-foreground">{item.countPercentage}%</div>
+                          </div>
                         </div>
-                        
-                        <div className="text-left min-w-[100px]">
-                          <div className="font-semibold">₪{item.budgetMillion}M</div>
-                          <div className="text-xs text-muted-foreground">{item.budgetPercentage}% מהתקציב</div>
+                      </div>
+                      
+                      {/* תקציב עם עמודה */}
+                      <div className="col-span-5">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <Progress 
+                              value={item.budgetPercentage} 
+                              className="h-3"
+                              style={{ 
+                                backgroundColor: 'hsl(var(--muted))',
+                              }}
+                            />
+                          </div>
+                          <div className="text-xs min-w-[70px] text-left">
+                            <div className="font-semibold">₪{item.budgetMillion}M</div>
+                            <div className="text-muted-foreground">{item.budgetPercentage}%</div>
+                          </div>
                         </div>
                       </div>
                     </div>
