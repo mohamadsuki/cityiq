@@ -265,22 +265,51 @@ export default function TasksApp() {
 
   // Acknowledgements for exec visibility (mayor/ceo)
   const [ackIds, setAckIds] = useState<string[]>([]);
+  const [acknowledgements, setAcknowledgements] = useState<any[]>([]);
+  
   useEffect(() => {
     let cancelled = false;
     async function loadAcks() {
       if (!(role === 'mayor' || role === 'ceo')) return;
-      const { data, error } = await supabase.from('task_acknowledgements').select('task_id');
-      if (!error && !cancelled) setAckIds((data || []).map((d: any) => d.task_id));
+      
+      if (isDemo) {
+        // Demo mode: load from localStorage
+        try {
+          const ackRaw = localStorage.getItem("demo_task_acknowledgements");
+          const ackList = ackRaw ? (JSON.parse(ackRaw) as any[]) : [];
+          if (!cancelled) {
+            setAckIds(ackList.map((d: any) => d.task_id));
+            setAcknowledgements(ackList);
+          }
+        } catch (e) {
+          console.error("Failed to load demo acknowledgements", e);
+        }
+      } else {
+        // Real mode: load from Supabase
+        const { data, error } = await supabase
+          .from('task_acknowledgements')
+          .select('task_id, manager_user_id, created_at');
+        if (!error && !cancelled) {
+          setAckIds((data || []).map((d: any) => d.task_id));
+          setAcknowledgements(data || []);
+        }
+      }
     }
+    
     loadAcks();
-    const ch = supabase
-      .channel('rt-task-acks-app')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_acknowledgements' }, () => {
-        loadAcks();
-      })
-      .subscribe();
-    return () => { cancelled = true; supabase.removeChannel(ch); };
-  }, [role]);
+    
+    if (!isDemo) {
+      const ch = supabase
+        .channel('rt-task-acks-app')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'task_acknowledgements' }, () => {
+          loadAcks();
+        })
+        .subscribe();
+      return () => { cancelled = true; supabase.removeChannel(ch); };
+    }
+    
+    return () => { cancelled = true; };
+  }, [role, isDemo]);
 
   function openCreate() {
     setEditing(null);
@@ -418,15 +447,38 @@ export default function TasksApp() {
 
   const acknowledgeTask = async (task: Task) => {
     if (!user?.id) return;
-    const { error } = await supabase.from('task_acknowledgements').insert({ 
-      task_id: task.id, 
-      manager_user_id: user.id 
-    });
-    if (!error) {
-      setAckIds(prev => [...prev, task.id]);
-      toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
+    
+    if (isDemo) {
+      // Demo mode: save to localStorage
+      try {
+        const ackRaw = localStorage.getItem("demo_task_acknowledgements");
+        const ackList = ackRaw ? (JSON.parse(ackRaw) as any[]) : [];
+        const newAck = { 
+          task_id: task.id, 
+          manager_user_id: user.id,
+          acknowledged_at: new Date().toISOString(),
+          manager_name: user.email?.split('@')[0] || 'מנהל מחלקה'
+        };
+        const updated = [...ackList, newAck];
+        localStorage.setItem("demo_task_acknowledgements", JSON.stringify(updated));
+        setAckIds(prev => [...prev, task.id]);
+        toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
+      } catch (e) {
+        console.error("Failed to save demo acknowledgement", e);
+        toast({ title: "שגיאה", description: "לא ניתן לאשר את המשימה", variant: "destructive" });
+      }
     } else {
-      toast({ title: "שגיאה", description: "לא ניתן לאשר את המשימה", variant: "destructive" });
+      // Real mode: save to Supabase
+      const { error } = await supabase.from('task_acknowledgements').insert({ 
+        task_id: task.id, 
+        manager_user_id: user.id 
+      });
+      if (!error) {
+        setAckIds(prev => [...prev, task.id]);
+        toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
+      } else {
+        toast({ title: "שגיאה", description: "לא ניתן לאשר את המשימה", variant: "destructive" });
+      }
     }
   };
 
@@ -532,7 +584,31 @@ export default function TasksApp() {
                 <td className="py-3 font-medium">
                   {t.title}
                   {(role === 'mayor' || role === 'ceo') && ackIds.includes(t.id) && (
-                    <Badge variant="outline" className="ml-2">נצפה</Badge>
+                    <div className="mt-1 flex items-center gap-2">
+                      <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
+                        ✓ נצפה על ידי המחלקה
+                      </Badge>
+                      {(() => {
+                        const ack = acknowledgements.find(a => a.task_id === t.id);
+                        if (ack) {
+                          const ackTime = isDemo && ack.acknowledged_at 
+                            ? new Date(ack.acknowledged_at).toLocaleString('he-IL')
+                            : isDemo 
+                              ? 'זה עתה'
+                              : new Date(ack.created_at).toLocaleString('he-IL');
+                          const managerName = isDemo && ack.manager_name 
+                            ? ack.manager_name 
+                            : 'מנהל המחלקה';
+                          
+                          return (
+                            <span className="text-xs text-muted-foreground">
+                              {managerName} • {ackTime}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                   )}
                 </td>
                 <td className="py-3">{DEPARTMENT_LABELS[t.department_slug]}</td>

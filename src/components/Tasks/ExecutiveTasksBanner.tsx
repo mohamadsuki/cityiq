@@ -101,7 +101,12 @@ export default function ExecutiveTasksBanner({ department }: Props) {
       try {
         const ackRaw = localStorage.getItem("demo_task_acknowledgements");
         const ackList = ackRaw ? (JSON.parse(ackRaw) as any[]) : [];
-        const newAck = { task_id: taskId, manager_user_id: user.id };
+        const newAck = { 
+          task_id: taskId, 
+          manager_user_id: user.id,
+          acknowledged_at: new Date().toISOString(),
+          manager_name: user.email?.split('@')[0] || 'מנהל מחלקה'
+        };
         const updated = [...ackList, newAck];
         localStorage.setItem("demo_task_acknowledgements", JSON.stringify(updated));
         setAckIds(prev => [...prev, taskId]);
