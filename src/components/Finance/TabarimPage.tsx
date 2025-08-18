@@ -311,14 +311,20 @@ export default function TabarimPage() {
 
   const domainStats = tabarim.reduce((acc, tabar) => {
     const domain = tabar.domain || "אחר";
-    acc[domain] = (acc[domain] || 0) + 1;
+    if (!acc[domain]) {
+      acc[domain] = { count: 0, budget: 0 };
+    }
+    acc[domain].count += 1;
+    acc[domain].budget += tabar.approved_budget || 0;
     return acc;
-  }, {} as Record<string, number>);
+  }, {} as Record<string, { count: number; budget: number }>);
 
-  const chartData = Object.entries(domainStats).map(([domain, count]) => ({
+  const chartData = Object.entries(domainStats).map(([domain, stats]) => ({
     name: domainLabels[domain] || domain,
-    value: count,
-    percentage: ((count / tabarim.length) * 100).toFixed(1)
+    value: stats.count,
+    budget: stats.budget,
+    percentage: ((stats.count / tabarim.length) * 100).toFixed(1),
+    budgetPercentage: totalBudget > 0 ? ((stats.budget / totalBudget) * 100).toFixed(1) : "0"
   }));
 
   const totalBudget = tabarim.reduce((sum, tabar) => sum + tabar.approved_budget, 0);
@@ -366,7 +372,9 @@ export default function TabarimPage() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percentage }) => `${name} (${percentage}%)`}
+                        label={({ name, percentage, budgetPercentage, budget }) => 
+                          `${name} (${percentage}%) - ₪${(budget / 1000000).toFixed(1)}M`
+                        }
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
@@ -376,11 +384,11 @@ export default function TabarimPage() {
                         ))}
                       </Pie>
                       <Tooltip 
-                        formatter={(value: number, name: string) => [
+                        formatter={(value: number, name: string, props: any) => [
                           `${value} תב"רים`,
-                          name
+                          `₪${(props.payload.budget / 1000000).toFixed(1)}M תקציב`
                         ]}
-                        labelFormatter={() => ''}
+                        labelFormatter={(label) => label}
                       />
                       <Legend />
                     </PieChart>
