@@ -350,30 +350,7 @@ export default function TabarimPage() {
       </div>
 
       <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>רשימת תב"רים ({tabarim.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                טוען נתונים...
-              </div>
-            ) : tabarim.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                אין תב"רים להצגה
-              </div>
-            ) : (
-              <DataTable
-                columns={columns}
-                data={tabarim}
-                searchableColumnIds={["tabar_name", "tabar_number"]}
-                searchPlaceholder="חפש תב״ר..."
-              />
-            )}
-          </CardContent>
-        </Card>
-
+        {/* Summary Cards First */}
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -445,6 +422,31 @@ export default function TabarimPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Table Below */}
+        <Card>
+          <CardHeader>
+            <CardTitle>רשימת תב"רים ({tabarim.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="text-center py-8 text-muted-foreground">
+                טוען נתונים...
+              </div>
+            ) : tabarim.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                אין תב"רים להצגה
+              </div>
+            ) : (
+              <DataTable
+                columns={columns}
+                data={tabarim}
+                searchableColumnIds={["tabar_name", "tabar_number"]}
+                searchPlaceholder="חפש תב״ר..."
+              />
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <AddTabarDialog
