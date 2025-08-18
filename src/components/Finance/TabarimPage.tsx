@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { DataTable } from "@/components/shared/DataTable";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { ColumnDef } from "@tanstack/react-table";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ComposedChart, Line, LineChart, ReferenceLine } from 'recharts';
 import AddTabarDialog from "./AddTabarDialog";
 import {
   AlertDialog,
@@ -331,26 +331,13 @@ export default function TabarimPage() {
     budgetPercentage: totalBudget > 0 ? ((stats.budget / totalBudget) * 100) : 0
   }));
 
-  // נתונים לגרף מוערם - שורה אחת עם כל התחומים
-  const stackedData = [
-    {
-      category: "מספר תב״רים",
-      ...chartData.reduce((acc, item) => {
-        acc[item.name] = item.countPercentage;
-        return acc;
-      }, {} as Record<string, number>)
-    },
-    {
-      category: "תקציב",
-      ...chartData.reduce((acc, item) => {
-        acc[item.name] = item.budgetPercentage;
-        return acc;
-      }, {} as Record<string, number>)
-    }
-  ];
-
-  const domains = chartData.map(item => item.name);
-  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1', '#d084d0', '#82d982'];
+  // נתוני Lollipop Chart - מיון לפי תקציב
+  const lollipopData = chartData
+    .sort((a, b) => b.budgetMillion - a.budgetMillion)
+    .map((item, index) => ({
+      ...item,
+      index: index
+    }));
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -387,51 +374,76 @@ export default function TabarimPage() {
               {tabarim.length > 0 ? (
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
+                    <ComposedChart
                       layout="horizontal"
-                      data={stackedData}
+                      data={lollipopData}
                       margin={{
                         top: 20,
                         right: 30,
-                        left: 80,
+                        left: 100,
                         bottom: 5,
                       }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" domain={[0, 100]} />
+                      <XAxis type="number" />
                       <YAxis 
                         type="category" 
-                        dataKey="category" 
-                        width={80}
+                        dataKey="name"
+                        width={100}
+                        tick={{ fontSize: 12 }}
                       />
                       <Tooltip 
-                        formatter={(value: number, name: string, props: any) => {
-                          const item = chartData.find(d => d.name === name);
-                          if (props.payload.category === "מספר תב״רים") {
-                            return [
-                              `${value.toFixed(1)}% (${item?.count || 0} תב"רים)`,
-                              name
-                            ];
-                          } else {
-                            return [
-                              `${value.toFixed(1)}% (₪${item?.budgetMillion || 0}M)`,
-                              name
-                            ];
+                        formatter={(value: number, name: string) => {
+                          if (name === 'count') {
+                            return [`${value} תב"רים`, 'מספר תב"רים'];
                           }
+                          if (name === 'budgetMillion') {
+                            return [`₪${value}M`, 'תקציב (מיליון ₪)'];
+                          }
+                          return [value, name];
                         }}
-                        labelFormatter={(label) => label}
+                        labelFormatter={(label) => `${label}`}
                       />
                       <Legend />
-                      {domains.map((domain, index) => (
-                        <Bar 
-                          key={domain}
-                          dataKey={domain} 
-                          stackId="a"
-                          fill={colors[index % colors.length]} 
-                          name={domain}
-                        />
-                      ))}
-                    </BarChart>
+                      
+                      {/* Lollipop stems for count */}
+                      <Bar 
+                        dataKey="count" 
+                        fill="transparent" 
+                        stroke="#8884d8"
+                        strokeWidth={2}
+                        name="מספר תב״רים"
+                        barSize={2}
+                      />
+                      
+                      {/* Lollipop stems for budget */}
+                      <Bar 
+                        dataKey="budgetMillion" 
+                        fill="transparent"
+                        stroke="#82ca9d" 
+                        strokeWidth={2}
+                        name="תקציב (מיליון ₪)"
+                        barSize={2}
+                      />
+                      
+                      {/* Circles for count */}
+                      <Bar 
+                        dataKey="count" 
+                        fill="#8884d8"
+                        name="מספר תב״רים (נקודות)"
+                        barSize={8}
+                        radius={[4, 4, 4, 4]}
+                      />
+                      
+                      {/* Circles for budget */}  
+                      <Bar 
+                        dataKey="budgetMillion" 
+                        fill="#82ca9d"
+                        name="תקציב (נקודות)"
+                        barSize={8}
+                        radius={[4, 4, 4, 4]}
+                      />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
