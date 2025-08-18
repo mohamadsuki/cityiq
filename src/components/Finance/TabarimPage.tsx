@@ -378,68 +378,79 @@ export default function TabarimPage() {
             </CardHeader>
             <CardContent>
               {tabarim.length > 0 ? (
-                <div className="space-y-2">
-                  {/* כותרת עמודות */}
-                  <div className="grid grid-cols-12 gap-2 pb-2 border-b text-xs text-muted-foreground font-medium">
-                    <div className="col-span-4">תחום</div>
-                    <div className="col-span-3 text-center">תב"רים</div>
-                    <div className="col-span-5 text-center">תקציב (מיליון ₪)</div>
-                  </div>
-                  
+                <div className="space-y-1">
                   {domainSummaryData.map((item, index) => (
                     <div 
                       key={item.originalDomain} 
-                      className="grid grid-cols-12 gap-2 py-2 hover:bg-accent/30 rounded-md transition-colors items-center"
+                      className="group relative p-3 hover:bg-accent/50 rounded-lg transition-all duration-300 cursor-pointer hover-scale"
                     >
-                      {/* שם התחום */}
-                      <div className="col-span-4 flex items-center gap-2">
-                        <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
+                      <div className="flex items-center gap-3">
+                        {/* מספר דירוג ועיגול צבעוני */}
+                        <div className="flex items-center gap-2 min-w-[60px]">
+                          <span className="text-xs font-bold text-muted-foreground/60 group-hover:text-foreground transition-colors">
+                            #{index + 1}
+                          </span>
                           <div 
-                            className="w-3 h-3 rounded-full flex-shrink-0" 
-                            style={{ backgroundColor: item.color }}
+                            className="w-4 h-4 rounded-full shadow-sm group-hover:scale-110 transition-transform duration-200" 
+                            style={{ 
+                              backgroundColor: item.color,
+                              boxShadow: `0 2px 8px ${item.color}40`
+                            }}
                           />
                         </div>
-                        <span className="text-sm font-medium truncate">{item.domain}</span>
-                      </div>
-                      
-                      {/* מספר תב"רים עם עמודה */}
-                      <div className="col-span-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1">
-                            <Progress 
-                              value={item.countPercentage} 
-                              className="h-3"
+                        
+                        {/* שם התחום */}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium group-hover:font-semibold transition-all duration-200 truncate block">
+                            {item.domain}
+                          </span>
+                          {/* פרטים נוספים בהover */}
+                          <div className="opacity-0 group-hover:opacity-100 text-xs text-muted-foreground transition-opacity duration-300 mt-1">
+                            {item.countPercentage}% מהתב"רים • {item.budgetPercentage}% מהתקציב
+                          </div>
+                        </div>
+                        
+                        {/* מספר תב"רים - עמודה קצרה */}
+                        <div className="flex items-center gap-2 min-w-[80px]">
+                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full rounded-full transition-all duration-500 group-hover:shadow-sm"
                               style={{ 
-                                backgroundColor: 'hsl(var(--muted))',
+                                width: `${item.countPercentage}%`,
+                                backgroundColor: item.color,
+                                boxShadow: `inset 0 1px 2px ${item.color}60`
                               }}
                             />
                           </div>
-                          <div className="text-xs min-w-[45px] text-left">
-                            <div className="font-semibold">{item.count}</div>
-                            <div className="text-muted-foreground">{item.countPercentage}%</div>
-                          </div>
+                          <span className="text-sm font-semibold min-w-[20px] text-right">
+                            {item.count}
+                          </span>
                         </div>
-                      </div>
-                      
-                      {/* תקציב עם עמודה */}
-                      <div className="col-span-5">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1">
-                            <Progress 
-                              value={item.budgetPercentage} 
-                              className="h-3"
+                        
+                        {/* תקציב - עמודה קצרה */}
+                        <div className="flex items-center gap-2 min-w-[90px]">
+                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full rounded-full transition-all duration-500 group-hover:shadow-sm"
                               style={{ 
-                                backgroundColor: 'hsl(var(--muted))',
+                                width: `${item.budgetPercentage}%`,
+                                backgroundColor: item.color,
+                                filter: 'brightness(1.1)',
+                                boxShadow: `inset 0 1px 2px ${item.color}60`
                               }}
                             />
                           </div>
-                          <div className="text-xs min-w-[70px] text-left">
-                            <div className="font-semibold">₪{item.budgetMillion}M</div>
-                            <div className="text-muted-foreground">{item.budgetPercentage}%</div>
-                          </div>
+                          <span className="text-xs font-semibold min-w-[35px] text-right">
+                            ₪{item.budgetMillion}M
+                          </span>
                         </div>
                       </div>
+                      
+                      {/* קו תחתון צבעוני בהover */}
+                      <div 
+                        className="absolute bottom-0 left-0 h-0.5 w-0 group-hover:w-full transition-all duration-300 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
                     </div>
                   ))}
                 </div>
