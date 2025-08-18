@@ -154,7 +154,23 @@ export default function OverviewDashboard() {
         .from('tasks')
         .select('id,title,department_slug,status,due_at,progress_percent,assigned_by_role,created_at');
       if (error) return [] as TaskRow[];
-      return (data || []) as any[];
+      
+      // Add demo task if no tasks exist and user is demo
+      const realTasks = (data || []) as any[];
+      if (realTasks.length === 0 && (user?.id?.includes('demo') || user?.id === '00000000-0000-0000-0000-000000000003' || user?.id === '33333333-3333-3333-3333-333333333333')) {
+        return [{
+          id: 'demo-task-1',
+          title: 'דוח תקציב חודשי - משימה לדוגמה',
+          department_slug: 'finance',
+          status: 'todo',
+          due_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          progress_percent: 0,
+          assigned_by_role: 'mayor',
+          created_at: new Date().toISOString()
+        }];
+      }
+      
+      return realTasks;
     },
   });
 
@@ -289,6 +305,13 @@ export default function OverviewDashboard() {
 
   const handleAcknowledge = async (taskId: string) => {
     if (!user?.id) return;
+    
+    // Skip demo tasks
+    if (taskId.startsWith('demo-')) {
+      setAckIds((prev) => [...prev, taskId]);
+      return;
+    }
+    
     const { error } = await supabase.from('task_acknowledgements').insert({ task_id: taskId, manager_user_id: user.id });
     if (!error) setAckIds((prev) => [...prev, taskId]);
   };
@@ -304,20 +327,23 @@ export default function OverviewDashboard() {
       </div>
 
       {(role === 'manager' || role === 'ceo') && executiveTasks.length > 0 && (
-        <Card className="shadow-card">
+        <Card className="shadow-card border-warning/50 bg-warning/10">
           <CardHeader>
-            <CardTitle className="text-xl">{role === 'ceo' ? 'משימות מראש העיר' : 'משימות מההנהלה'}</CardTitle>
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Megaphone className="h-5 w-5 text-warning" />
+              {role === 'ceo' ? 'משימות מראש העיר' : 'משימות מההנהלה'}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {executiveTasks.map((t) => (
-              <div key={t.id} className="rounded-md border p-3" style={{ backgroundColor: 'hsl(var(--warning) / 0.12)', borderColor: 'hsl(var(--warning))' }}>
+              <div key={t.id} className="rounded-md border border-warning p-3 bg-warning/15">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-medium text-foreground truncate" title={t.title}>{t.title}</div>
+                    <div className="font-medium text-warning-foreground truncate" title={t.title}>{t.title}</div>
                     <div className="text-xs text-muted-foreground mt-1">דד-ליין: {t.due_at ? new Date(t.due_at).toLocaleDateString('he-IL') : '—'}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">{DEPT_LABELS[t.department_slug] || t.department_slug}</Badge>
+                    <Badge variant="outline" className="border-warning text-warning">{DEPT_LABELS[t.department_slug] || t.department_slug}</Badge>
                     <Button size="sm" variant="secondary" onClick={() => handleAcknowledge(t.id)} className="gap-1">
                       <Eye className="h-4 w-4" /> אישור צפייה
                     </Button>
