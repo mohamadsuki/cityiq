@@ -13,7 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Eye } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Eye, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import type { DepartmentSlug } from "@/lib/demoAccess";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 
@@ -704,12 +708,80 @@ export default function TasksApp() {
 
             <div>
               <Label>דד-ליין</Label>
-              <Input
-                type="datetime-local"
-                value={form.due_at ? new Date(form.due_at).toISOString().slice(0,16) : ""}
-                onChange={(e) => setForm((f) => ({ ...f, due_at: e.target.value ? new Date(e.target.value).toISOString() : "" }))}
-                disabled={isManager && !managerEditable("due_at")}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-right font-normal",
+                      !form.due_at && "text-muted-foreground"
+                    )}
+                    disabled={isManager && !managerEditable("due_at")}
+                  >
+                    <CalendarIcon className="ml-2 h-4 w-4" />
+                    {form.due_at ? format(new Date(form.due_at), "dd/MM/yyyy HH:mm") : <span>בחר תאריך ושעה</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <div className="p-3">
+                    <Calendar
+                      mode="single"
+                      selected={form.due_at ? new Date(form.due_at) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          // Preserve existing time or set to current time
+                          const existingTime = form.due_at ? new Date(form.due_at) : new Date();
+                          date.setHours(existingTime.getHours());
+                          date.setMinutes(existingTime.getMinutes());
+                          setForm((f) => ({ ...f, due_at: date.toISOString() }));
+                        } else {
+                          setForm((f) => ({ ...f, due_at: "" }));
+                        }
+                      }}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                    {form.due_at && (
+                      <div className="flex gap-2 mt-3 pt-3 border-t">
+                        <div className="flex-1">
+                          <Label className="text-xs">שעה</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="23"
+                            value={form.due_at ? new Date(form.due_at).getHours().toString().padStart(2, '0') : "00"}
+                            onChange={(e) => {
+                              if (form.due_at) {
+                                const date = new Date(form.due_at);
+                                date.setHours(parseInt(e.target.value) || 0);
+                                setForm((f) => ({ ...f, due_at: date.toISOString() }));
+                              }
+                            }}
+                            className="h-8"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Label className="text-xs">דקות</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="59"
+                            value={form.due_at ? new Date(form.due_at).getMinutes().toString().padStart(2, '0') : "00"}
+                            onChange={(e) => {
+                              if (form.due_at) {
+                                const date = new Date(form.due_at);
+                                date.setMinutes(parseInt(e.target.value) || 0);
+                                setForm((f) => ({ ...f, due_at: date.toISOString() }));
+                              }
+                            }}
+                            className="h-8"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {editing && (
