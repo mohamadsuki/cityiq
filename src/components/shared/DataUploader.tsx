@@ -87,6 +87,40 @@ const detectDataType = (headers: string[], rows: any[], context?: string) => {
   return { table: null, reason: 'לא זוהה סוג נתונים מתאים' };
 };
 
+// Function to find Hebrew column indices in Excel headers
+const findHebrewColumns = (headers: string[]) => {
+  const columnMapping = {
+    incomeIndex: -1,
+    expenseIndex: -1,
+    surplusIndex: -1
+  };
+
+  console.log('🔍 Searching for Hebrew columns in headers:', headers);
+
+  headers.forEach((header, index) => {
+    const headerStr = String(header || '').trim();
+    console.log(`🔍 Header ${index}: "${headerStr}"`);
+    
+    if (headerStr.includes('ביצוע מצטבר הכנסות') || headerStr.includes('ביצוע מצטבר הכנסה')) {
+      columnMapping.incomeIndex = index;
+      console.log(`✅ Found income column at index ${index}: "${headerStr}"`);
+    }
+    
+    if (headerStr.includes('ביצוע מצטבר הוצאות') || headerStr.includes('ביצוע מצטבר הוצאה')) {
+      columnMapping.expenseIndex = index;
+      console.log(`✅ Found expense column at index ${index}: "${headerStr}"`);
+    }
+    
+    if (headerStr.includes('עודף/גירעון') || (headerStr.includes('עודף') && headerStr.includes('גירעון'))) {
+      columnMapping.surplusIndex = index;
+      console.log(`✅ Found surplus column at index ${index}: "${headerStr}"`);
+    }
+  });
+
+  console.log('🔍 Final column mapping:', columnMapping);
+  return columnMapping;
+};
+
 const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
   const original = k;
   let normalized = k.toLowerCase().trim();
@@ -149,7 +183,7 @@ const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
   return normalized;
 };
 
-const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: DebugLog[]) => {
+const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: DebugLog[], allHeaders?: string[]) => {
   console.log(`🗂️ mapRowToTable called for table: ${table}`, row);
   console.log('🐛 DEBUG - Original row sample keys:', Object.keys(row).slice(0, 5));
   console.log('🐛 DEBUG - Row has project name key:', !!row['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיל לפי פרקי התקציב']);
@@ -260,6 +294,12 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       console.log('🐛 Raw row object keys:', Object.keys(row));
       console.log('🐛 Raw row sample entries:', Object.entries(row).slice(0, 20).map(([k,v]) => `${k}: ${v}`));
       
+      // Use allHeaders to find Hebrew column mapping once (more efficient)
+      let columnMapping = { incomeIndex: -1, expenseIndex: -1, surplusIndex: -1 };
+      if (allHeaders && allHeaders.length > 0) {
+        columnMapping = findHebrewColumns(allHeaders);
+      }
+      
       // Let's check what's actually in the funding and numeric columns
       const allEmptyKeys = Object.keys(row).filter(k => k.includes('EMPTY'));
       console.log('🐛 All EMPTY keys found:', allEmptyKeys);
@@ -348,42 +388,19 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.funding_source2 = funding2;
       mapped.funding_source3 = funding3;
       
-      // Map numeric fields - Find correct column names in Excel headers
-      console.log('🔍 Looking for Hebrew column names in Excel headers...');
+      // Map numeric fields using the found column indices
+      console.log('🔍 Using column mapping for Hebrew columns:', columnMapping);
       
-      // Find income column
-      let incomeColumnKey = null;
-      let expenseColumnKey = null;
-      let surplusColumnKey = null;
-      
-      // Search all keys for Hebrew column names
-      for (const key of Object.keys(row)) {
-        const keyStr = String(key);
-        console.log(`🔍 Checking key: "${keyStr}" with value: "${row[key]}"`);
-        
-        if (keyStr.includes('ביצוע מצטבר הכנסות') || keyStr.includes('ביצוע מצטבר הכנסה')) {
-          incomeColumnKey = key;
-          console.log(`✅ Found income column: ${key}`);
-        }
-        if (keyStr.includes('ביצוע מצטבר הוצאות') || keyStr.includes('ביצוע מצטבר הוצאה')) {
-          expenseColumnKey = key;
-          console.log(`✅ Found expense column: ${key}`);
-        }
-        if (keyStr.includes('עודף/גירעון') || keyStr.includes('עודף') || keyStr.includes('גירעון')) {
-          surplusColumnKey = key;
-          console.log(`✅ Found surplus column: ${key}`);
-        }
-      }
+      // Convert row to array for index access
+      const rowValues = Object.values(row);
       
       const approvedBudgetRaw = row['__EMPTY_7'] || '0';
-      const incomeActualRaw = incomeColumnKey ? row[incomeColumnKey] || '0' : '0'; 
-      const expenseActualRaw = expenseColumnKey ? row[expenseColumnKey] || '0' : '0';
-      const surplusDeficitRaw = surplusColumnKey ? row[surplusColumnKey] || '0' : '0';
+      const incomeActualRaw = columnMapping.incomeIndex >= 0 ? rowValues[columnMapping.incomeIndex] || '0' : '0';
+      const expenseActualRaw = columnMapping.expenseIndex >= 0 ? rowValues[columnMapping.expenseIndex] || '0' : '0';
+      const surplusDeficitRaw = columnMapping.surplusIndex >= 0 ? rowValues[columnMapping.surplusIndex] || '0' : '0';
       
       console.log('🔍 Column mapping results:', {
-        incomeColumnKey,
-        expenseColumnKey,
-        surplusColumnKey,
+        columnMapping,
         foundValues: {
           incomeActualRaw,
           expenseActualRaw,
@@ -618,7 +635,7 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
           const row = rows[i];
           console.log(`🗂️ Processing row ${i + 1}/${rows.length}`);
           
-          const mappedRow = mapRowToTable(detected.table, row, logs);
+          const mappedRow = mapRowToTable(detected.table, row, logs, headers);
           
           if (!mappedRow) {
             console.log(`🚫 Skipping row ${i + 1} - returned null from mapping`);
