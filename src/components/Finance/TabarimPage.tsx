@@ -373,50 +373,68 @@ export default function TabarimPage() {
         {/* Summary Cards First */}
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-3">
               <CardTitle className="text-lg">תב"רים לפי תחום</CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               {tabarim.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {domainSummaryData.map((item, index) => (
                     <div 
                       key={item.originalDomain} 
-                      className="flex items-center group hover:bg-accent/30 rounded-md transition-colors duration-200 py-1.5 px-2"
+                      className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
                     >
-                      {/* סוגר שמאלי */}
-                      <div className="flex items-center mr-3">
+                      {/* סוגר שמאלי צבעוני */}
+                      <div className="flex items-center ml-2">
                         <div 
-                          className="w-1 h-8 rounded-sm"
+                          className="w-1 h-6 rounded-sm"
                           style={{ backgroundColor: item.color }}
                         />
                       </div>
                       
                       {/* תקציב */}
-                      <div className="min-w-[60px] text-left">
+                      <div className="min-w-[50px] text-left">
                         <span className="text-sm font-medium text-muted-foreground">
                           {item.budgetMillion === 0 ? '0M' : `${item.budgetMillion}M`}
                         </span>
                       </div>
                       
                       {/* מספר תב"רים */}
-                      <div className="min-w-[40px] text-left mr-6">
-                        <span className="text-lg font-semibold">
+                      <div className="min-w-[30px] text-left ml-4">
+                        <span className="text-base font-semibold">
                           {item.count}
                         </span>
                       </div>
                       
                       {/* שם התחום */}
-                      <div className="flex-1">
+                      <div className="flex-1 ml-4">
                         <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
                           {item.domain}
                         </span>
+                      </div>
+                      
+                      {/* פרטי hover */}
+                      <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 min-w-[200px]">
+                        <div className="text-xs space-y-1">
+                          <div className="flex justify-between">
+                            <span>מספר תב"רים:</span>
+                            <span className="font-medium">{item.count} ({item.countPercentage}%)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>תקציב:</span>
+                            <span className="font-medium">₪{item.budgetMillion}M ({item.budgetPercentage}%)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>תקציב ממוצע לתב"ר:</span>
+                            <span className="font-medium">₪{Math.round(item.budget / item.count / 1000)}K</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-6 text-muted-foreground text-sm">
+                <div className="text-center py-4 text-muted-foreground text-sm">
                   אין נתונים להצגה
                 </div>
               )}
