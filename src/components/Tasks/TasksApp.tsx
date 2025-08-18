@@ -845,9 +845,6 @@ export default function TasksApp() {
                     <span className="font-medium">נוצרה:</span>{" "}
                     {new Date(highlightedTask.created_at).toLocaleDateString('he-IL')}
                   </div>
-                  <div>
-                    <span className="font-medium">התקדמות:</span> {highlightedTask.progress_percent ?? 0}%
-                  </div>
                 </div>
 
                 {highlightedTask.progress_notes && (
