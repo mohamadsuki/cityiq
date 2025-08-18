@@ -85,7 +85,9 @@ export default function Navigation() {
               })
               .map((item) => {
                 const Icon = item.icon;
-                const isActive = currentPath === item.url;
+                const isActive = item.id === 'finance' 
+                  ? (currentPath === item.url || currentPath.startsWith('/finance/'))
+                  : currentPath === item.url;
 
                 return (
                   <Button
