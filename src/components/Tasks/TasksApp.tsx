@@ -663,9 +663,6 @@ export default function TasksApp() {
                   {(role === "mayor" ? (["ceo", ...ALL_DEPARTMENTS] as DepartmentSlug[]) : visibleDepartments).map((d) => (
                     <SelectItem key={d} value={d}>
                       <span className="font-medium">{DEPARTMENT_LABELS[d]}</span>
-                      {d === 'education' && role === "mayor" && (
-                        <span className="text-xs text-muted-foreground mr-2"> - למנהל החינוך</span>
-                      )}
                     </SelectItem>
                   ))}
                 </SelectContent>
