@@ -18,43 +18,92 @@ export default function ExecutiveTasksBanner({ department }: Props) {
   const isManager = role === 'manager';
   const canSee = (
     (isManager && !!user?.id && !!session && departments?.includes(department)) ||
-    (role === 'ceo' && !!user?.id && !!session && department === 'ceo')
+    (role === 'ceo' && !!user?.id && !!session && department === 'ceo') ||
+    // Allow demo mode access
+    (isManager && !!user?.id && !session && departments?.includes(department)) ||
+    (role === 'ceo' && !!user?.id && !session && department === 'ceo')
   );
 
   const [tasks, setTasks] = useState<any[]>([]);
   const [ackIds, setAckIds] = useState<string[]>([]);
+  const isDemo = !session;
 
   useEffect(() => {
     if (!canSee) return;
     let active = true;
+    
     async function load() {
-      const [{ data: t }, { data: a }] = await Promise.all([
-        supabase
-          .from('tasks')
-          .select('id,title,department_slug,status,due_at,assigned_by_role,created_at')
-          .eq('department_slug', department)
-          .in('assigned_by_role', ['mayor','ceo'])
-          .not('status', 'in', '(\"done\",\"cancelled\")')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('task_acknowledgements')
-          .select('task_id')
-          .eq('manager_user_id', user!.id)
-      ]);
-      if (!active) return;
-      setTasks((t as any[]) || []);
-      setAckIds(((a as { task_id: string }[]) || []).map(x => x.task_id));
+      if (isDemo) {
+        // Demo mode: read from localStorage
+        try {
+          const raw = localStorage.getItem("demo_tasks");
+          const list = raw ? (JSON.parse(raw) as any[]) : [];
+          const filtered = list.filter(t => 
+            t.department_slug === department &&
+            ['mayor', 'ceo'].includes(t.assigned_by_role) &&
+            !['done', 'cancelled'].includes(t.status)
+          );
+          if (!active) return;
+          setTasks(filtered);
+          
+          // For demo mode, acknowledgements are also in localStorage
+          const ackRaw = localStorage.getItem("demo_task_acknowledgements");
+          const ackList = ackRaw ? (JSON.parse(ackRaw) as any[]) : [];
+          const userAcks = ackList.filter(a => a.manager_user_id === user!.id);
+          setAckIds(userAcks.map(a => a.task_id));
+        } catch (e) {
+          console.error("Failed to parse demo tasks", e);
+          if (!active) return;
+          setTasks([]);
+          setAckIds([]);
+        }
+      } else {
+        // Real mode: read from Supabase
+        const [{ data: t }, { data: a }] = await Promise.all([
+          supabase
+            .from('tasks')
+            .select('id,title,department_slug,status,due_at,assigned_by_role,created_at')
+            .eq('department_slug', department)
+            .in('assigned_by_role', ['mayor','ceo'])
+            .not('status', 'in', '(\"done\",\"cancelled\")')
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('task_acknowledgements')
+            .select('task_id')
+            .eq('manager_user_id', user!.id)
+        ]);
+        if (!active) return;
+        setTasks((t as any[]) || []);
+        setAckIds(((a as { task_id: string }[]) || []).map(x => x.task_id));
+      }
     }
+    
     load();
     return () => { active = false; };
-  }, [canSee, department, user?.id]);
+  }, [canSee, department, user?.id, isDemo]);
 
   const pending = useMemo(() => tasks.filter(t => !ackIds.includes(t.id)), [tasks, ackIds]);
 
   const acknowledge = async (taskId: string) => {
     if (!user?.id) return;
-    const { error } = await supabase.from('task_acknowledgements').insert({ task_id: taskId, manager_user_id: user.id });
-    if (!error) setAckIds(prev => [...prev, taskId]);
+    
+    if (isDemo) {
+      // Demo mode: save to localStorage
+      try {
+        const ackRaw = localStorage.getItem("demo_task_acknowledgements");
+        const ackList = ackRaw ? (JSON.parse(ackRaw) as any[]) : [];
+        const newAck = { task_id: taskId, manager_user_id: user.id };
+        const updated = [...ackList, newAck];
+        localStorage.setItem("demo_task_acknowledgements", JSON.stringify(updated));
+        setAckIds(prev => [...prev, taskId]);
+      } catch (e) {
+        console.error("Failed to save demo acknowledgement", e);
+      }
+    } else {
+      // Real mode: save to Supabase
+      const { error } = await supabase.from('task_acknowledgements').insert({ task_id: taskId, manager_user_id: user.id });
+      if (!error) setAckIds(prev => [...prev, taskId]);
+    }
   };
 
   const viewTaskDetails = (taskId: string) => {
