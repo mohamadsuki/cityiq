@@ -352,7 +352,13 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
 
     addLog('info', `קורא קובץ: ${f.name} (${(f.size / 1024).toFixed(1)} KB)`);
 
-    try {
+          // Don't insert test data at all
+          if (mappedRow.tabar_number === '999' || 
+              mappedRow.tabar_name.includes('בדיקת מערכת') ||
+              mappedRow.tabar_name === 'בדיקת מערכת') {
+            console.log('🚫 BLOCKING test data insertion:', mappedRow.tabar_name, mappedRow.tabar_number);
+            continue; // Skip completely, don't insert
+          }
       const buffer = await f.arrayBuffer();
       const workbook = XLSX.read(buffer);
       const firstSheetName = workbook.SheetNames[0];
