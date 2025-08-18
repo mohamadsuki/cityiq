@@ -5,7 +5,7 @@ import type { DepartmentSlug } from "@/lib/demoAccess";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye } from "lucide-react";
+import { Eye, Megaphone } from "lucide-react";
 
 interface Props {
   department: DepartmentSlug;
@@ -58,26 +58,30 @@ export default function ExecutiveTasksBanner({ department }: Props) {
   if (!canSee || pending.length === 0) return null;
 
   return (
-    <Card className="shadow-card border-warning/40" style={{ backgroundColor: 'hsl(var(--warning) / 0.08)' }}>
+    <Card className="shadow-card border-warning/40 bg-warning/8">
       <CardHeader>
-        <CardTitle className="text-lg">משימות מההנהלה למחלקה</CardTitle>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Megaphone className="h-5 w-5 text-warning" />
+          משימות מההנהלה למחלקה
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {pending.slice(0, 5).map((t) => (
-          <div key={t.id} className="rounded-md border p-3 flex items-center justify-between gap-3" style={{ borderColor: 'hsl(var(--warning))' }}>
-            <div className="min-w-0">
-              <div className="font-medium truncate" title={t.title}>{t.title}</div>
-              <div className="text-xs text-muted-foreground mt-1">דד-ליין: {t.due_at ? new Date(t.due_at).toLocaleDateString('he-IL') : '—'}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">{departmentLabel(department)}</Badge>
-              <Button size="sm" variant="secondary" onClick={() => acknowledge(t.id)} className="gap-1">
-                <Eye className="h-4 w-4" /> אישור צפייה
-              </Button>
+          <div key={t.id} className="rounded-md border border-warning p-3 bg-warning/12">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-medium truncate text-warning-foreground" title={t.title}>{t.title}</div>
+                <div className="text-xs text-muted-foreground mt-1">דד-ליין: {t.due_at ? new Date(t.due_at).toLocaleDateString('he-IL') : '—'}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-warning text-warning">{departmentLabel(department)}</Badge>
+                <Button size="sm" variant="secondary" onClick={() => acknowledge(t.id)} className="gap-1">
+                  <Eye className="h-4 w-4" /> אישור צפייה
+                </Button>
+              </div>
             </div>
           </div>
-        ))
-        }
+        ))}
       </CardContent>
     </Card>
   );

@@ -407,6 +407,15 @@ export default function TasksApp() {
         <ExecutiveTasksBanner department={'ceo' as DepartmentSlug} />
       )}
 
+      {/* Demo notice */}
+      {(role === 'manager' || role === 'ceo') && (
+        <Card className="p-4 border-info bg-info/5">
+          <div className="text-sm text-muted-foreground">
+            <strong>הדרכה:</strong> התראות למשימות חדשות מההנהלה יופיעו כאן ברקע צהוב כשראש העיר או המנכ"ל יוסיפו משימות חדשות למחלקה שלך.
+          </div>
+        </Card>
+      )}
+
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
           <div className="md:col-span-2">
