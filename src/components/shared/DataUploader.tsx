@@ -313,7 +313,14 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       let columnMapping = { incomeIndex: -1, expenseIndex: -1, surplusIndex: -1 };
       if (allHeaders && allHeaders.length > 0) {
         columnMapping = findHebrewColumns(allHeaders);
+      } else {
+        // Fallback: search in row keys if headers not available
+        console.log('🔍 No headers provided, searching in row keys...');
+        const rowKeys = Object.keys(row);
+        columnMapping = findHebrewColumns(rowKeys);
       }
+      
+      console.log('🔍 Final column mapping after search:', columnMapping);
       
       // Let's check what's actually in the funding and numeric columns
       const allEmptyKeys = Object.keys(row).filter(k => k.includes('EMPTY'));
