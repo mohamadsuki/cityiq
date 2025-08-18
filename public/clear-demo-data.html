@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ניקוי נתוני הדמו</title>
+    <meta charset="utf-8">
+</head>
+<body dir="rtl">
+    <h1>ניקוי נתוני הדמו</h1>
+    <p>לחץ כדי לנקות את כל נתוני הדמו מ-localStorage:</p>
+    <button onclick="clearDemoData()">נקה נתוני הדמו</button>
+    <div id="result"></div>
+
+    <script>
+        function clearDemoData() {
+            localStorage.removeItem('demo_tasks');
+            localStorage.removeItem('demo_task_acknowledgements');
+            localStorage.removeItem('demo_user_email');
+            localStorage.removeItem('app_role');
+            localStorage.removeItem('app_departments');
+            
+            document.getElementById('result').innerHTML = 
+                '<p style="color: green;">✅ נתוני הדמו נוקו בהצלחה!</p>' +
+                '<p>עכשיו אפשר לחזור לאתר ולהתחיל מחדש.</p>';
+        }
+    </script>
+</body>
+</html>

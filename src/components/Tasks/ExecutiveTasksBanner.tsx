@@ -33,16 +33,25 @@ export default function ExecutiveTasksBanner({ department }: Props) {
     let active = true;
     
     async function load() {
+      console.log("Executive banner loading - canSee:", canSee, "isDemo:", isDemo, "department:", department);
+      
       if (isDemo) {
         // Demo mode: read from localStorage
         try {
           const raw = localStorage.getItem("demo_tasks");
+          console.log("Executive banner - demo tasks raw:", raw);
           const list = raw ? (JSON.parse(raw) as any[]) : [];
-          const filtered = list.filter(t => 
-            t.department_slug === department &&
-            ['mayor', 'ceo'].includes(t.assigned_by_role) &&
-            !['done', 'cancelled'].includes(t.status)
-          );
+          console.log("Executive banner - demo tasks parsed:", list);
+          
+          const filtered = list.filter(t => {
+            const matches = t.department_slug === department &&
+              ['mayor', 'ceo'].includes(t.assigned_by_role) &&
+              !['done', 'cancelled'].includes(t.status);
+            console.log(`Task ${t.title} - dept: ${t.department_slug}, assigned_by: ${t.assigned_by_role}, status: ${t.status}, matches: ${matches}`);
+            return matches;
+          });
+          console.log("Executive banner - filtered tasks:", filtered);
+          
           if (!active) return;
           setTasks(filtered);
           

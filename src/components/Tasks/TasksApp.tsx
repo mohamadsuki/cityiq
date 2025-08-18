@@ -34,6 +34,7 @@ type Task = {
   progress_percent: number | null;
   progress_notes: string | null;
   tags: string[] | null;
+  assigned_by_role?: 'mayor' | 'ceo' | 'manager';
 };
 
 const ALL_DEPARTMENTS: DepartmentSlug[] = [
@@ -199,10 +200,14 @@ export default function TasksApp() {
 
   async function fetchTasks() {
     setLoading(true);
+    console.log("Fetching tasks - isDemo:", isDemo, "session:", !!session);
+    
     if (isDemo) {
       try {
         const raw = localStorage.getItem("demo_tasks");
+        console.log("Demo tasks localStorage raw:", raw);
         const list = raw ? (JSON.parse(raw) as Task[]) : [];
+        console.log("Demo tasks parsed:", list);
         const sorted = isManager
           ? [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
           : list;
@@ -309,7 +314,7 @@ export default function TasksApp() {
         id: editing?.id ?? (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
         title: form.title as string,
         description: (form.description as string) ?? "",
-        created_by: "demo",
+        created_by: user?.id || "demo",
         updated_at: now,
         created_at: editing?.created_at ?? now,
         due_at: form.due_at || null,
@@ -321,18 +326,25 @@ export default function TasksApp() {
         tags: (form.tags as string[]) ?? [],
       };
 
+      // Add assigned_by_role for demo mode - determine from current user role
+      const taskWithRole: Task = {
+        ...payload,
+        assigned_by_role: role === 'mayor' ? 'mayor' : (role === 'ceo' ? 'ceo' : 'manager')
+      };
+
       let next = [] as Task[];
       try {
         const raw = localStorage.getItem("demo_tasks");
         const list = raw ? (JSON.parse(raw) as Task[]) : [];
         if (editing) {
-          next = list.map((t) => (t.id === editing.id ? { ...payload } : t));
+          next = list.map((t) => (t.id === editing.id ? { ...taskWithRole } : t));
         } else {
-          next = [{ ...payload }, ...list];
+          next = [{ ...taskWithRole }, ...list];
         }
       } catch {
-        next = [payload];
+        next = [taskWithRole];
       }
+      console.log("Saving demo task:", taskWithRole, "All tasks:", next);
       localStorage.setItem("demo_tasks", JSON.stringify(next));
       setTasks(next);
       toast({ title: editing ? "עודכן" : "נוצר", description: "המשימה נשמרה (מצב הדגמה)" });
