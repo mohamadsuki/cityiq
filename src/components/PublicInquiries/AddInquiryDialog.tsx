@@ -51,21 +51,25 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
     
     setIsLoading(true);
     try {
+      console.log('Submitting inquiry with user ID:', user.id);
+      const inquiryData = {
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        address: formData.address,
+        subject: formData.subject,
+        description: formData.description,
+        inquiry_type: formData.inquiry_type,
+        source: formData.source,
+        priority: formData.priority,
+        department_slug: formData.department_slug as any || null,
+        user_id: user.id,
+      };
+      console.log('Inquiry data:', inquiryData);
+      
       const { error } = await supabase
         .from('public_inquiries')
-        .insert({
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
-          address: formData.address,
-          subject: formData.subject,
-          description: formData.description,
-          inquiry_type: formData.inquiry_type,
-          source: formData.source,
-          priority: formData.priority,
-          department_slug: formData.department_slug as any || null,
-          user_id: user.id,
-        });
+        .insert(inquiryData);
 
       if (error) throw error;
 
