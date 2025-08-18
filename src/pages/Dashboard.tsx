@@ -17,6 +17,7 @@ import CollectionPage from "@/components/Finance/CollectionPage";
 import SalaryPage from "@/components/Finance/SalaryPage";
 import { useAuth } from "@/context/AuthContext";
 import ProfilePage from "@/components/Profile/ProfilePage";
+import { PublicInquiriesPage } from "@/components/PublicInquiries/PublicInquiriesPage";
 export default function Dashboard() {
   const location = useLocation();
   const path = location.pathname;
@@ -38,6 +39,7 @@ export default function Dashboard() {
     "/grants": "grants",
     "/projects": "projects",
     "/tasks": "tasks",
+    "/inquiries": "inquiries",
     "/profile": "profile",
   };
   const currentSection = sectionByPath[path] || "overview";
@@ -62,6 +64,7 @@ export default function Dashboard() {
       "grants": "קולות קוראים - דאשבורד עירוני",
       "projects": "פרויקטים - דאשבורד עירוני",
       "tasks": "משימות - דאשבורד עירוני",
+      "inquiries": "פניות ציבור - דאשבורד עירוני",
       "profile": "פרופיל משתמש - דאשבורד עירוני",
     };
     const descriptions: Record<string, string> = {
@@ -79,6 +82,7 @@ export default function Dashboard() {
       "grants": "קולות קוראים: סטטוס בקשות, החלטות ומשרדים.",
       "projects": "פרויקטים עירוניים: סטטוס, התקדמות ועלויות.",
       "tasks": "ניהול משימות בין ראש העיר לראשי מחלקות: תעדוף, סטטוס ודד-ליין.",
+      "inquiries": "ניהול פניות ציבור: טיפול בפניות מוותסאפ, אימייל ופניות ישירות.",
       "profile": "עריכת פרופיל משתמש: שם ותמונת פרופיל.",
     };
 
@@ -144,6 +148,8 @@ export default function Dashboard() {
         return <ProjectsApp />;
       case "tasks":
         return <TasksApp />;
+      case "inquiries":
+        return <PublicInquiriesPage />;
       case "profile":
         return <ProfilePage />;
       default:

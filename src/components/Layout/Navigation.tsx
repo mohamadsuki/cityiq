@@ -15,11 +15,10 @@ import {
   Menu,
   X,
   Home,
-  Megaphone
+  Megaphone,
+  MessageCircle
 } from "lucide-react";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { DataUploader } from "@/components/shared/DataUploader";
 import { useAuth } from "@/context/AuthContext";
 import GlobalLogo from "@/components/Layout/GlobalLogo";
 
@@ -34,11 +33,11 @@ const navigationItems = [
   { id: "welfare", name: "מחלקת רווחה", icon: Users, url: "/welfare" },
   { id: "non-formal", name: "חינוך בלתי פורמאלי", icon: Activity, url: "/non-formal" },
   { id: "business", name: "רישוי עסקים", icon: Store, url: "/business" },
+  { id: "inquiries", name: "פניות ציבור", icon: MessageCircle, url: "/inquiries" },
 ];
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
   const location = useLocation();
   const currentPath = location.pathname;
   const { role, departments } = useAuth();
@@ -118,12 +117,6 @@ export default function Navigation() {
               })}
           </nav>
 
-          <div className="mt-4">
-            <Button className="w-full" onClick={() => setImportOpen(true)}>
-              ייבוא נתונים
-            </Button>
-          </div>
-
           {/* Footer Info */}
           <div className="mt-8 p-4 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground text-center">
@@ -135,16 +128,6 @@ export default function Navigation() {
           </div>
           </div>
       </Card>
-
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>ייבוא נתונים</DialogTitle>
-            <DialogDescription>טעינת CSV/XLSX עם זיהוי יעד אוטומטי</DialogDescription>
-          </DialogHeader>
-          <DataUploader context="global" />
-        </DialogContent>
-      </Dialog>
 
       {/* Overlay for mobile */}
       {isOpen && (
