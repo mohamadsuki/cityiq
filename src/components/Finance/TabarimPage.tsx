@@ -326,10 +326,31 @@ export default function TabarimPage() {
   const chartData = Object.entries(domainStats).map(([domain, stats]) => ({
     name: domainLabels[domain] || domain,
     count: stats.count,
-    budgetMillion: Math.round(stats.budget / 1000000 * 10) / 10, // תקציב במיליונים מעוגל
-    percentage: ((stats.count / tabarim.length) * 100).toFixed(1),
-    budgetPercentage: totalBudget > 0 ? ((stats.budget / totalBudget) * 100).toFixed(1) : "0"
+    budgetMillion: Math.round(stats.budget / 1000000 * 10) / 10,
+    countPercentage: ((stats.count / tabarim.length) * 100),
+    budgetPercentage: totalBudget > 0 ? ((stats.budget / totalBudget) * 100) : 0
   }));
+
+  // נתונים לגרף מוערם - שורה אחת עם כל התחומים
+  const stackedData = [
+    {
+      category: "מספר תב״רים",
+      ...chartData.reduce((acc, item) => {
+        acc[item.name] = item.countPercentage;
+        return acc;
+      }, {} as Record<string, number>)
+    },
+    {
+      category: "תקציב",
+      ...chartData.reduce((acc, item) => {
+        acc[item.name] = item.budgetPercentage;
+        return acc;
+      }, {} as Record<string, number>)
+    }
+  ];
+
+  const domains = chartData.map(item => item.name);
+  const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7c7c', '#8dd1e1', '#d084d0', '#82d982'];
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -367,48 +388,49 @@ export default function TabarimPage() {
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={chartData}
+                      layout="horizontal"
+                      data={stackedData}
                       margin={{
                         top: 20,
                         right: 30,
-                        left: 20,
-                        bottom: 60,
+                        left: 80,
+                        bottom: 5,
                       }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis 
-                        dataKey="name" 
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        interval={0}
-                        fontSize={12}
+                      <XAxis type="number" domain={[0, 100]} />
+                      <YAxis 
+                        type="category" 
+                        dataKey="category" 
+                        width={80}
                       />
-                      <YAxis yAxisId="left" orientation="left" />
-                      <YAxis yAxisId="right" orientation="right" />
                       <Tooltip 
-                        formatter={(value: number, name: string) => {
-                          if (name === 'count') return [`${value} תב"רים`, 'מספר תב"רים'];
-                          if (name === 'budgetMillion') return [`₪${value}M`, 'תקציב (מיליון ₪)'];
-                          return [value, name];
+                        formatter={(value: number, name: string, props: any) => {
+                          const item = chartData.find(d => d.name === name);
+                          if (props.payload.category === "מספר תב״רים") {
+                            return [
+                              `${value.toFixed(1)}% (${item?.count || 0} תב"רים)`,
+                              name
+                            ];
+                          } else {
+                            return [
+                              `${value.toFixed(1)}% (₪${item?.budgetMillion || 0}M)`,
+                              name
+                            ];
+                          }
                         }}
-                        labelFormatter={(label) => `תחום: ${label}`}
+                        labelFormatter={(label) => label}
                       />
                       <Legend />
-                      <Bar 
-                        yAxisId="left"
-                        dataKey="count" 
-                        fill="#8884d8" 
-                        name="מספר תב״רים"
-                        radius={[2, 2, 0, 0]}
-                      />
-                      <Bar 
-                        yAxisId="right"
-                        dataKey="budgetMillion" 
-                        fill="#82ca9d" 
-                        name="תקציב (מיליון ₪)"
-                        radius={[2, 2, 0, 0]}
-                      />
+                      {domains.map((domain, index) => (
+                        <Bar 
+                          key={domain}
+                          dataKey={domain} 
+                          stackId="a"
+                          fill={colors[index % colors.length]} 
+                          name={domain}
+                        />
+                      ))}
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
