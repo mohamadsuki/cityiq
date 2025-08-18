@@ -15,7 +15,10 @@ import {
   Menu,
   X,
   Home,
-  Megaphone
+  Megaphone,
+  MessageSquare,
+  ChevronDown,
+  ChevronLeft
 } from "lucide-react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -33,15 +36,31 @@ const navigationItems = [
   { id: "engineering", name: "מחלקת הנדסה", icon: Building2, url: "/engineering" },
   { id: "welfare", name: "מחלקת רווחה", icon: Users, url: "/welfare" },
   { id: "non-formal", name: "חינוך בלתי פורמאלי", icon: Activity, url: "/non-formal" },
-  { id: "business", name: "רישוי עסקים", icon: Store, url: "/business" },
+  { 
+    id: "business", 
+    name: "רישוי עסקים", 
+    icon: Store, 
+    url: "/business",
+    subItems: [
+      { id: "public-inquiries", name: "פניות ציבור", icon: MessageSquare, url: "/business/public-inquiries" }
+    ]
+  },
 ];
 
 export default function Navigation() {
   const [isOpen, setIsOpen] = useState(false);
-  const [importOpen, setImportOpen] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const location = useLocation();
   const currentPath = location.pathname;
   const { role, departments } = useAuth();
+
+  const toggleExpanded = (itemId: string) => {
+    setExpandedItems(prev => 
+      prev.includes(itemId) 
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    );
+  };
 
   return (
     <>
@@ -87,42 +106,92 @@ export default function Navigation() {
                 const Icon = item.icon;
                 const isActive = item.id === 'finance' 
                   ? (currentPath === item.url || currentPath.startsWith('/finance/'))
+                  : item.id === 'business'
+                  ? (currentPath === item.url || currentPath.startsWith('/business/'))
                   : currentPath === item.url;
 
+                const isExpanded = expandedItems.includes(item.id);
+                const hasSubItems = item.subItems && item.subItems.length > 0;
+
                 return (
-                  <Button
-                    key={item.id}
-                    asChild
-                    variant={isActive ? "default" : "ghost"}
-                    className={`
-                    w-full justify-start h-12 text-right
-                    ${isActive 
-                      ? 'bg-gradient-primary text-primary-foreground shadow-glow' 
-                      : 'hover:bg-secondary/80'
-                    }
-                  `}
-                  >
-                    <NavLink to={item.url} onClick={() => setIsOpen(false)}>
-                      <span className="flex items-center w-full">
-                        <Icon className="ml-3 h-5 w-5" />
-                        <span className="flex-1">{item.name}</span>
-                        {isActive && (
-                          <Badge variant="secondary" className="bg-white/20 text-primary-foreground">
-                            פעיל
-                          </Badge>
-                        )}
-                      </span>
-                    </NavLink>
-                  </Button>
+                  <div key={item.id}>
+                    <Button
+                      asChild={!hasSubItems}
+                      variant={isActive ? "default" : "ghost"}
+                      className={`
+                        w-full justify-start h-12 text-right
+                        ${isActive 
+                          ? 'bg-gradient-primary text-primary-foreground shadow-glow' 
+                          : 'hover:bg-secondary/80'
+                        }
+                      `}
+                      onClick={hasSubItems ? () => toggleExpanded(item.id) : undefined}
+                    >
+                      {hasSubItems ? (
+                        <span className="flex items-center w-full cursor-pointer">
+                          <Icon className="ml-3 h-5 w-5" />
+                          <span className="flex-1">{item.name}</span>
+                          {isExpanded ? 
+                            <ChevronDown className="h-4 w-4" /> : 
+                            <ChevronLeft className="h-4 w-4" />
+                          }
+                        </span>
+                      ) : (
+                        <NavLink to={item.url} onClick={() => setIsOpen(false)}>
+                          <span className="flex items-center w-full">
+                            <Icon className="ml-3 h-5 w-5" />
+                            <span className="flex-1">{item.name}</span>
+                            {isActive && (
+                              <Badge variant="secondary" className="bg-white/20 text-primary-foreground">
+                                פעיל
+                              </Badge>
+                            )}
+                          </span>
+                        </NavLink>
+                      )}
+                    </Button>
+
+                    {/* Sub Items */}
+                    {hasSubItems && isExpanded && (
+                      <div className="mr-4 mt-1 space-y-1">
+                        {item.subItems?.map((subItem) => {
+                          const SubIcon = subItem.icon;
+                          const isSubActive = currentPath === subItem.url;
+                          
+                          return (
+                            <Button
+                              key={subItem.id}
+                              asChild
+                              variant={isSubActive ? "default" : "ghost"}
+                              size="sm"
+                              className={`
+                                w-full justify-start h-10 text-right
+                                ${isSubActive 
+                                  ? 'bg-gradient-primary text-primary-foreground shadow-glow' 
+                                  : 'hover:bg-secondary/80'
+                                }
+                              `}
+                            >
+                              <NavLink to={subItem.url} onClick={() => setIsOpen(false)}>
+                                <span className="flex items-center w-full">
+                                  <SubIcon className="ml-3 h-4 w-4" />
+                                  <span className="flex-1">{subItem.name}</span>
+                                  {isSubActive && (
+                                    <Badge variant="secondary" className="bg-white/20 text-primary-foreground">
+                                      פעיל
+                                    </Badge>
+                                  )}
+                                </span>
+                              </NavLink>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
           </nav>
-
-          <div className="mt-4">
-            <Button className="w-full" onClick={() => setImportOpen(true)}>
-              ייבוא נתונים
-            </Button>
-          </div>
 
           {/* Footer Info */}
           <div className="mt-8 p-4 bg-muted rounded-lg">
@@ -135,16 +204,6 @@ export default function Navigation() {
           </div>
           </div>
       </Card>
-
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>ייבוא נתונים</DialogTitle>
-            <DialogDescription>טעינת CSV/XLSX עם זיהוי יעד אוטומטי</DialogDescription>
-          </DialogHeader>
-          <DataUploader context="global" />
-        </DialogContent>
-      </Dialog>
 
       {/* Overlay for mobile */}
       {isOpen && (

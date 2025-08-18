@@ -15,6 +15,7 @@ import RegularBudgetPage from "@/components/Finance/RegularBudgetPage";
 import TabarimPage from "@/components/Finance/TabarimPage";
 import CollectionPage from "@/components/Finance/CollectionPage";
 import SalaryPage from "@/components/Finance/SalaryPage";
+import PublicInquiriesPage from "@/components/PublicInquiries/PublicInquiriesPage";
 import { useAuth } from "@/context/AuthContext";
 import ProfilePage from "@/components/Profile/ProfilePage";
 export default function Dashboard() {
@@ -35,6 +36,7 @@ export default function Dashboard() {
     "/welfare": "welfare",
     "/non-formal": "non-formal",
     "/business": "business",
+    "/business/public-inquiries": "business-public-inquiries",
     "/grants": "grants",
     "/projects": "projects",
     "/tasks": "tasks",
@@ -59,6 +61,7 @@ export default function Dashboard() {
       "welfare": "מחלקת רווחה - דאשבורד עירוני",
       "non-formal": "חינוך בלתי פורמאלי - דאשבורד עירוני",
       "business": "רישוי עסקים - דאשבורד עירוני",
+      "business-public-inquiries": "פניות ציבור - רישוי עסקים",
       "grants": "קולות קוראים - דאשבורד עירוני",
       "projects": "פרויקטים - דאשבורד עירוני",
       "tasks": "משימות - דאשבורד עירוני",
@@ -76,6 +79,7 @@ export default function Dashboard() {
       "welfare": "דאשבורד רווחה: מקבלי שירות, שירותים, מגמות ופילוחים.",
       "non-formal": "חינוך בלתי פורמאלי: תוכניות, משתתפים, מגמות והשתתפות.",
       "business": "רישוי עסקים: סטטוס רישיונות, סוגי עסקים והתראות.",
+      "business-public-inquiries": "פניות ציבור: מעקב פניות, טיפול ותגובות לתושבים.",
       "grants": "קולות קוראים: סטטוס בקשות, החלטות ומשרדים.",
       "projects": "פרויקטים עירוניים: סטטוס, התקדמות ועלויות.",
       "tasks": "ניהול משימות בין ראש העיר לראשי מחלקות: תעדוף, סטטוס ודד-ליין.",
@@ -105,8 +109,8 @@ export default function Dashboard() {
   const renderDashboard = () => {
     // Access control: if not mayor and section is department not in permissions -> show overview
     if (role !== 'mayor' && role !== 'ceo' && [
-      'finance','education','engineering','welfare','non-formal','business']
-      .includes(currentSection) && !departments.includes(currentSection as any)) {
+      'finance','education','engineering','welfare','non-formal','business','business-public-inquiries']
+      .includes(currentSection) && !departments.includes(currentSection.split('-')[0] as any)) {
       return (
         <div className="space-y-4">
           <div className="p-4 bg-muted rounded-md">אין לך הרשאה לגשת למחלקה זו. הועברת לסקירה כללית.</div>
@@ -138,6 +142,8 @@ export default function Dashboard() {
         return <NonFormalDashboard />;
       case "business":
         return <BusinessDashboard />;
+      case "business-public-inquiries":
+        return <PublicInquiriesPage />;
       case "grants":
         return <GrantsApp />;
       case "projects":
