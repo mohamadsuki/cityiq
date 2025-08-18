@@ -464,14 +464,6 @@ export default function TasksApp() {
         localStorage.setItem("demo_task_acknowledgements", JSON.stringify(updated));
         setAckIds(prev => [...prev, task.id]);
         toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
-        
-        // Trigger a window event to update the executive banner
-        window.dispatchEvent(new CustomEvent('taskAcknowledged', { detail: { taskId: task.id } }));
-        
-        // If viewing task details, close the modal after acknowledgment
-        if (taskDetailOpen && highlightedTask?.id === task.id) {
-          setTaskDetailOpen(false);
-        }
       } catch (e) {
         console.error("Failed to save demo acknowledgement", e);
         toast({ title: "שגיאה", description: "לא ניתן לאשר את המשימה", variant: "destructive" });
@@ -485,13 +477,6 @@ export default function TasksApp() {
       if (!error) {
         setAckIds(prev => [...prev, task.id]);
         toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
-        // Trigger a window event to update the executive banner
-        window.dispatchEvent(new CustomEvent('taskAcknowledged', { detail: { taskId: task.id } }));
-        
-        // If viewing task details, close the modal after acknowledgment
-        if (taskDetailOpen && highlightedTask?.id === task.id) {
-          setTaskDetailOpen(false);
-        }
       } else {
         toast({ title: "שגיאה", description: "לא ניתן לאשר את המשימה", variant: "destructive" });
       }
@@ -679,7 +664,7 @@ export default function TasksApp() {
                     <SelectItem key={d} value={d}>
                       <span className="font-medium">{DEPARTMENT_LABELS[d]}</span>
                       {d === 'education' && role === "mayor" && (
-                        <span></span>
+                        <span className="text-xs text-muted-foreground mr-2"> - למנהל החינוך</span>
                       )}
                     </SelectItem>
                   ))}
