@@ -566,22 +566,35 @@ export default function TasksApp() {
                 value={form.title as string}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 disabled={isManager && !managerEditable("title")}
+                placeholder="למשל: שדרוג מערכת למידה דיגיטלית"
               />
             </div>
 
             <div>
-              <Label>{role === "mayor" ? "יעד" : "מחלקה"}</Label>
+              <Label>{role === "mayor" ? "יעד" : "מחלקה"} *</Label>
               <Select
                 value={(form.department_slug as DepartmentSlug) ?? "finance"}
                 onValueChange={(v) => setForm((f) => ({ ...f, department_slug: v as DepartmentSlug }))}
               >
-                <SelectTrigger disabled={isManager && !managerEditable("department_slug")}><SelectValue aria-label={role === "mayor" ? "יעד" : "מחלקה"} /></SelectTrigger>
+                <SelectTrigger disabled={isManager && !managerEditable("department_slug")}>
+                  <SelectValue aria-label={role === "mayor" ? "יעד" : "מחלקה"} placeholder="בחר מחלקה..." />
+                </SelectTrigger>
                 <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                   {(role === "mayor" ? (["ceo", ...ALL_DEPARTMENTS] as DepartmentSlug[]) : visibleDepartments).map((d) => (
-                    <SelectItem key={d} value={d}>{DEPARTMENT_LABELS[d]}</SelectItem>
+                    <SelectItem key={d} value={d}>
+                      <span className="font-medium">{DEPARTMENT_LABELS[d]}</span>
+                      {d === 'education' && role === "mayor" && (
+                        <span className="text-xs text-muted-foreground mr-2"> - למנהל החינוך</span>
+                      )}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {role === "mayor" && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  💡 בחר "חינוך" כדי ליצור התראה למנהל החינוך
+                </div>
+              )}
             </div>
 
             <div>
