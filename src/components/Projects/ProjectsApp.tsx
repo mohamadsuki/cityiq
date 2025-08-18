@@ -1194,7 +1194,7 @@ function openEdit(p: Project) {
       {/* Lightbox Modal */}
       {lightboxOpen && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[9999]"
           onClick={() => setLightboxOpen(false)}
         >
           <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center">
@@ -1203,7 +1203,7 @@ function openEdit(p: Project) {
               variant="ghost"
               size="sm"
               onClick={() => setLightboxOpen(false)}
-              className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
+              className="absolute top-4 right-4 z-10 text-white hover:bg-white/20 bg-black/30 rounded-full p-2"
             >
               <X className="h-6 w-6" />
             </Button>
@@ -1213,7 +1213,7 @@ function openEdit(p: Project) {
               variant="ghost"
               size="sm"
               onClick={downloadImage}
-              className="absolute top-4 left-4 z-10 text-white hover:bg-white/20 gap-2"
+              className="absolute top-4 left-4 z-10 text-white hover:bg-white/20 bg-black/30 rounded-full gap-2 p-2"
             >
               <Download className="h-5 w-5" />
               הורדה
@@ -1228,7 +1228,7 @@ function openEdit(p: Project) {
                   e.stopPropagation();
                   prevImage();
                 }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20 bg-black/30 rounded-full p-3"
               >
                 <ChevronLeft className="h-8 w-8" />
               </Button>
@@ -1243,7 +1243,7 @@ function openEdit(p: Project) {
                   e.stopPropagation();
                   nextImage();
                 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20 bg-black/30 rounded-full p-3"
               >
                 <ChevronRight className="h-8 w-8" />
               </Button>
@@ -1253,13 +1253,13 @@ function openEdit(p: Project) {
             <img
               src={resolvedImages[selectedImageIndex]}
               alt={`תמונה ${selectedImageIndex + 1} של פרויקט ${viewing?.name || ""}`}
-              className="max-w-full max-h-full object-contain rounded-lg"
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
 
             {/* Image Counter */}
             {resolvedImages.length > 1 && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-medium">
                 {selectedImageIndex + 1} מתוך {resolvedImages.length}
               </div>
             )}
