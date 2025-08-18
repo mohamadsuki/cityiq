@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
-import { Target, ListChecks, BarChart3, CheckCircle, X, CalendarIcon } from "lucide-react";
+import { Target, ListChecks, BarChart3, CheckCircle, X, CalendarIcon, Download } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -276,6 +276,7 @@ export default function ProjectsApp() {
   const [viewOpen, setViewOpen] = useState(false);
   const [viewing, setViewing] = useState<Project | null>(null);
   const [resolvedImages, setResolvedImages] = useState<string[]>([]);
+  const [resolvedFiles, setResolvedFiles] = useState<Array<{ url: string; name: string }>>([]);
   const [editing, setEditing] = useState<Project | null>(null);
 const [form, setForm] = useState<Partial<Project>>({
   name: "",
@@ -376,18 +377,42 @@ function openEdit(p: Project) {
   function openView(p: Project) {
     setViewing(p);
     setResolvedImages([]);
+    setResolvedFiles([]);
     setViewOpen(true);
-    const paths = p.image_urls || [];
-    if (!paths.length) return;
+    
+    const imagePaths = p.image_urls || [];
+    const filePaths = p.file_urls || [];
+    
     if (isDemo) {
-      setResolvedImages(paths);
+      setResolvedImages(imagePaths);
+      // For demo mode, extract filename from data URL or use generic name
+      setResolvedFiles(filePaths.map((url, idx) => ({
+        url,
+        name: `קובץ_${idx + 1}.pdf`
+      })));
       return;
     }
-    Promise.all(paths.map(async (path) => {
-      const { data, error } = await supabase.storage.from('uploads').createSignedUrl(path, 3600);
-      if (error) return null;
-      return data?.signedUrl || null;
-    })).then((urls) => setResolvedImages(urls.filter(Boolean) as string[]));
+    
+    // Load images
+    if (imagePaths.length > 0) {
+      Promise.all(imagePaths.map(async (path) => {
+        const { data, error } = await supabase.storage.from('uploads').createSignedUrl(path, 3600);
+        if (error) return null;
+        return data?.signedUrl || null;
+      })).then((urls) => setResolvedImages(urls.filter(Boolean) as string[]));
+    }
+    
+    // Load files
+    if (filePaths.length > 0) {
+      Promise.all(filePaths.map(async (path) => {
+        const { data, error } = await supabase.storage.from('uploads').createSignedUrl(path, 3600);
+        if (error) return null;
+        return {
+          url: data?.signedUrl || '',
+          name: path.split('/').pop() || 'קובץ לא ידוע'
+        };
+      })).then((files) => setResolvedFiles(files.filter(f => f.url) as Array<{ url: string; name: string }>));
+    }
   }
 
   async function saveProject() {
@@ -878,6 +903,37 @@ function openEdit(p: Project) {
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground">אין תמונות</div>
+                )}
+              </div>
+              
+              <div>
+                <Label>קבצים</Label>
+                {resolvedFiles.length > 0 ? (
+                  <div className="space-y-2">
+                    {resolvedFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-3 border border-border rounded-md bg-muted/20">
+                        <div className="text-sm font-medium">{file.name}</div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const link = document.createElement('a');
+                            link.href = file.url;
+                            link.download = file.name;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          }}
+                          className="gap-1"
+                        >
+                          <Download className="h-4 w-4" />
+                          הורדה
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">אין קבצים</div>
                 )}
               </div>
             </div>
