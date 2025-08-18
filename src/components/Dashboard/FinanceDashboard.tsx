@@ -303,61 +303,65 @@ export default function FinanceDashboard() {
       {/* Navigation to Sub-pages */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <Card 
-          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 hover:border-primary/20 bg-card/50 backdrop-blur-sm"
+          className="cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-primary/10 hover:scale-105 border-2 border-transparent hover:border-primary/30 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/30 backdrop-blur-sm group"
           onClick={() => navigate('/finance/salary')}
         >
           <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-            <div className="h-16 w-16 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-lg">
-              <Users className="h-8 w-8 text-primary-foreground" />
+            <div className="h-20 w-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/30 group-hover:shadow-blue-500/50 transition-all duration-300 group-hover:scale-110">
+              <Users className="h-10 w-10 text-white drop-shadow-sm" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-foreground">שכר</h3>
-              <ArrowRight className="h-5 w-5 text-muted-foreground mx-auto" />
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-blue-700 dark:text-blue-300 group-hover:text-blue-800 dark:group-hover:text-blue-200">שכר</h3>
+              <div className="h-1 w-8 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full mx-auto opacity-60 group-hover:opacity-100 transition-opacity"></div>
+              <ArrowRight className="h-6 w-6 text-blue-500 mx-auto group-hover:translate-x-1 transition-transform" />
             </div>
           </CardContent>
         </Card>
         
         <Card 
-          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 hover:border-primary/20 bg-card/50 backdrop-blur-sm"
+          className="cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 hover:scale-105 border-2 border-transparent hover:border-green-500/30 bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/50 dark:to-emerald-900/30 backdrop-blur-sm group"
           onClick={() => navigate('/finance/collection')}
         >
           <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-            <div className="h-16 w-16 bg-gradient-accent rounded-2xl flex items-center justify-center shadow-lg">
-              <Receipt className="h-8 w-8 text-accent-foreground" />
+            <div className="h-20 w-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-green-500/30 group-hover:shadow-green-500/50 transition-all duration-300 group-hover:scale-110">
+              <Receipt className="h-10 w-10 text-white drop-shadow-sm" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-foreground">גבייה</h3>
-              <ArrowRight className="h-5 w-5 text-muted-foreground mx-auto" />
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-green-700 dark:text-green-300 group-hover:text-green-800 dark:group-hover:text-green-200">גבייה</h3>
+              <div className="h-1 w-8 bg-gradient-to-r from-green-400 to-emerald-600 rounded-full mx-auto opacity-60 group-hover:opacity-100 transition-opacity"></div>
+              <ArrowRight className="h-6 w-6 text-green-500 mx-auto group-hover:translate-x-1 transition-transform" />
             </div>
           </CardContent>
         </Card>
         
         <Card 
-          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 hover:border-primary/20 bg-card/50 backdrop-blur-sm"
+          className="cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/10 hover:scale-105 border-2 border-transparent hover:border-purple-500/30 bg-gradient-to-br from-purple-50 to-violet-100 dark:from-purple-950/50 dark:to-violet-900/30 backdrop-blur-sm group"
           onClick={() => navigate('/finance/tabarim')}
         >
           <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-            <div className="h-16 w-16 bg-gradient-secondary rounded-2xl flex items-center justify-center shadow-lg">
-              <FileText className="h-8 w-8 text-secondary-foreground" />
+            <div className="h-20 w-20 bg-gradient-to-br from-purple-500 to-violet-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-purple-500/30 group-hover:shadow-purple-500/50 transition-all duration-300 group-hover:scale-110">
+              <FileText className="h-10 w-10 text-white drop-shadow-sm" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-foreground">תב״רים</h3>
-              <ArrowRight className="h-5 w-5 text-muted-foreground mx-auto" />
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-purple-700 dark:text-purple-300 group-hover:text-purple-800 dark:group-hover:text-purple-200">תב״רים</h3>
+              <div className="h-1 w-8 bg-gradient-to-r from-purple-400 to-violet-600 rounded-full mx-auto opacity-60 group-hover:opacity-100 transition-opacity"></div>
+              <ArrowRight className="h-6 w-6 text-purple-500 mx-auto group-hover:translate-x-1 transition-transform" />
             </div>
           </CardContent>
         </Card>
         
         <Card 
-          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 hover:border-primary/20 bg-card/50 backdrop-blur-sm"
+          className="cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-orange-500/10 hover:scale-105 border-2 border-transparent hover:border-orange-500/30 bg-gradient-to-br from-orange-50 to-amber-100 dark:from-orange-950/50 dark:to-amber-900/30 backdrop-blur-sm group"
           onClick={() => navigate('/finance/regular-budget')}
         >
           <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
-            <div className="h-16 w-16 bg-gradient-tertiary rounded-2xl flex items-center justify-center shadow-lg">
-              <Calculator className="h-8 w-8 text-tertiary-foreground" />
+            <div className="h-20 w-20 bg-gradient-to-br from-orange-500 to-amber-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-orange-500/30 group-hover:shadow-orange-500/50 transition-all duration-300 group-hover:scale-110">
+              <Calculator className="h-10 w-10 text-white drop-shadow-sm" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-semibold text-foreground">תקציב רגיל</h3>
-              <ArrowRight className="h-5 w-5 text-muted-foreground mx-auto" />
+            <div className="space-y-3">
+              <h3 className="text-xl font-bold text-orange-700 dark:text-orange-300 group-hover:text-orange-800 dark:group-hover:text-orange-200">תקציב רגיל</h3>
+              <div className="h-1 w-8 bg-gradient-to-r from-orange-400 to-amber-600 rounded-full mx-auto opacity-60 group-hover:opacity-100 transition-opacity"></div>
+              <ArrowRight className="h-6 w-6 text-orange-500 mx-auto group-hover:translate-x-1 transition-transform" />
             </div>
           </CardContent>
         </Card>
