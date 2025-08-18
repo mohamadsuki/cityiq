@@ -1,0 +1,1 @@
+DELETE FROM tabarim WHERE tabar_number = '999' OR tabar_name LIKE '%בדיקת מערכת%';

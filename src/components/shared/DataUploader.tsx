@@ -350,15 +350,7 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
       return;
     }
 
-    addLog('info', `קורא קובץ: ${f.name} (${(f.size / 1024).toFixed(1)} KB)`);
-
-          // Don't insert test data at all
-          if (mappedRow.tabar_number === '999' || 
-              mappedRow.tabar_name.includes('בדיקת מערכת') ||
-              mappedRow.tabar_name === 'בדיקת מערכת') {
-            console.log('🚫 BLOCKING test data insertion:', mappedRow.tabar_name, mappedRow.tabar_number);
-            continue; // Skip completely, don't insert
-          }
+    try {
       const buffer = await f.arrayBuffer();
       const workbook = XLSX.read(buffer);
       const firstSheetName = workbook.SheetNames[0];
@@ -583,28 +575,6 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
           });
         } catch (verifyErr) {
           console.warn('⚠️ Verification error:', verifyErr);
-        }
-
-        // Test direct insert
-        try {
-          console.log('🧪 Testing direct insert...');
-          const { data: testData, error: testError } = await supabase
-            .from(detected.table as any)
-            .insert({
-              tabar_name: 'בדיקת מערכת',
-              tabar_number: '999',
-              domain: 'other',
-              approved_budget: 1000,
-              income_actual: 500,
-              expense_actual: 300,
-              surplus_deficit: 200,
-              user_id: '33333333-3333-3333-3333-333333333333'
-            })
-            .select('*');
-
-          console.log('🧪 Test insert result:', { success: !testError, data: testData, error: testError });
-        } catch (testErr) {
-          console.warn('🧪 Test insert error:', testErr);
         }
 
       } catch (processingError) {
