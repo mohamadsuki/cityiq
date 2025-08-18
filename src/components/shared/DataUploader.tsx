@@ -348,11 +348,48 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.funding_source2 = funding2;
       mapped.funding_source3 = funding3;
       
-      // Map numeric fields - Updated to use Hebrew column names
+      // Map numeric fields - Find correct column names in Excel headers
+      console.log('🔍 Looking for Hebrew column names in Excel headers...');
+      
+      // Find income column
+      let incomeColumnKey = null;
+      let expenseColumnKey = null;
+      let surplusColumnKey = null;
+      
+      // Search all keys for Hebrew column names
+      for (const key of Object.keys(row)) {
+        const keyStr = String(key);
+        console.log(`🔍 Checking key: "${keyStr}" with value: "${row[key]}"`);
+        
+        if (keyStr.includes('ביצוע מצטבר הכנסות') || keyStr.includes('ביצוע מצטבר הכנסה')) {
+          incomeColumnKey = key;
+          console.log(`✅ Found income column: ${key}`);
+        }
+        if (keyStr.includes('ביצוע מצטבר הוצאות') || keyStr.includes('ביצוע מצטבר הוצאה')) {
+          expenseColumnKey = key;
+          console.log(`✅ Found expense column: ${key}`);
+        }
+        if (keyStr.includes('עודף/גירעון') || keyStr.includes('עודף') || keyStr.includes('גירעון')) {
+          surplusColumnKey = key;
+          console.log(`✅ Found surplus column: ${key}`);
+        }
+      }
+      
       const approvedBudgetRaw = row['__EMPTY_7'] || '0';
-      const incomeActualRaw = row['ביצוע מצטבר הכנסות'] || '0'; 
-      const expenseActualRaw = row['ביצוע מצטבר הוצאות'] || '0';
-      const surplusDeficitRaw = row['עודף/גירעון'] || '0';
+      const incomeActualRaw = incomeColumnKey ? row[incomeColumnKey] || '0' : '0'; 
+      const expenseActualRaw = expenseColumnKey ? row[expenseColumnKey] || '0' : '0';
+      const surplusDeficitRaw = surplusColumnKey ? row[surplusColumnKey] || '0' : '0';
+      
+      console.log('🔍 Column mapping results:', {
+        incomeColumnKey,
+        expenseColumnKey,
+        surplusColumnKey,
+        foundValues: {
+          incomeActualRaw,
+          expenseActualRaw,
+          surplusDeficitRaw
+        }
+      });
       
       // Clean numbers (remove commas if they exist)
       mapped.approved_budget = parseFloat(String(approvedBudgetRaw).replace(/,/g, '')) || 0;
