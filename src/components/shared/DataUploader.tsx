@@ -307,11 +307,19 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
     case 'tabarim':
       console.log('🐛 TABARIM DETAILED DEBUG:');
       console.log('🐛 Raw row object keys:', Object.keys(row));
-      console.log('🐛 Raw row sample entries:', Object.entries(row).slice(0, 20).map(([k,v]) => `${k}: ${v}`));
+      console.log('🐛 ALL ROW ENTRIES (FULL DEBUG):', Object.entries(row));
+      console.log('🐛 HEADERS PROVIDED:', allHeaders);
+      
+      // Debug: Show all row values for troubleshooting
+      console.log('🐛 All row key-value pairs:');
+      Object.entries(row).forEach(([key, value], index) => {
+        console.log(`🐛 ${index}: "${key}" = "${value}"`);
+      });
       
       // Use allHeaders to find Hebrew column mapping once (more efficient)
       let columnMapping = { incomeIndex: -1, expenseIndex: -1, surplusIndex: -1 };
       if (allHeaders && allHeaders.length > 0) {
+        console.log('🔍 Searching in provided headers for Hebrew columns...');
         columnMapping = findHebrewColumns(allHeaders);
       } else {
         // Fallback: search in row keys if headers not available
