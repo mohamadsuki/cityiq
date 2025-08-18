@@ -202,29 +202,35 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
       console.log('🐛 FIXED: Extracted project name from original row:', projectName);
       
-      // Skip if this looks like a header row or empty row or unwanted test entries
+      // Skip if this looks like a header row or empty row or unwanted entries
       if (!projectName || 
           projectName.includes('דו"ח תקופתי') || 
           projectName.includes('שם תב"ר') ||
           projectName.includes('כולל קליטה') ||
           projectName.includes('בדיקת מערכת') ||
           projectName.includes('סה"כ כללי') ||
+          projectName === 'בדיקת מערכת' ||
+          projectName === 'סה"כ כללי' ||
           projectName.length < 3) {
-        console.log('🚫 Skipping header/empty row:', projectName);
+        console.log('🚫 Skipping unwanted row:', projectName);
+        return null; // Skip this row
+      }
+      
+      // Map tabar number from the " " (space) column 
+      const tabarNumber = row[' '] || row['__EMPTY'] || String(normalizedRow['__empty'] || '');
+      
+      // Skip rows without valid tabar number or with test numbers
+      if (!tabarNumber || 
+          tabarNumber === '999' || 
+          tabarNumber.trim() === '' ||
+          tabarNumber === 'null' ||
+          isNaN(parseInt(tabarNumber))) {
+        console.log('🚫 Skipping row - invalid tabar number:', tabarNumber, 'for project:', projectName);
         return null; // Skip this row
       }
       
       mapped.tabar_name = projectName;
-      
-      // Map tabar number from the " " (space) column 
-      const tabarNumber = row[' '] || row['__EMPTY'] || String(normalizedRow['__empty'] || '');
       mapped.tabar_number = tabarNumber;
-      
-      // Skip rows without valid tabar number or with test numbers
-      if (!tabarNumber || tabarNumber === '999' || tabarNumber.trim() === '') {
-        console.log('🚫 Skipping row without valid tabar number:', tabarNumber);
-        return null; // Skip this row
-      }
       
       // Map domain field - now accepts Hebrew text directly
       const domainValue = row['נכון לחודש 6/2025'] || 
