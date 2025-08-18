@@ -346,11 +346,10 @@ export default function TabarimPage() {
       color: domainColors[domain] || "hsl(var(--muted-foreground))"
     }))
     .sort((a, b) => {
-      const multiplier = sortOrder === 'desc' ? -1 : 1;
       if (sortBy === 'count') {
-        return (b.count - a.count) * multiplier;
+        return sortOrder === 'desc' ? b.count - a.count : a.count - b.count;
       } else {
-        return (b.budget - a.budget) * multiplier;
+        return sortOrder === 'desc' ? b.budget - a.budget : a.budget - b.budget;
       }
     });
 
