@@ -2,18 +2,36 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Edit, Trash2 } from "lucide-react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { AddInquiryDialog } from "./AddInquiryDialog";
+import { EditInquiryDialog } from "./EditInquiryDialog";
+import { InquiriesStatsCards } from "./InquiriesStatsCards";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { Database } from "@/integrations/supabase/types";
 
 type PublicInquiry = Database['public']['Tables']['public_inquiries']['Row'];
 
 export function PublicInquiriesPage() {
   const [addInquiryOpen, setAddInquiryOpen] = useState(false);
+  const [editInquiryOpen, setEditInquiryOpen] = useState(false);
+  const [selectedInquiry, setSelectedInquiry] = useState<PublicInquiry | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [inquiryToDelete, setInquiryToDelete] = useState<PublicInquiry | null>(null);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const { data: inquiries = [], isLoading, refetch } = useQuery({
     queryKey: ['public-inquiries'],
@@ -28,6 +46,45 @@ export function PublicInquiriesPage() {
     },
     enabled: !!user,
   });
+
+  const handleEdit = (inquiry: PublicInquiry) => {
+    setSelectedInquiry(inquiry);
+    setEditInquiryOpen(true);
+  };
+
+  const handleDelete = (inquiry: PublicInquiry) => {
+    setInquiryToDelete(inquiry);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!inquiryToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('public_inquiries')
+        .delete()
+        .eq('id', inquiryToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "הפניה נמחקה בהצלחה",
+        description: "הפניה הוסרה מהמערכת",
+      });
+
+      refetch();
+    } catch (error: any) {
+      toast({
+        title: "שגיאה",
+        description: error.message || "אירעה שגיאה במחיקת הפניה",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setInquiryToDelete(null);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -131,6 +188,31 @@ export function PublicInquiriesPage() {
         return date.toLocaleDateString('he-IL');
       },
     },
+    {
+      id: "actions",
+      header: "פעולות",
+      cell: ({ row }: any) => {
+        const inquiry = row.original;
+        return (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleEdit(inquiry)}
+            >
+              <Edit className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleDelete(inquiry)}
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        );
+      },
+    },
   ];
 
   return (
@@ -148,6 +230,9 @@ export function PublicInquiriesPage() {
         </Button>
       </div>
 
+      {/* כרטיסיות סטטיסטיקה */}
+      <InquiriesStatsCards />
+
       <DataTable
         columns={columns}
         data={inquiries}
@@ -163,6 +248,32 @@ export function PublicInquiriesPage() {
           setAddInquiryOpen(false);
         }}
       />
+
+      <EditInquiryDialog
+        open={editInquiryOpen}
+        onOpenChange={setEditInquiryOpen}
+        inquiry={selectedInquiry}
+        onSuccess={() => {
+          refetch();
+          setEditInquiryOpen(false);
+          setSelectedInquiry(null);
+        }}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>האם אתה בטוח?</AlertDialogTitle>
+            <AlertDialogDescription>
+              פעולה זו תמחק את הפניה לצמיתות. לא ניתן לבטל פעולה זו.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>ביטול</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>מחק</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
