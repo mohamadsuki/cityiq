@@ -180,15 +180,45 @@ export default function AuthPage() {
 
           <div className="pt-2">
             <p className="text-sm font-medium mb-2">בחר/י משתמש למילוי אוטומטי</p>
-            <div className="grid grid-cols-1 gap-2">
-              {DEMO_USERS.map(u => {
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" onClick={() => {
+                setEmail('mayor');
+                setPassword('password');
+                setMode('login');
+              }}>
+                ראש העיר · mayor · password
+              </Button>
+              <Button variant="outline" onClick={() => {
+                setEmail('ceo');
+                setPassword('password'); 
+                setMode('login');
+              }}>
+                מנכ"ל · ceo · password
+              </Button>
+              <Button variant="outline" onClick={() => {
+                setEmail('00000000-0000-0000-0000-000000000003');
+                setPassword('password');
+                setMode('login');
+              }}>
+                מנהל כספים · finance · password
+              </Button>
+              <Button variant="outline" onClick={() => {
+                setEmail('00000000-0000-0000-0000-000000000008');
+                setPassword('password');
+                setMode('login');
+              }}>
+                מנהל עסקים · business · password
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 gap-2 mt-2">
+              {DEMO_USERS.slice(4).map(u => {
               const uname = simpleUsernameFromEmail(u.email);
-              return <Button key={u.email} variant="outline" onClick={() => {
+              return <Button key={u.email} variant="outline" size="sm" onClick={() => {
                 setEmail(uname);
                 setPassword(u.password);
                 setMode('login');
               }}>
-                    {u.displayName} · {uname} · {u.password}
+                    {u.displayName}
                   </Button>;
             })}
             </div>
