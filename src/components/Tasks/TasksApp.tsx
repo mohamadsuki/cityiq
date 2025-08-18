@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Eye } from "lucide-react";
 import type { DepartmentSlug } from "@/lib/demoAccess";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
@@ -585,9 +586,18 @@ export default function TasksApp() {
                   {t.title}
                   {(role === 'mayor' || role === 'ceo') && ackIds.includes(t.id) && (
                     <div className="mt-1 flex items-center gap-2">
-                      <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
-                        ✓ נצפה על ידי המחלקה
-                      </Badge>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
+                              ✓
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            המשימה נצפתה על ידי ראש המחלקה
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       {(() => {
                         const ack = acknowledgements.find(a => a.task_id === t.id);
                         if (ack) {

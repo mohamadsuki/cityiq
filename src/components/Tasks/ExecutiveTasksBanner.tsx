@@ -127,7 +127,7 @@ export default function ExecutiveTasksBanner({ department }: Props) {
   if (!canSee || pending.length === 0) return null;
 
   return (
-    <Card className="shadow-card border-warning/40 bg-warning/8">
+    <Card className="shadow-card border-yellow-300/60 bg-yellow-100/80">
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Megaphone className="h-5 w-5 text-warning" />
@@ -136,14 +136,14 @@ export default function ExecutiveTasksBanner({ department }: Props) {
       </CardHeader>
       <CardContent className="space-y-2">
         {pending.slice(0, 5).map((t) => (
-          <div key={t.id} className="rounded-md border border-warning p-3 bg-warning/12 cursor-pointer hover:bg-warning/16 transition-colors" onClick={() => viewTaskDetails(t.id)}>
+          <div key={t.id} className="rounded-md border border-yellow-400 p-3 bg-yellow-100/90 cursor-pointer hover:bg-yellow-100 transition-colors" onClick={() => viewTaskDetails(t.id)}>
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="font-medium truncate text-warning-foreground" title={t.title}>{t.title}</div>
+                <div className="font-medium truncate text-yellow-800" title={t.title}>{t.title}</div>
                 <div className="text-xs text-muted-foreground mt-1">דד-ליין: {t.due_at ? new Date(t.due_at).toLocaleDateString('he-IL') : '—'}</div>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="border-warning text-warning">{departmentLabel(department)}</Badge>
+                
                 <Button 
                   size="sm" 
                   variant="outline" 
@@ -151,7 +151,7 @@ export default function ExecutiveTasksBanner({ department }: Props) {
                     e.stopPropagation();
                     viewTaskDetails(t.id);
                   }} 
-                  className="gap-1 border-warning text-warning hover:bg-warning/10"
+                  className="gap-1 border-yellow-500 text-yellow-700 hover:bg-yellow-200/60"
                 >
                   <ArrowLeft className="h-4 w-4" /> פרטים
                 </Button>
