@@ -158,10 +158,10 @@ export default function OverviewDashboard() {
     },
   });
 
-  // Manager acknowledgements (which tasks already viewed)
+  // Manager and CEO acknowledgements (which tasks already viewed)
   const { data: acks = [] } = useQuery({
     queryKey: ['task-acks', user?.id],
-    enabled: !!user && role === 'manager',
+    enabled: !!user && (role === 'manager' || role === 'ceo'),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('task_acknowledgements')
@@ -188,7 +188,7 @@ export default function OverviewDashboard() {
     const ch2 = supabase
       .channel('rt-task-acks')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'task_acknowledgements' }, () => {
-        if (user?.id) queryClient.invalidateQueries({ queryKey: ['task-acks', user.id] });
+        if (user?.id && (role === 'manager' || role === 'ceo')) queryClient.invalidateQueries({ queryKey: ['task-acks', user.id] });
       })
       .subscribe();
 
@@ -222,6 +222,16 @@ export default function OverviewDashboard() {
           (t.assigned_by_role === 'mayor' || t.assigned_by_role === 'ceo') &&
           t.status !== 'done' && t.status !== 'cancelled' &&
           departments.includes(t.department_slug as any) &&
+          !ackIds.includes(t.id)
+        )
+        .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())
+        .slice(0, 5)
+    : (role === 'ceo')
+    ? tasksFull
+        .filter((t) =>
+          t.assigned_by_role === 'mayor' &&
+          t.status !== 'done' && t.status !== 'cancelled' &&
+          t.department_slug === 'ceo' &&
           !ackIds.includes(t.id)
         )
         .sort((a, b) => new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime())
@@ -293,10 +303,10 @@ export default function OverviewDashboard() {
         </p>
       </div>
 
-      {role === 'manager' && executiveTasks.length > 0 && (
+      {(role === 'manager' || role === 'ceo') && executiveTasks.length > 0 && (
         <Card className="shadow-card">
           <CardHeader>
-            <CardTitle className="text-xl">משימות מההנהלה</CardTitle>
+            <CardTitle className="text-xl">{role === 'ceo' ? 'משימות מראש העיר' : 'משימות מההנהלה'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {executiveTasks.map((t) => (
