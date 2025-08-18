@@ -373,89 +373,101 @@ export default function TabarimPage() {
         {/* Summary Cards First */}
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
-            <CardHeader>
-              <CardTitle>תב"רים לפי תחום</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">תב"רים לפי תחום</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               {tabarim.length > 0 ? (
                 <div className="space-y-1">
                   {domainSummaryData.map((item, index) => (
                     <div 
                       key={item.originalDomain} 
-                      className="group relative p-3 hover:bg-accent/50 rounded-lg transition-all duration-300 cursor-pointer hover-scale"
+                      className="group relative p-2 hover:bg-gradient-to-r hover:from-accent/30 hover:to-transparent rounded-lg transition-all duration-300 cursor-pointer"
+                      style={{
+                        borderLeft: `3px solid ${item.color}`,
+                        background: `linear-gradient(90deg, ${item.color}08, transparent 50%)`
+                      }}
                     >
-                      <div className="flex items-center gap-3">
-                        {/* מספר דירוג ועיגול צבעוני */}
-                        <div className="flex items-center gap-2 min-w-[60px]">
-                          <span className="text-xs font-bold text-muted-foreground/60 group-hover:text-foreground transition-colors">
-                            #{index + 1}
-                          </span>
-                          <div 
-                            className="w-4 h-4 rounded-full shadow-sm group-hover:scale-110 transition-transform duration-200" 
-                            style={{ 
-                              backgroundColor: item.color,
-                              boxShadow: `0 2px 8px ${item.color}40`
-                            }}
-                          />
-                        </div>
-                        
-                        {/* שם התחום */}
+                      <div className="flex items-center gap-2">
+                        {/* שם התחום עם gradient */}
                         <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium group-hover:font-semibold transition-all duration-200 truncate block">
+                          <span 
+                            className="text-sm font-semibold group-hover:font-bold transition-all duration-200 truncate block"
+                            style={{ 
+                              background: `linear-gradient(135deg, ${item.color}, ${item.color}cc)`,
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              backgroundClip: 'text'
+                            }}
+                          >
                             {item.domain}
                           </span>
                           {/* פרטים נוספים בהover */}
-                          <div className="opacity-0 group-hover:opacity-100 text-xs text-muted-foreground transition-opacity duration-300 mt-1">
-                            {item.countPercentage}% מהתב"רים • {item.budgetPercentage}% מהתקציב
+                          <div className="opacity-0 group-hover:opacity-100 text-xs transition-opacity duration-300 mt-0.5">
+                            <span style={{ color: item.color }} className="font-medium">
+                              {item.countPercentage}%
+                            </span>
+                            <span className="text-muted-foreground mx-1">•</span>
+                            <span style={{ color: item.color }} className="font-medium">
+                              {item.budgetPercentage}%
+                            </span>
                           </div>
                         </div>
                         
-                        {/* מספר תב"רים - עמודה קצרה */}
-                        <div className="flex items-center gap-2 min-w-[80px]">
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        {/* תב"רים - עמודה עם gradients */}
+                        <div className="flex items-center gap-1.5 min-w-[60px]">
+                          <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
                             <div 
-                              className="h-full rounded-full transition-all duration-500 group-hover:shadow-sm"
+                              className="h-full rounded-full transition-all duration-500"
                               style={{ 
                                 width: `${item.countPercentage}%`,
-                                backgroundColor: item.color,
-                                boxShadow: `inset 0 1px 2px ${item.color}60`
+                                background: `linear-gradient(90deg, ${item.color}, ${item.color}dd)`,
+                                boxShadow: `0 0 4px ${item.color}60`
                               }}
                             />
                           </div>
-                          <span className="text-sm font-semibold min-w-[20px] text-right">
+                          <span 
+                            className="text-xs font-bold min-w-[15px] text-right transition-colors duration-200"
+                            style={{ color: item.color }}
+                          >
                             {item.count}
                           </span>
                         </div>
                         
-                        {/* תקציב - עמודה קצרה */}
-                        <div className="flex items-center gap-2 min-w-[90px]">
-                          <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        {/* תקציב - עמודה עם gradients */}
+                        <div className="flex items-center gap-1.5 min-w-[70px]">
+                          <div className="flex-1 h-1.5 bg-muted/50 rounded-full overflow-hidden">
                             <div 
-                              className="h-full rounded-full transition-all duration-500 group-hover:shadow-sm"
+                              className="h-full rounded-full transition-all duration-500"
                               style={{ 
                                 width: `${item.budgetPercentage}%`,
-                                backgroundColor: item.color,
-                                filter: 'brightness(1.1)',
-                                boxShadow: `inset 0 1px 2px ${item.color}60`
+                                background: `linear-gradient(90deg, ${item.color}dd, ${item.color})`,
+                                boxShadow: `0 0 4px ${item.color}60`
                               }}
                             />
                           </div>
-                          <span className="text-xs font-semibold min-w-[35px] text-right">
-                            ₪{item.budgetMillion}M
+                          <span 
+                            className="text-xs font-bold min-w-[30px] text-right transition-colors duration-200"
+                            style={{ color: item.color }}
+                          >
+                            {item.budgetMillion}M
                           </span>
                         </div>
                       </div>
                       
-                      {/* קו תחתון צבעוני בהover */}
+                      {/* גלואו אפקט בהover */}
                       <div 
-                        className="absolute bottom-0 left-0 h-0.5 w-0 group-hover:w-full transition-all duration-300 rounded-full"
-                        style={{ backgroundColor: item.color }}
+                        className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none"
+                        style={{ 
+                          background: `radial-gradient(circle at center, ${item.color}40, transparent 70%)`,
+                          boxShadow: `inset 0 1px 0 ${item.color}30`
+                        }}
                       />
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-4 text-muted-foreground text-sm">
                   אין נתונים להצגה
                 </div>
               )}
