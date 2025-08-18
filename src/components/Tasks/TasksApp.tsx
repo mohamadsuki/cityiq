@@ -584,42 +584,24 @@ export default function TasksApp() {
               <tr key={t.id} className="border-b border-border">
                 <td className="py-3 font-medium">
                   {t.title}
-                  {(role === 'mayor' || role === 'ceo') && ackIds.includes(t.id) && (
-                    <div className="mt-1 flex items-center gap-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
-                              ✓
-                            </Badge>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            המשימה נצפתה על ידי ראש המחלקה
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      {(() => {
-                        const ack = acknowledgements.find(a => a.task_id === t.id);
-                        if (ack) {
-                          const ackTime = isDemo && ack.acknowledged_at 
-                            ? new Date(ack.acknowledged_at).toLocaleString('he-IL')
-                            : isDemo 
-                              ? 'זה עתה'
-                              : new Date(ack.created_at).toLocaleString('he-IL');
-                          const managerName = isDemo && ack.manager_name 
-                            ? ack.manager_name 
-                            : 'מנהל המחלקה';
-                          
-                          return (
-                            <span className="text-xs text-muted-foreground">
-                              {managerName} • {ackTime}
-                            </span>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </div>
-                  )}
+                   {(role === 'mayor' || role === 'ceo') && ackIds.includes(t.id) && (
+                     <div className="mt-1">
+                       <TooltipProvider>
+                         <Tooltip>
+                           <TooltipTrigger asChild>
+                             <span className="inline-block">
+                               <Badge variant="outline" className="text-green-600 border-green-600 text-xs cursor-default">
+                                 ✓
+                               </Badge>
+                             </span>
+                           </TooltipTrigger>
+                           <TooltipContent>
+                             המשימה נצפתה על ידי ראש המחלקה
+                           </TooltipContent>
+                         </Tooltip>
+                       </TooltipProvider>
+                     </div>
+                   )}
                 </td>
                 <td className="py-3">{DEPARTMENT_LABELS[t.department_slug]}</td>
                 <td className="py-3">
@@ -738,16 +720,18 @@ export default function TasksApp() {
               />
             </div>
 
-            <div>
-              <Label>התקדמות (%)</Label>
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                value={form.progress_percent ?? 0}
-                onChange={(e) => setForm((f) => ({ ...f, progress_percent: Number(e.target.value) }))}
-              />
-            </div>
+            {editing && (
+              <div>
+                <Label>התקדמות (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={form.progress_percent ?? 0}
+                  onChange={(e) => setForm((f) => ({ ...f, progress_percent: Number(e.target.value) }))}
+                />
+              </div>
+            )}
 
             <div className="md:col-span-2">
               <Label>תיאור</Label>
