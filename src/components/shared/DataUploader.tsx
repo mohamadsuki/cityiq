@@ -194,24 +194,55 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       break;
       
     case 'regular_budget':
-      mapped.category_name = normalizedRow.category_name || normalizedRow['קטגוריה'] || '';
+      // Get category name from the first column (עיריית כפר קרע key)
+      mapped.category_name = row['עיריית כפר קרע'] || normalizedRow.category_name || normalizedRow['קטגוריה'] || '';
       
-      // Handle category type with Hebrew to English translation
-      let categoryType = normalizedRow.category_type || normalizedRow['סוג'] || 'הכנסות';
-      if (categoryType === 'הכנסות' || categoryType === 'income') {
-        categoryType = 'income';
-      } else if (categoryType === 'הוצאות' || categoryType === 'expense') {
+      console.log('🔍 Regular Budget mapping:', {
+        categoryName: mapped.category_name,
+        rawData: {
+          col1: row['__EMPTY_1'],
+          col3: row['__EMPTY_3']
+        }
+      });
+      
+      // Determine category type based on content patterns
+      let categoryType = 'income'; // default
+      const categoryName = mapped.category_name.toLowerCase();
+      
+      // These are expense categories
+      if (categoryName.includes('משכורות') || 
+          categoryName.includes('שכר') || 
+          categoryName.includes('הוצאות') || 
+          categoryName.includes('רכישות') || 
+          categoryName.includes('תחזוקה') || 
+          categoryName.includes('שירותים') ||
+          categoryName.includes('פעילויות') ||
+          categoryName.includes('מימון')) {
         categoryType = 'expense';
-      } else {
-        categoryType = 'income'; // default
       }
       
       mapped.category_type = categoryType;
-      mapped.budget_amount = parseFloat(normalizedRow.budget_amount || normalizedRow['תקציב'] || '0') || 0;
-      mapped.actual_amount = parseFloat(normalizedRow.actual_amount || normalizedRow['ביצוע'] || '0') || 0;
       
-      // Skip empty rows
-      if (!mapped.category_name && mapped.budget_amount === 0 && mapped.actual_amount === 0) {
+      // Map budget and actual amounts from the Excel structure
+      // Based on the logs: __EMPTY_1 seems to be budget, __EMPTY_3 seems to be actual
+      const budgetValue = row['__EMPTY_1'] || normalizedRow.budget_amount || normalizedRow['תקציב'] || '0';
+      const actualValue = row['__EMPTY_3'] || normalizedRow.actual_amount || normalizedRow['ביצוע'] || '0';
+      
+      // Clean and parse numeric values (remove commas)
+      mapped.budget_amount = parseFloat(String(budgetValue).replace(/,/g, '')) || 0;
+      mapped.actual_amount = parseFloat(String(actualValue).replace(/,/g, '')) || 0;
+      
+      console.log('🔍 Parsed amounts:', {
+        budget: mapped.budget_amount,
+        actual: mapped.actual_amount
+      });
+      
+      // Skip empty rows or header rows
+      if (!mapped.category_name || 
+          mapped.category_name.includes('עיריית כפר קרע') ||
+          mapped.category_name.includes('תקציב') ||
+          mapped.category_name.length < 2) {
+        console.log('🚫 Skipping row:', mapped.category_name);
         return null;
       }
       
