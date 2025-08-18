@@ -319,6 +319,10 @@ export default function TabarimPage() {
     return acc;
   }, {} as Record<string, { count: number; budget: number }>);
 
+  const totalBudget = tabarim.reduce((sum, tabar) => sum + tabar.approved_budget, 0);
+  const totalIncome = tabarim.reduce((sum, tabar) => sum + tabar.income_actual, 0);
+  const totalExpense = tabarim.reduce((sum, tabar) => sum + tabar.expense_actual, 0);
+
   const chartData = Object.entries(domainStats).map(([domain, stats]) => ({
     name: domainLabels[domain] || domain,
     value: stats.count,
@@ -326,10 +330,6 @@ export default function TabarimPage() {
     percentage: ((stats.count / tabarim.length) * 100).toFixed(1),
     budgetPercentage: totalBudget > 0 ? ((stats.budget / totalBudget) * 100).toFixed(1) : "0"
   }));
-
-  const totalBudget = tabarim.reduce((sum, tabar) => sum + tabar.approved_budget, 0);
-  const totalIncome = tabarim.reduce((sum, tabar) => sum + tabar.income_actual, 0);
-  const totalExpense = tabarim.reduce((sum, tabar) => sum + tabar.expense_actual, 0);
 
   return (
     <div className="space-y-6" dir="rtl">
