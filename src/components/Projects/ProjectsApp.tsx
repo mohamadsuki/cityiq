@@ -299,9 +299,10 @@ const [form, setForm] = useState<Partial<Project>>({
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     
-    const delayedProjects = projects.filter(p => 
-      (p.progress ?? 0) < 10 && 
-      new Date(p.created_at) < oneMonthAgo
+    // Count stuck projects - status "תקוע"
+    const stuckProjects = projects.filter(p => 
+      (p.status ?? '').toLowerCase() === 'תקוע' || 
+      (p.status ?? '').toLowerCase() === 'עיכוב'
     );
     
     const activeProjects = projects.filter(p => 
@@ -340,7 +341,7 @@ const [form, setForm] = useState<Partial<Project>>({
     console.log('All projects:', projects.map(p => ({ name: p.name, dept: p.department_slug, budget: p.budget_approved })));
     
     return {
-      delayed: delayedProjects.length,
+      delayed: stuckProjects.length,
       activeAndPlanning: activeProjects.length + planningProjects.length,
       activeCount: activeProjects.length,
       planningCount: planningProjects.length,
@@ -355,9 +356,9 @@ const [form, setForm] = useState<Partial<Project>>({
   const handleKpiClick = (filterType: string) => {
     switch (filterType) {
       case 'delayed':
-        // Filter for delayed projects - this would require custom logic
+        // Filter for stuck projects - status "עיכוב"
         setQ('');
-        setStatus('all');
+        setStatus('עיכוב');
         setDomain('all');
         break;
       case 'active':
@@ -688,7 +689,7 @@ function openEdit(p: Project) {
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-red-800">פרויקטים בעיכוב</div>
-              <div className="text-sm text-red-600">התקדמות פחות מ-10% כבר יותר מחודש</div>
+              <div className="text-sm text-red-600">פרויקטים בסטטוס תקוע או עיכוב</div>
             </div>
           </CardContent>
         </Card>
@@ -819,11 +820,12 @@ function openEdit(p: Project) {
 <Select value={status} onValueChange={(v) => setStatus(v)}>
   <SelectTrigger><SelectValue placeholder="סטטוס" /></SelectTrigger>
   <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
-    <SelectItem value="all">הכל</SelectItem>
-    <SelectItem value="תכנון">תכנון</SelectItem>
-    <SelectItem value="ביצוע">ביצוע</SelectItem>
-    <SelectItem value="סיום">סיום</SelectItem>
-    <SelectItem value="תקוע">תקוע</SelectItem>
+     <SelectItem value="all">הכל</SelectItem>
+     <SelectItem value="תכנון">תכנון</SelectItem>
+     <SelectItem value="ביצוע">ביצוע</SelectItem>
+     <SelectItem value="סיום">סיום</SelectItem>
+     <SelectItem value="תקוע">תקוע</SelectItem>
+     <SelectItem value="עיכוב">עיכוב</SelectItem>
   </SelectContent>
 </Select>
           </div>
