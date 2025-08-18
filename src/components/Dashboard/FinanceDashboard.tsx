@@ -301,46 +301,66 @@ export default function FinanceDashboard() {
       </div>
 
       {/* Navigation to Sub-pages */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Button 
-          variant="outline" 
-          className="h-auto p-4 flex flex-col items-center gap-2"
-          onClick={() => navigate('/finance/regular-budget')}
-        >
-          <Calculator className="h-8 w-8 text-primary" />
-          <span className="font-medium">תקציב רגיל</span>
-          <ArrowRight className="h-4 w-4 opacity-50" />
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          className="h-auto p-4 flex flex-col items-center gap-2"
-          onClick={() => navigate('/finance/tabarim')}
-        >
-          <FileText className="h-8 w-8 text-primary" />
-          <span className="font-medium">תב״רים</span>
-          <ArrowRight className="h-4 w-4 opacity-50" />
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          className="h-auto p-4 flex flex-col items-center gap-2"
-          onClick={() => navigate('/finance/collection')}
-        >
-          <Receipt className="h-8 w-8 text-primary" />
-          <span className="font-medium">גביה</span>
-          <ArrowRight className="h-4 w-4 opacity-50" />
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          className="h-auto p-4 flex flex-col items-center gap-2"
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <Card 
+          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 hover:border-primary/20 bg-card/50 backdrop-blur-sm"
           onClick={() => navigate('/finance/salary')}
         >
-          <Users className="h-8 w-8 text-primary" />
-          <span className="font-medium">שכר</span>
-          <ArrowRight className="h-4 w-4 opacity-50" />
-        </Button>
+          <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+            <div className="h-16 w-16 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-lg">
+              <Users className="h-8 w-8 text-primary-foreground" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold text-foreground">שכר</h3>
+              <ArrowRight className="h-5 w-5 text-muted-foreground mx-auto" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 hover:border-primary/20 bg-card/50 backdrop-blur-sm"
+          onClick={() => navigate('/finance/collection')}
+        >
+          <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+            <div className="h-16 w-16 bg-gradient-accent rounded-2xl flex items-center justify-center shadow-lg">
+              <Receipt className="h-8 w-8 text-accent-foreground" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold text-foreground">גבייה</h3>
+              <ArrowRight className="h-5 w-5 text-muted-foreground mx-auto" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 hover:border-primary/20 bg-card/50 backdrop-blur-sm"
+          onClick={() => navigate('/finance/tabarim')}
+        >
+          <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+            <div className="h-16 w-16 bg-gradient-secondary rounded-2xl flex items-center justify-center shadow-lg">
+              <FileText className="h-8 w-8 text-secondary-foreground" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold text-foreground">תב״רים</h3>
+              <ArrowRight className="h-5 w-5 text-muted-foreground mx-auto" />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 border-2 hover:border-primary/20 bg-card/50 backdrop-blur-sm"
+          onClick={() => navigate('/finance/regular-budget')}
+        >
+          <CardContent className="p-8 flex flex-col items-center text-center space-y-4">
+            <div className="h-16 w-16 bg-gradient-tertiary rounded-2xl flex items-center justify-center shadow-lg">
+              <Calculator className="h-8 w-8 text-tertiary-foreground" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold text-foreground">תקציב רגיל</h3>
+              <ArrowRight className="h-5 w-5 text-muted-foreground mx-auto" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <ExecutiveTasksBanner department="finance" />
