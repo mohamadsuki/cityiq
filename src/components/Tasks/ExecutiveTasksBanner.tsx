@@ -32,6 +32,20 @@ export default function ExecutiveTasksBanner({ department }: Props) {
     if (!canSee) return;
     let active = true;
     
+    // Listen for task acknowledgment events
+    const handleTaskAcknowledged = (event: CustomEvent) => {
+      console.log("Executive banner - received taskAcknowledged event:", event.detail);
+      const { taskId } = event.detail;
+      setAckIds(prev => {
+        if (!prev.includes(taskId)) {
+          return [...prev, taskId];
+        }
+        return prev;
+      });
+    };
+    
+    window.addEventListener('taskAcknowledged', handleTaskAcknowledged as EventListener);
+    
     async function load() {
       console.log("Executive banner loading - canSee:", canSee, "isDemo:", isDemo, "department:", department);
       
@@ -88,7 +102,10 @@ export default function ExecutiveTasksBanner({ department }: Props) {
     }
     
     load();
-    return () => { active = false; };
+    return () => { 
+      active = false; 
+      window.removeEventListener('taskAcknowledged', handleTaskAcknowledged as EventListener);
+    };
   }, [canSee, department, user?.id, isDemo]);
 
   const pending = useMemo(() => tasks.filter(t => !ackIds.includes(t.id)), [tasks, ackIds]);
