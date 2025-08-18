@@ -101,17 +101,32 @@ const findHebrewColumns = (headers: string[]) => {
     const headerStr = String(header || '').trim();
     console.log(`🔍 Header ${index}: "${headerStr}"`);
     
-    if (headerStr.includes('ביצוע מצטבר הכנסות') || headerStr.includes('ביצוע מצטבר הכנסה')) {
+    // More flexible income column detection
+    if (headerStr.includes('ביצוע') && headerStr.includes('הכנסות') ||
+        headerStr.includes('ביצוע') && headerStr.includes('הכנסה') ||
+        headerStr.includes('מצטבר') && headerStr.includes('הכנסות') ||
+        headerStr.includes('הכנסות בפועל') ||
+        headerStr === 'ביצוע מצטבר הכנסות') {
       columnMapping.incomeIndex = index;
       console.log(`✅ Found income column at index ${index}: "${headerStr}"`);
     }
     
-    if (headerStr.includes('ביצוע מצטבר הוצאות') || headerStr.includes('ביצוע מצטבר הוצאה')) {
+    // More flexible expense column detection
+    if (headerStr.includes('ביצוע') && headerStr.includes('הוצאות') ||
+        headerStr.includes('ביצוע') && headerStr.includes('הוצאה') ||
+        headerStr.includes('מצטבר') && headerStr.includes('הוצאות') ||
+        headerStr.includes('הוצאות בפועל') ||
+        headerStr === 'ביצוע מצטבר הוצאות') {
       columnMapping.expenseIndex = index;
       console.log(`✅ Found expense column at index ${index}: "${headerStr}"`);
     }
     
-    if (headerStr.includes('עודף/גירעון') || (headerStr.includes('עודף') && headerStr.includes('גירעון'))) {
+    // More flexible surplus column detection
+    if (headerStr.includes('עודף') && headerStr.includes('גירעון') ||
+        headerStr === 'עודף/גירעון' ||
+        headerStr === 'עודף גירעון' ||
+        headerStr.includes('עודף') || 
+        headerStr.includes('גירעון')) {
       columnMapping.surplusIndex = index;
       console.log(`✅ Found surplus column at index ${index}: "${headerStr}"`);
     }
