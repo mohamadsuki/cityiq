@@ -211,22 +211,35 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
           projectName.includes('סה"כ כללי') ||
           projectName === 'בדיקת מערכת' ||
           projectName === 'סה"כ כללי' ||
+          projectName.trim() === 'בדיקת מערכת' ||
+          projectName.trim() === 'סה"כ כללי' ||
           projectName.length < 3) {
         console.log('🚫 Skipping unwanted row:', projectName);
         return null; // Skip this row
       }
       
       // Map tabar number from the " " (space) column 
-      const tabarNumber = row[' '] || row['__EMPTY'] || String(normalizedRow['__empty'] || '');
+      const tabarNumber = (row[' '] || row['__EMPTY'] || String(normalizedRow['__empty'] || '')).toString().trim();
       
       // Skip rows without valid tabar number or with test numbers
       if (!tabarNumber || 
           tabarNumber === '999' || 
-          tabarNumber.trim() === '' ||
+          tabarNumber === '' ||
           tabarNumber === 'null' ||
-          isNaN(parseInt(tabarNumber))) {
+          tabarNumber === 'undefined' ||
+          isNaN(parseInt(tabarNumber)) ||
+          parseInt(tabarNumber) === 999) {
         console.log('🚫 Skipping row - invalid tabar number:', tabarNumber, 'for project:', projectName);
         return null; // Skip this row
+      }
+      
+      // Additional check: Skip if project name contains test data patterns
+      if (projectName.toLowerCase().includes('test') || 
+          projectName.toLowerCase().includes('בדיקה') ||
+          projectName.toLowerCase().includes('בדיקת') ||
+          (tabarNumber === '999' && projectName.includes('מערכת'))) {
+        console.log('🚫 Skipping test data row:', projectName, tabarNumber);
+        return null; // Skip this row  
       }
       
       mapped.tabar_name = projectName;
