@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { DataTable } from "@/components/shared/DataTable";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { ColumnDef } from "@tanstack/react-table";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import AddTabarDialog from "./AddTabarDialog";
 import {
   AlertDialog,
@@ -294,10 +295,31 @@ export default function TabarimPage() {
   ];
 
   // חישוב נתונים לגרפים
+  const domainLabels: Record<string, string> = {
+    "תשתיות וכבישים": "תשתיות וכבישים",
+    "מבני ציבור": "מבני ציבור", 
+    "חינוך": "חינוך",
+    "תרבות וספורט": "תרבות וספורט",
+    "רווחה": "רווחה",
+    "איכות הסביבה": "איכות הסביבה",
+    "אחר": "אחר",
+  };
+
+  const domainColors = [
+    "#8884d8", "#82ca9d", "#ffc658", "#ff7c7c", "#8dd1e1", "#d084d0", "#82d982"
+  ];
+
   const domainStats = tabarim.reduce((acc, tabar) => {
-    acc[tabar.domain] = (acc[tabar.domain] || 0) + 1;
+    const domain = tabar.domain || "אחר";
+    acc[domain] = (acc[domain] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+
+  const chartData = Object.entries(domainStats).map(([domain, count]) => ({
+    name: domainLabels[domain] || domain,
+    value: count,
+    percentage: ((count / tabarim.length) * 100).toFixed(1)
+  }));
 
   const totalBudget = tabarim.reduce((sum, tabar) => sum + tabar.approved_budget, 0);
   const totalIncome = tabarim.reduce((sum, tabar) => sum + tabar.income_actual, 0);
@@ -358,24 +380,40 @@ export default function TabarimPage() {
               <CardTitle>תב"רים לפי תחום</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                {Object.entries(domainStats).map(([domain, count]) => {
-                  const domainLabels: Record<string, string> = {
-                    education_buildings: "מבני חינוך",
-                    infrastructure: "תשתיות", 
-                    parks_gardens: "גנים ופארקים",
-                    culture_sports: "תרבות וספורט",
-                    organizational: "ארגוני",
-                    welfare: "רווחה",
-                  };
-                  return (
-                    <div key={domain} className="flex justify-between items-center py-2 border-b">
-                      <span>{domainLabels[domain] || domain}</span>
-                      <span className="font-semibold">{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              {tabarim.length > 0 ? (
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percentage }) => `${name} (${percentage}%)`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={domainColors[index % domainColors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number, name: string) => [
+                          `${value} תב"רים`,
+                          name
+                        ]}
+                        labelFormatter={() => ''}
+                      />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  אין נתונים להצגה
+                </div>
+              )}
             </CardContent>
           </Card>
 
