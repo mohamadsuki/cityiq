@@ -241,6 +241,20 @@ export default function ProjectsApp() {
     
     const totalBudget = Object.values(departmentBudgets).reduce((sum, dept) => sum + dept.budget, 0);
     
+    // Get top 3 departments by project count or budget for display
+    const topDepartments = ALL_DEPARTMENTS
+      .filter(dept => departmentBudgets[dept]?.count > 0)
+      .sort((a, b) => {
+        const aBudget = departmentBudgets[a]?.budget || 0;
+        const bBudget = departmentBudgets[b]?.budget || 0;
+        const aCount = departmentBudgets[a]?.count || 0;
+        const bCount = departmentBudgets[b]?.count || 0;
+        // Sort by budget first, then by count
+        if (aBudget !== bBudget) return bBudget - aBudget;
+        return bCount - aCount;
+      })
+      .slice(0, 3);
+    
     // Debug log to check department calculations
     console.log('Department budgets:', departmentBudgets);
     console.log('All projects:', projects.map(p => ({ name: p.name, dept: p.department_slug, budget: p.budget_approved })));
@@ -252,7 +266,8 @@ export default function ProjectsApp() {
       planningCount: planningProjects.length,
       totalActive: projects.filter(p => p.status === 'ביצוע' || p.status === 'תכנון').length,
       totalBudget,
-      departmentBudgets
+      departmentBudgets,
+      topDepartments
     };
   }, [projects]);
 
@@ -321,7 +336,7 @@ const [form, setForm] = useState<Partial<Project>>({
         value: kpiData.departmentBudgets[dept]?.budget || 0,
         count: kpiData.departmentBudgets[dept]?.count || 0
       }))
-      .filter(item => item.value > 0);
+      .filter(item => item.count > 0); // Filter by project count instead of budget value
   }, [kpiData.departmentBudgets]);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
@@ -629,9 +644,13 @@ function openEdit(p: Project) {
             <div className="space-y-1">
               <div className="font-semibold text-green-800">התפלגות לפי מחלקות</div>
               <div className="text-sm text-green-600">
-                הנדסה: ₪{(kpiData.departmentBudgets.engineering?.budget / 1000000 || 0).toFixed(1)}M, 
-                חינוך: ₪{(kpiData.departmentBudgets.education?.budget / 1000000 || 0).toFixed(1)}M, 
-                רווחה: ₪{(kpiData.departmentBudgets.welfare?.budget / 1000000 || 0).toFixed(1)}M
+                {kpiData.topDepartments.length > 0 ? (
+                  kpiData.topDepartments.map(dept => 
+                    `${DEPARTMENT_LABELS[dept]}: ₪${(kpiData.departmentBudgets[dept]?.budget / 1000000 || 0).toFixed(1)}M`
+                  ).join(', ')
+                ) : (
+                  'לא נמצאו פרויקטים עם תקציב'
+                )}
               </div>
             </div>
           </CardContent>
