@@ -29,10 +29,32 @@ type DebugLog = {
   details?: any;
 };
 
-const detectDataType = (headers: string[], rows: any[]) => {
+const detectDataType = (headers: string[], rows: any[], context?: string) => {
   const headerStr = headers.join(' ').toLowerCase();
   console.log('🔍 Headers for detection:', headers);
+  console.log('🔍 Context for detection:', context);
   console.log('🔍 First few rows for detection:', rows.slice(0, 3));
+  
+  // If context is provided, trust it first
+  if (context) {
+    switch (context) {
+      case 'regular_budget':
+        return { table: 'regular_budget', reason: 'זוהה על בסיס הקשר הדף (תקציב רגיל)' };
+      case 'collection':
+        return { table: 'collection_data', reason: 'זוהה על בסיס הקשר הדף (גביה)' };
+      case 'salary':
+        return { table: 'salary_data', reason: 'זוהה על בסיס הקשר הדף (משכורות)' };
+      case 'tabarim':
+        return { table: 'tabarim', reason: 'זוהה על בסיס הקשר הדף (תב"רים)' };
+    }
+  }
+  
+  // Also check in the first few rows content for regular budget indicators
+  const allContent = [...headers, ...rows.flatMap(row => Object.values(row).filter(v => typeof v === 'string'))].join(' ').toLowerCase();
+  
+  if (allContent.includes('תמצית נתוני התקציב הרגיל') || allContent.includes('תקציב שנתי מאושר') || allContent.includes('תקציב יחסי')) {
+    return { table: 'regular_budget', reason: 'זוהה על בסיס תוכן הקובץ (תקציב רגיל)' };
+  }
   
   // Check for collection-specific keywords
   if (headerStr.includes('property_type') || headerStr.includes('סוג נכס') || headerStr.includes('גביה')) {
@@ -55,7 +77,7 @@ const detectDataType = (headers: string[], rows: any[]) => {
   }
   
   if (headerStr.includes('institution') || headerStr.includes('מוסד')) {
-    return { table: 'institutions', reason: 'זוהה על בסיס כותרות מוסדות חינוך' };
+    return { table: 'institutions', reason: 'זוהה על בסיس כותרות מוסדות חינוך' };
   }
   
   if (headerStr.includes('license') || headerStr.includes('רישיון')) {
@@ -407,7 +429,7 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
       setRows(rowObjects);
       
       // Detect data type
-      const detection = detectDataType(headersArray, rowObjects.slice(0, 5));
+      const detection = detectDataType(headersArray, rowObjects.slice(0, 5), context);
       setDetected(detection);
       
       if (detection.table) {
