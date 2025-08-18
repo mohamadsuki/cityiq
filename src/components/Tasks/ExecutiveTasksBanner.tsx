@@ -88,7 +88,19 @@ export default function ExecutiveTasksBanner({ department }: Props) {
     }
     
     load();
-    return () => { active = false; };
+    
+    // Listen for task acknowledgements from the details modal
+    const handleTaskAcknowledged = (event: CustomEvent) => {
+      const { taskId } = event.detail;
+      setAckIds(prev => [...prev, taskId]);
+    };
+    
+    window.addEventListener('taskAcknowledged', handleTaskAcknowledged as EventListener);
+    
+    return () => { 
+      active = false; 
+      window.removeEventListener('taskAcknowledged', handleTaskAcknowledged as EventListener);
+    };
   }, [canSee, department, user?.id, isDemo]);
 
   const pending = useMemo(() => tasks.filter(t => !ackIds.includes(t.id)), [tasks, ackIds]);

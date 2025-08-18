@@ -468,6 +468,17 @@ export default function TasksApp() {
         const updated = [...ackList, newAck];
         localStorage.setItem("demo_task_acknowledgements", JSON.stringify(updated));
         setAckIds(prev => [...prev, task.id]);
+        
+        // Dispatch custom event to notify banner
+        window.dispatchEvent(new CustomEvent('taskAcknowledged', {
+          detail: { taskId: task.id }
+        }));
+        
+        // Close the modal if it's the highlighted task
+        if (highlightedTask?.id === task.id) {
+          setTaskDetailOpen(false);
+        }
+        
         toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
       } catch (e) {
         console.error("Failed to save demo acknowledgement", e);
@@ -481,6 +492,17 @@ export default function TasksApp() {
       });
       if (!error) {
         setAckIds(prev => [...prev, task.id]);
+        
+        // Dispatch custom event to notify banner
+        window.dispatchEvent(new CustomEvent('taskAcknowledged', {
+          detail: { taskId: task.id }
+        }));
+        
+        // Close the modal if it's the highlighted task
+        if (highlightedTask?.id === task.id) {
+          setTaskDetailOpen(false);
+        }
+        
         toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
       } else {
         toast({ title: "שגיאה", description: "לא ניתן לאשר את המשימה", variant: "destructive" });
