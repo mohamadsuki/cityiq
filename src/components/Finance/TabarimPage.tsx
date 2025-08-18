@@ -485,6 +485,10 @@ export default function TabarimPage() {
             <CardContent>
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex justify-between items-center py-2 border-b">
+                  <span>תב"רים פעילים</span>
+                  <span className="font-semibold text-primary">{tabarim.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b">
                   <span>סה"כ תקציב מאושר</span>
                   <span className="font-semibold text-blue-600">₪{totalBudget.toLocaleString()}</span>
                 </div>
