@@ -8,7 +8,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { DataTable } from "@/components/shared/DataTable";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { ColumnDef } from "@tanstack/react-table";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import AddTabarDialog from "./AddTabarDialog";
 import {
   AlertDialog,
@@ -325,8 +325,8 @@ export default function TabarimPage() {
 
   const chartData = Object.entries(domainStats).map(([domain, stats]) => ({
     name: domainLabels[domain] || domain,
-    value: stats.count,
-    budget: stats.budget,
+    count: stats.count,
+    budgetMillion: Math.round(stats.budget / 1000000 * 10) / 10, // תקציב במיליונים מעוגל
     percentage: ((stats.count / tabarim.length) * 100).toFixed(1),
     budgetPercentage: totalBudget > 0 ? ((stats.budget / totalBudget) * 100).toFixed(1) : "0"
   }));
@@ -366,32 +366,50 @@ export default function TabarimPage() {
               {tabarim.length > 0 ? (
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={chartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percentage, budgetPercentage, budget }) => 
-                          `${name} (${percentage}%) - ₪${(budget / 1000000).toFixed(1)}M`
-                        }
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={domainColors[index % domainColors.length]} />
-                        ))}
-                      </Pie>
+                    <BarChart
+                      data={chartData}
+                      margin={{
+                        top: 20,
+                        right: 30,
+                        left: 20,
+                        bottom: 60,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis 
+                        dataKey="name" 
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        interval={0}
+                        fontSize={12}
+                      />
+                      <YAxis yAxisId="left" orientation="left" />
+                      <YAxis yAxisId="right" orientation="right" />
                       <Tooltip 
-                        formatter={(value: number, name: string, props: any) => [
-                          `${value} תב"רים`,
-                          `₪${(props.payload.budget / 1000000).toFixed(1)}M תקציב`
-                        ]}
-                        labelFormatter={(label) => label}
+                        formatter={(value: number, name: string) => {
+                          if (name === 'count') return [`${value} תב"רים`, 'מספר תב"רים'];
+                          if (name === 'budgetMillion') return [`₪${value}M`, 'תקציב (מיליון ₪)'];
+                          return [value, name];
+                        }}
+                        labelFormatter={(label) => `תחום: ${label}`}
                       />
                       <Legend />
-                    </PieChart>
+                      <Bar 
+                        yAxisId="left"
+                        dataKey="count" 
+                        fill="#8884d8" 
+                        name="מספר תב״רים"
+                        radius={[2, 2, 0, 0]}
+                      />
+                      <Bar 
+                        yAxisId="right"
+                        dataKey="budgetMillion" 
+                        fill="#82ca9d" 
+                        name="תקציב (מיליון ₪)"
+                        radius={[2, 2, 0, 0]}
+                      />
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               ) : (
