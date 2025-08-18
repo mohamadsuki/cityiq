@@ -329,19 +329,30 @@ export default function TabarimPage() {
   const totalIncome = tabarim.reduce((sum, tabar) => sum + tabar.income_actual, 0);
   const totalExpense = tabarim.reduce((sum, tabar) => sum + tabar.expense_actual, 0);
 
-  // נתונים עבור הטבלה הויזואלית - מיון לפי מספר תב"רים
+  // מצב מיון
+  const [sortBy, setSortBy] = useState<'count' | 'budget'>('count');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // נתונים עבור הטבלה הויזואלית - מיון לפי הבחירה של המשתמש
   const domainSummaryData = Object.entries(domainStats)
     .map(([domain, stats]) => ({
       domain: domainLabels[domain] || domain,
       originalDomain: domain,
       count: stats.count,
       budget: stats.budget,
-      budgetMillion: Math.round(stats.budget / 1000000 * 10) / 10,
+      budgetThousand: Math.round(stats.budget / 1000),
       countPercentage: tabarim.length > 0 ? Math.round((stats.count / tabarim.length) * 100) : 0,
       budgetPercentage: totalBudget > 0 ? Math.round((stats.budget / totalBudget) * 100) : 0,
       color: domainColors[domain] || "hsl(var(--muted-foreground))"
     }))
-    .sort((a, b) => b.count - a.count); // מיון לפי מספר תב"רים מהגבוה לנמוך
+    .sort((a, b) => {
+      const multiplier = sortOrder === 'desc' ? -1 : 1;
+      if (sortBy === 'count') {
+        return (b.count - a.count) * multiplier;
+      } else {
+        return (b.budget - a.budget) * multiplier;
+      }
+    });
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -372,7 +383,35 @@ export default function TabarimPage() {
         <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">תב"רים לפי תחום</CardTitle>
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-lg">תב"רים לפי תחום</CardTitle>
+                <div className="flex gap-2 text-xs">
+                  <Button
+                    variant={sortBy === 'count' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSortBy('count')}
+                    className="h-7 text-xs"
+                  >
+                    לפי מספר
+                  </Button>
+                  <Button
+                    variant={sortBy === 'budget' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSortBy('budget')}
+                    className="h-7 text-xs"
+                  >
+                    לפי תקציב
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
+                    className="h-7 text-xs w-7 p-0"
+                  >
+                    {sortOrder === 'desc' ? '↓' : '↑'}
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="pt-0">
               {tabarim.length > 0 ? (
@@ -393,7 +432,7 @@ export default function TabarimPage() {
                       {/* תקציב */}
                       <div className="min-w-[50px] text-left">
                         <span className="text-sm font-medium text-muted-foreground">
-                          {item.budgetMillion === 0 ? '0M' : `${item.budgetMillion}M`}
+                          {item.budgetThousand === 0 ? '0K' : `${item.budgetThousand}K`}
                         </span>
                       </div>
                       
@@ -420,7 +459,7 @@ export default function TabarimPage() {
                           </div>
                           <div className="flex justify-between">
                             <span>תקציב:</span>
-                            <span className="font-medium">₪{item.budgetMillion}M ({item.budgetPercentage}%)</span>
+                            <span className="font-medium">₪{item.budgetThousand}K ({item.budgetPercentage}%)</span>
                           </div>
                           <div className="flex justify-between">
                             <span>תקציב ממוצע לתב"ר:</span>
