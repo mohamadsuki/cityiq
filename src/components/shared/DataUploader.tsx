@@ -418,24 +418,45 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.funding_source2 = funding2;
       mapped.funding_source3 = funding3;
       
-      // Map numeric fields using the found column indices
-      console.log('🔍 Using column mapping for Hebrew columns:', columnMapping);
+      // Map numeric fields using __EMPTY_ columns (similar to approved_budget)
+      console.log('🐛 All EMPTY keys already found above:', allEmptyKeys);
       
-      // Convert row to array for index access
-      const rowValues = Object.values(row);
-      
+      // Based on Excel structure - find the correct __EMPTY_ columns for each field
+      // We'll need to identify which __EMPTY_ column contains income, expense, surplus
       const approvedBudgetRaw = row['__EMPTY_7'] || '0';
-      const incomeActualRaw = columnMapping.incomeIndex >= 0 ? rowValues[columnMapping.incomeIndex] || '0' : '0';
-      const expenseActualRaw = columnMapping.expenseIndex >= 0 ? rowValues[columnMapping.expenseIndex] || '0' : '0';
-      const surplusDeficitRaw = columnMapping.surplusIndex >= 0 ? rowValues[columnMapping.surplusIndex] || '0' : '0';
       
-      console.log('🔍 Column mapping results:', {
-        columnMapping,
-        foundValues: {
-          incomeActualRaw,
-          expenseActualRaw,
-          surplusDeficitRaw
+      // Try different __EMPTY_ columns to find income, expense, surplus
+      // Usually they appear after the approved budget column
+      let incomeActualRaw = '0';
+      let expenseActualRaw = '0';
+      let surplusDeficitRaw = '0';
+      
+      // Check columns 8-15 for numeric values that could be income/expense/surplus
+      for (let i = 8; i <= 15; i++) {
+        const columnKey = `__EMPTY_${i}`;
+        const value = row[columnKey];
+        console.log(`🔍 Checking ${columnKey}: "${value}"`);
+        
+        if (value && !isNaN(parseFloat(String(value))) && parseFloat(String(value)) !== 0) {
+          // Found a non-zero numeric value - let's map it based on position
+          if (i === 8 || i === 9) {
+            incomeActualRaw = value || '0';
+            console.log(`✅ Found potential income at ${columnKey}: ${value}`);
+          } else if (i === 10 || i === 11) {
+            expenseActualRaw = value || '0';
+            console.log(`✅ Found potential expense at ${columnKey}: ${value}`);
+          } else if (i === 12 || i === 13 || i === 14) {
+            surplusDeficitRaw = value || '0';
+            console.log(`✅ Found potential surplus at ${columnKey}: ${value}`);
+          }
         }
+      }
+      
+      console.log('🔍 Final values found:', {
+        approved: approvedBudgetRaw,
+        income: incomeActualRaw,
+        expense: expenseActualRaw,
+        surplus: surplusDeficitRaw
       });
       
       // Clean numbers (remove commas if they exist)
