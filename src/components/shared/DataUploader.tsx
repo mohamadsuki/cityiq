@@ -195,9 +195,26 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
     case 'regular_budget':
       mapped.category_name = normalizedRow.category_name || normalizedRow['קטגוריה'] || '';
-      mapped.category_type = normalizedRow.category_type || normalizedRow['סוג'] || 'הכנסות';
+      
+      // Handle category type with Hebrew to English translation
+      let categoryType = normalizedRow.category_type || normalizedRow['סוג'] || 'הכנסות';
+      if (categoryType === 'הכנסות' || categoryType === 'income') {
+        categoryType = 'income';
+      } else if (categoryType === 'הוצאות' || categoryType === 'expense') {
+        categoryType = 'expense';
+      } else {
+        categoryType = 'income'; // default
+      }
+      
+      mapped.category_type = categoryType;
       mapped.budget_amount = parseFloat(normalizedRow.budget_amount || normalizedRow['תקציב'] || '0') || 0;
       mapped.actual_amount = parseFloat(normalizedRow.actual_amount || normalizedRow['ביצוע'] || '0') || 0;
+      
+      // Skip empty rows
+      if (!mapped.category_name && mapped.budget_amount === 0 && mapped.actual_amount === 0) {
+        return null;
+      }
+      
       break;
       
     case 'collection_data':
