@@ -667,11 +667,6 @@ export default function TasksApp() {
                   ))}
                 </SelectContent>
               </Select>
-              {role === "mayor" && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  💡 בחר "חינוך" כדי ליצור התראה למנהל החינוך
-                </div>
-              )}
             </div>
 
             <div>
