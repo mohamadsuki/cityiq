@@ -218,8 +218,15 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         return null; // Skip this row
       }
       
-      // Map tabar number from the " " (space) column 
-      const tabarNumber = (row[' '] || row['__EMPTY'] || String(normalizedRow['__empty'] || '')).toString().trim();
+      // Map tabar number from the FIRST column in Excel file
+      const firstColumnKey = Object.keys(row)[0]; // Get first column key
+      const tabarNumber = (row[firstColumnKey] || '').toString().trim();
+      
+      console.log('🔢 Tabar number mapping:', {
+        firstColumnKey,
+        tabarNumber,
+        allColumns: Object.keys(row).slice(0, 5) // Show first 5 column names for debugging
+      });
       
       // Skip rows without valid tabar number or with test numbers
       if (!tabarNumber || 
