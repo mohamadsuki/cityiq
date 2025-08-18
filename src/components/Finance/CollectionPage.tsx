@@ -151,19 +151,19 @@ export default function CollectionPage() {
     }) => PROPERTY_TYPE_LABELS[row.getValue("property_type") as string] || row.getValue("property_type")
   }, {
     accessorKey: "annual_budget",
-    header: "תקציב שנתי ארנונה (עמודה H)",
+    header: "תקציב שנתי ארנונה",
     cell: ({
       row
     }) => formatCurrency(row.getValue("annual_budget"))
   }, {
     accessorKey: "relative_budget",
-    header: "תקציב יחסי ארנונה (עמודה I)",
+    header: "תקציב יחסי ארנונה",
     cell: ({
       row
     }) => formatCurrency(row.getValue("relative_budget"))
   }, {
     accessorKey: "actual_collection",
-    header: "גביה בפועל (עמודה M)",
+    header: "גביה בפועל",
     cell: ({
       row
     }) => formatCurrency(row.getValue("actual_collection"))
@@ -360,7 +360,7 @@ export default function CollectionPage() {
           {/* Annual Budget Pie Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>תקציב שנתי ארנונה לפי סיווגים (עמודה H)</CardTitle>
+              <CardTitle>תקציב שנתי ארנונה לפי סיווגים</CardTitle>
               <p className="text-sm text-muted-foreground">
                 סה"כ: {formatCurrency(totalAnnualBudget)}
               </p>
@@ -383,7 +383,7 @@ export default function CollectionPage() {
           {/* Relative Budget Pie Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>תקציב יחסי ארנונה לפי סיווגים (עמודה I)</CardTitle>
+              <CardTitle>תקציב יחסי ארנונה לפי סיווגים</CardTitle>
               <p className="text-sm text-muted-foreground">
                 סה"כ: {formatCurrency(totalRelativeBudget)}
               </p>
@@ -406,7 +406,7 @@ export default function CollectionPage() {
           {/* Actual Collection Pie Chart */}
           <Card>
             <CardHeader>
-              <CardTitle>גביה בפועל לפי סיווגים (עמודה M)</CardTitle>
+              <CardTitle>גביה בפועל לפי סיווגים</CardTitle>
               <p className="text-sm text-muted-foreground">
                 סה"כ: {formatCurrency(totalActualCollection)}
               </p>
