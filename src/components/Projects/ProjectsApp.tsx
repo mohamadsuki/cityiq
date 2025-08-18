@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
-import { Target, ListChecks, BarChart3, CheckCircle, X, CalendarIcon, Download } from "lucide-react";
+import { Target, ListChecks, BarChart3, CheckCircle, X, CalendarIcon, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -103,6 +103,16 @@ export default function ProjectsApp() {
 
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
+  
+  // Modal state
+  const [open, setOpen] = useState(false);
+  const [viewOpen, setViewOpen] = useState(false);
+  const [viewing, setViewing] = useState<Project | null>(null);
+  const [resolvedImages, setResolvedImages] = useState<string[]>([]);
+  const [resolvedFiles, setResolvedFiles] = useState<Array<{ url: string; name: string }>>([]);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [editing, setEditing] = useState<Project | null>(null);
 
   // Filters
   const [q, setQ] = useState("");
@@ -121,6 +131,27 @@ export default function ProjectsApp() {
 
   const visibleDepartments: DepartmentSlug[] = (role === "mayor" || role === "ceo") ? ALL_DEPARTMENTS : departments;
 
+  const [files, setFiles] = useState<File[]>([]);
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+
+const [form, setForm] = useState<Partial<Project>>({
+  name: "",
+  code: "",
+  department_slug: (department !== "all" ? department : (visibleDepartments?.[0] ?? "finance")) as DepartmentSlug,
+  domain: "",
+  status: "תכנון",
+  funding_source: "",
+  budget_approved: null,
+  budget_executed: null,
+  progress: 0,
+  notes: "",
+  image_urls: [],
+  file_urls: [],
+  start_at: null,
+  end_at: null,
+  tabar_assignment: "",
+});
+
   useEffect(() => {
     if (department === "all") {
       searchParams.delete("department");
@@ -130,6 +161,55 @@ export default function ProjectsApp() {
     setSearchParams(searchParams, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [department]);
+
+  // Navigation functions for lightbox
+  const openLightbox = (index: number) => {
+    if (resolvedImages.length === 0) return;
+    setSelectedImageIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const nextImage = () => {
+    setSelectedImageIndex((prev) => (prev + 1) % resolvedImages.length);
+  };
+
+  const prevImage = () => {
+    setSelectedImageIndex((prev) => (prev - 1 + resolvedImages.length) % resolvedImages.length);
+  };
+
+  const downloadImage = () => {
+    const imageUrl = resolvedImages[selectedImageIndex];
+    if (!imageUrl) return;
+    
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `project-image-${selectedImageIndex + 1}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!lightboxOpen) return;
+      
+      switch (e.key) {
+        case 'Escape':
+          setLightboxOpen(false);
+          break;
+        case 'ArrowRight':
+          nextImage();
+          break;
+        case 'ArrowLeft':
+          prevImage();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [lightboxOpen]);
 
   async function fetchProjects() {
     setLoading(true);
@@ -270,34 +350,6 @@ export default function ProjectsApp() {
       topDepartments
     };
   }, [projects]);
-
-  // Modal state
-  const [open, setOpen] = useState(false);
-  const [viewOpen, setViewOpen] = useState(false);
-  const [viewing, setViewing] = useState<Project | null>(null);
-  const [resolvedImages, setResolvedImages] = useState<string[]>([]);
-  const [resolvedFiles, setResolvedFiles] = useState<Array<{ url: string; name: string }>>([]);
-  const [editing, setEditing] = useState<Project | null>(null);
-const [form, setForm] = useState<Partial<Project>>({
-  name: "",
-  code: "",
-  department_slug: (department !== "all" ? department : (visibleDepartments?.[0] ?? "finance")) as DepartmentSlug,
-  domain: "",
-  status: "תכנון",
-  funding_source: "",
-  budget_approved: null,
-  budget_executed: null,
-  progress: 0,
-  notes: "",
-  image_urls: [],
-  file_urls: [],
-  start_at: null,
-  end_at: null,
-  tabar_assignment: "",
-});
-
-  const [files, setFiles] = useState<File[]>([]);
-  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
 
   // Function to handle KPI card clicks
   const handleKpiClick = (filterType: string) => {
@@ -896,9 +948,18 @@ function openEdit(p: Project) {
                 {resolvedImages.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {resolvedImages.map((url, idx) => (
-                      <a key={idx} href={url} target="_blank" rel="noreferrer">
-                        <img src={url} alt={`תמונה לפרויקט ${viewing.name || ""}`} className="w-full h-40 object-cover rounded-md border border-border" loading="lazy" />
-                      </a>
+                      <div 
+                        key={idx} 
+                        className="cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => openLightbox(idx)}
+                      >
+                        <img 
+                          src={url} 
+                          alt={`תמונה לפרויקט ${viewing.name || ""}`} 
+                          className="w-full h-40 object-cover rounded-md border border-border" 
+                          loading="lazy" 
+                        />
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -1129,6 +1190,82 @@ function openEdit(p: Project) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Lightbox Modal */}
+      {lightboxOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50"
+          onClick={() => setLightboxOpen(false)}
+        >
+          <div className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center">
+            {/* Close Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setLightboxOpen(false)}
+              className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
+            >
+              <X className="h-6 w-6" />
+            </Button>
+
+            {/* Download Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={downloadImage}
+              className="absolute top-4 left-4 z-10 text-white hover:bg-white/20 gap-2"
+            >
+              <Download className="h-5 w-5" />
+              הורדה
+            </Button>
+
+            {/* Previous Button */}
+            {resolvedImages.length > 1 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prevImage();
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
+              >
+                <ChevronLeft className="h-8 w-8" />
+              </Button>
+            )}
+
+            {/* Next Button */}
+            {resolvedImages.length > 1 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nextImage();
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20"
+              >
+                <ChevronRight className="h-8 w-8" />
+              </Button>
+            )}
+
+            {/* Image */}
+            <img
+              src={resolvedImages[selectedImageIndex]}
+              alt={`תמונה ${selectedImageIndex + 1} של פרויקט ${viewing?.name || ""}`}
+              className="max-w-full max-h-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+
+            {/* Image Counter */}
+            {resolvedImages.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                {selectedImageIndex + 1} מתוך {resolvedImages.length}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
