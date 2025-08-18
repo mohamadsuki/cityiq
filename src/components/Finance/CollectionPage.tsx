@@ -344,7 +344,7 @@ export default function CollectionPage() {
       {/* Data Table */}
       <Card>
         <CardHeader>
-          <CardTitle>טבלת נתוני גביה מעמודות D-I, L, M</CardTitle>
+          <CardTitle>טבלת נתוני גביה</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? <div className="text-center py-8 text-muted-foreground">
