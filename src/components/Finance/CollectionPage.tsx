@@ -12,7 +12,6 @@ import { DataTable } from "@/components/shared/DataTable";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { ColumnDef } from "@tanstack/react-table";
 import { useAuth } from "@/context/AuthContext";
-
 interface CollectionData {
   id: string;
   property_type: string;
@@ -23,9 +22,7 @@ interface CollectionData {
   year: number;
   created_at: string;
 }
-
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
   'מגורים': 'מגורים',
   'מסחר': 'מסחר',
@@ -38,10 +35,13 @@ const PROPERTY_TYPE_LABELS: Record<string, string> = {
   'office': 'משרדים',
   'other': 'אחר'
 };
-
 export default function CollectionPage() {
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const {
+    user
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [collectionData, setCollectionData] = useState<CollectionData[]>([]);
   const [loading, setLoading] = useState(true);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -50,30 +50,26 @@ export default function CollectionPage() {
 
   // Generate year options (current year and 10 years back)
   const currentYear = new Date().getFullYear();
-  const yearOptions = Array.from({ length: 11 }, (_, i) => currentYear - i);
-
+  const yearOptions = Array.from({
+    length: 11
+  }, (_, i) => currentYear - i);
   const formatCurrency = (amount: number | null | undefined) => {
     if (amount === null || amount === undefined || isNaN(amount)) {
       return "₪0";
     }
     return `₪${amount.toLocaleString('he-IL')}`;
   };
-
   const loadCollectionData = async () => {
     try {
       setLoading(true);
-      
+
       // Build query - filter by selected year(s) and order by property type
-      let query = supabase
-        .from('collection_data')
-        .select('*')
-        .order('property_type');
+      let query = supabase.from('collection_data').select('*').order('property_type');
 
       // Apply year filtering
       if (selectedEndYear && selectedEndYear !== selectedYear) {
         // Year range selection
-        query = query.gte('year', Math.min(selectedYear, selectedEndYear))
-                     .lte('year', Math.max(selectedYear, selectedEndYear));
+        query = query.gte('year', Math.min(selectedYear, selectedEndYear)).lte('year', Math.max(selectedYear, selectedEndYear));
       } else {
         // Single year selection
         query = query.eq('year', selectedYear);
@@ -83,13 +79,13 @@ export default function CollectionPage() {
       if (user?.id) {
         query = query.eq('user_id', user.id);
       }
-
-      const { data, error } = await query;
-
+      const {
+        data,
+        error
+      } = await query;
       if (error) throw error;
-      
       console.log('Loaded collection data:', data);
-      
+
       // Convert to proper format and clean up property types
       const processedData: CollectionData[] = (data || []).map(item => ({
         id: item.id,
@@ -104,10 +100,8 @@ export default function CollectionPage() {
 
       // Consolidate duplicate property types by summing their values
       const consolidatedData: Record<string, CollectionData> = {};
-      
       processedData.forEach(item => {
         const standardizedType = PROPERTY_TYPE_LABELS[item.property_type] || item.property_type;
-        
         if (consolidatedData[standardizedType]) {
           // Merge with existing entry
           consolidatedData[standardizedType].annual_budget += item.annual_budget;
@@ -122,96 +116,88 @@ export default function CollectionPage() {
           };
         }
       });
-
       const finalData = Object.values(consolidatedData);
       console.log('Consolidated collection data:', finalData);
-      
       setCollectionData(finalData);
     } catch (error) {
       console.error('Error loading collection data:', error);
       toast({
         title: "שגיאה",
         description: "לא ניתן לטעון את נתוני הגביה",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     loadCollectionData();
   }, [selectedYear, selectedEndYear]);
-
   const handleUploadSuccess = () => {
     setImportDialogOpen(false);
     loadCollectionData();
     toast({
       title: "הצלחה",
-      description: "נתוני הגביה עודכנו בהצלחה",
+      description: "נתוני הגביה עודכנו בהצלחה"
     });
   };
 
   // Table columns
-  const columns: ColumnDef<CollectionData>[] = [
-    {
-      accessorKey: "property_type",
-      header: "סוג נכס",
-      cell: ({ row }) => PROPERTY_TYPE_LABELS[row.getValue("property_type") as string] || row.getValue("property_type"),
-    },
-    {
-      accessorKey: "annual_budget",
-      header: "תקציב שנתי ארנונה (עמודה H)",
-      cell: ({ row }) => formatCurrency(row.getValue("annual_budget")),
-    },
-    {
-      accessorKey: "relative_budget",
-      header: "תקציב יחסי ארנונה (עמודה I)",
-      cell: ({ row }) => formatCurrency(row.getValue("relative_budget")),
-    },
-    {
-      accessorKey: "actual_collection",
-      header: "גביה בפועל (עמודה M)",
-      cell: ({ row }) => formatCurrency(row.getValue("actual_collection")),
-    },
-    {
-      accessorKey: "surplus_deficit",
-      header: "עודף/גירעון",
-      cell: ({ row }) => {
-        const surplusDeficit = row.getValue<number>("surplus_deficit") || 0;
-        return (
-          <span className={surplusDeficit >= 0 ? "text-green-600" : "text-red-600"}>
+  const columns: ColumnDef<CollectionData>[] = [{
+    accessorKey: "property_type",
+    header: "סוג נכס",
+    cell: ({
+      row
+    }) => PROPERTY_TYPE_LABELS[row.getValue("property_type") as string] || row.getValue("property_type")
+  }, {
+    accessorKey: "annual_budget",
+    header: "תקציב שנתי ארנונה (עמודה H)",
+    cell: ({
+      row
+    }) => formatCurrency(row.getValue("annual_budget"))
+  }, {
+    accessorKey: "relative_budget",
+    header: "תקציב יחסי ארנונה (עמודה I)",
+    cell: ({
+      row
+    }) => formatCurrency(row.getValue("relative_budget"))
+  }, {
+    accessorKey: "actual_collection",
+    header: "גביה בפועל (עמודה M)",
+    cell: ({
+      row
+    }) => formatCurrency(row.getValue("actual_collection"))
+  }, {
+    accessorKey: "surplus_deficit",
+    header: "עודף/גירעון",
+    cell: ({
+      row
+    }) => {
+      const surplusDeficit = row.getValue<number>("surplus_deficit") || 0;
+      return <span className={surplusDeficit >= 0 ? "text-green-600" : "text-red-600"}>
             {formatCurrency(surplusDeficit)}
-          </span>
-        );
-      },
-    },
-  ];
+          </span>;
+    }
+  }];
 
   // Prepare pie chart data by grouping by property type
   const groupDataByPropertyType = (data: CollectionData[], valueField: keyof CollectionData) => {
     const grouped: Record<string, number> = {};
-    
     data.forEach(item => {
       const propertyType = PROPERTY_TYPE_LABELS[item.property_type] || item.property_type || 'לא מוגדר';
       const value = Number(item[valueField]) || 0;
-      
       if (grouped[propertyType]) {
         grouped[propertyType] += value;
       } else {
         grouped[propertyType] = value;
       }
     });
-    
-    return Object.entries(grouped)
-      .filter(([_, value]) => value > 0)
-      .map(([name, value], index) => ({
-        name,
-        value,
-        color: COLORS[index % COLORS.length]
-      }));
+    return Object.entries(grouped).filter(([_, value]) => value > 0).map(([name, value], index) => ({
+      name,
+      value,
+      color: COLORS[index % COLORS.length]
+    }));
   };
-
   const annualBudgetChartData = groupDataByPropertyType(collectionData, 'annual_budget');
   const relativeBudgetChartData = groupDataByPropertyType(collectionData, 'relative_budget');
   const actualCollectionChartData = groupDataByPropertyType(collectionData, 'actual_collection');
@@ -221,30 +207,23 @@ export default function CollectionPage() {
   const totalRelativeBudget = relativeBudgetChartData.reduce((sum, item) => sum + item.value, 0);
   const totalActualCollection = actualCollectionChartData.reduce((sum, item) => sum + item.value, 0);
   const totalSurplusDeficit = totalActualCollection - totalRelativeBudget;
-
   const renderCustomTooltip = (props: any) => {
     if (props.active && props.payload && props.payload.length) {
-      return (
-        <div className="bg-background p-2 border rounded shadow">
+      return <div className="bg-background p-2 border rounded shadow">
           <p className="font-medium">{props.payload[0].name}</p>
           <p className="text-primary">
             {formatCurrency(props.payload[0].value)}
           </p>
-        </div>
-      );
+        </div>;
     }
     return null;
   };
-
-  return (
-    <div className="space-y-6" dir="rtl">
+  return <div className="space-y-6" dir="rtl">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-3xl font-bold mb-2">גביה</h1>
-          <p className="text-muted-foreground">
-            ניהול נתוני גביה מקובץ "טיוטת מאזן RAW" - עמודות D-I, L, M
-          </p>
+          <p className="text-muted-foreground">ניהול נתוני גביה מקובץ "טיוטת מאזן RAW"</p>
         </div>
         <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
           <DialogTrigger asChild>
@@ -258,10 +237,7 @@ export default function CollectionPage() {
               <DialogTitle>ייבוא נתוני גביה מטיוטת מאזן RAW</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <DataUploader
-                context="collection"
-                onUploadSuccess={handleUploadSuccess}
-              />
+              <DataUploader context="collection" onUploadSuccess={handleUploadSuccess} />
               <div className="mt-4 text-sm text-muted-foreground">
                 העלה קובץ "טיוטת מאזן RAW" עם נתוני הגביה (עמודות D-I, L, M).
                 הקובץ צריך להכיל נתונים לפי סוגי נכסים: מגורים, מסחר, תעשיה, משרדים ואחר.
@@ -280,60 +256,39 @@ export default function CollectionPage() {
               <Label htmlFor="year-select">שנה:</Label>
             </div>
             <div className="flex items-center gap-2">
-              <Select
-                value={selectedYear.toString()}
-                onValueChange={(value) => setSelectedYear(parseInt(value))}
-              >
+              <Select value={selectedYear.toString()} onValueChange={value => setSelectedYear(parseInt(value))}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="בחר שנה" />
                 </SelectTrigger>
                 <SelectContent>
-                  {yearOptions.map((year) => (
-                    <SelectItem key={year} value={year.toString()}>
+                  {yearOptions.map(year => <SelectItem key={year} value={year.toString()}>
                       {year}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             
             <div className="flex items-center gap-2">
               <Label htmlFor="end-year-select">עד שנה (אופציונלי):</Label>
-              <Select
-                value={selectedEndYear?.toString() || "none"}
-                onValueChange={(value) => setSelectedEndYear(value === "none" ? null : parseInt(value))}
-              >
+              <Select value={selectedEndYear?.toString() || "none"} onValueChange={value => setSelectedEndYear(value === "none" ? null : parseInt(value))}>
                 <SelectTrigger className="w-32">
                   <SelectValue placeholder="בחר שנת סיום" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">ללא</SelectItem>
-                  {yearOptions
-                    .filter(year => year !== selectedYear)
-                    .map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
+                  {yearOptions.filter(year => year !== selectedYear).map(year => <SelectItem key={year} value={year.toString()}>
                         {year}
-                      </SelectItem>
-                    ))}
+                      </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
-            {selectedEndYear && (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setSelectedEndYear(null)}
-              >
+            {selectedEndYear && <Button variant="outline" size="sm" onClick={() => setSelectedEndYear(null)}>
                 איפוס טווח
-              </Button>
-            )}
+              </Button>}
             
             <div className="text-sm text-muted-foreground">
-              {selectedEndYear && selectedEndYear !== selectedYear 
-                ? `מציג נתונים לשנים ${Math.min(selectedYear, selectedEndYear)}-${Math.max(selectedYear, selectedEndYear)}`
-                : `מציג נתונים לשנת ${selectedYear}`
-              }
+              {selectedEndYear && selectedEndYear !== selectedYear ? `מציג נתונים לשנים ${Math.min(selectedYear, selectedEndYear)}-${Math.max(selectedYear, selectedEndYear)}` : `מציג נתונים לשנת ${selectedYear}`}
             </div>
           </div>
         </CardContent>
@@ -392,28 +347,16 @@ export default function CollectionPage() {
           <CardTitle>טבלת נתוני גביה מעמודות D-I, L, M</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
+          {loading ? <div className="text-center py-8 text-muted-foreground">
               טוען נתונים...
-            </div>
-          ) : collectionData.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            </div> : collectionData.length === 0 ? <div className="text-center py-8 text-muted-foreground">
               אין נתוני גביה להצגה. יש לייבא קובץ "טיוטת מאזן RAW".
-            </div>
-          ) : (
-            <DataTable
-              columns={columns}
-              data={collectionData}
-              searchableColumnIds={["property_type"]}
-              searchPlaceholder="חפש סוג נכס..."
-            />
-          )}
+            </div> : <DataTable columns={columns} data={collectionData} searchableColumnIds={["property_type"]} searchPlaceholder="חפש סוג נכס..." />}
         </CardContent>
       </Card>
 
       {/* Pie Charts */}
-      {collectionData.length > 0 && (
-        <div className="grid md:grid-cols-3 gap-6">
+      {collectionData.length > 0 && <div className="grid md:grid-cols-3 gap-6">
           {/* Annual Budget Pie Chart */}
           <Card>
             <CardHeader>
@@ -426,16 +369,8 @@ export default function CollectionPage() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie
-                      data={annualBudgetChartData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                    >
-                      {annualBudgetChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
+                    <Pie data={annualBudgetChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
+                      {annualBudgetChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                     </Pie>
                     <Tooltip content={renderCustomTooltip} />
                     <Legend />
@@ -457,16 +392,8 @@ export default function CollectionPage() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie
-                      data={relativeBudgetChartData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                    >
-                      {relativeBudgetChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
+                    <Pie data={relativeBudgetChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
+                      {relativeBudgetChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                     </Pie>
                     <Tooltip content={renderCustomTooltip} />
                     <Legend />
@@ -488,16 +415,8 @@ export default function CollectionPage() {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie
-                      data={actualCollectionChartData}
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      dataKey="value"
-                    >
-                      {actualCollectionChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
+                    <Pie data={actualCollectionChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
+                      {actualCollectionChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
                     </Pie>
                     <Tooltip content={renderCustomTooltip} />
                     <Legend />
@@ -506,8 +425,7 @@ export default function CollectionPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
-      )}
+        </div>}
 
       {/* Other Income Section (In Development) */}
       <Card>
@@ -521,6 +439,5 @@ export default function CollectionPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
