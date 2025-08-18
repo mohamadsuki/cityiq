@@ -348,12 +348,11 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.funding_source2 = funding2;
       mapped.funding_source3 = funding3;
       
-      // Map numeric fields - CORRECTED based on actual Excel structure from logs
-      // __EMPTY_7 = approved budget, __EMPTY_9 = income, __EMPTY_10 = expense, __EMPTY_13 = surplus
+      // Map numeric fields - Updated to use Hebrew column names
       const approvedBudgetRaw = row['__EMPTY_7'] || '0';
-      const incomeActualRaw = row['__EMPTY_9'] || '0'; 
-      const expenseActualRaw = row['__EMPTY_10'] || '0';
-      const surplusDeficitRaw = row['__EMPTY_13'] || '0';
+      const incomeActualRaw = row['ביצוע מצטבר הכנסות'] || '0'; 
+      const expenseActualRaw = row['ביצוע מצטבר הוצאות'] || '0';
+      const surplusDeficitRaw = row['עודף/גירעון'] || '0';
       
       // Clean numbers (remove commas if they exist)
       mapped.approved_budget = parseFloat(String(approvedBudgetRaw).replace(/,/g, '')) || 0;
