@@ -213,17 +213,6 @@ const [form, setForm] = useState<Partial<Project>>({
 
   async function fetchProjects() {
     setLoading(true);
-    if (isDemo) {
-      try {
-        const raw = localStorage.getItem("demo_projects");
-        const list = raw ? (JSON.parse(raw) as Project[]) : [];
-        setProjects(list);
-      } catch {
-        setProjects([]);
-      }
-      setLoading(false);
-      return;
-    }
 
     let query = supabase.from("projects").select("*").order("created_at", { ascending: false });
     if (department !== "all") {
@@ -485,45 +474,7 @@ function openEdit(p: Project) {
     const newImageUrls = files.length ? await Promise.all(files.map(toDataURL)) : [];
     const newPdfUrls = pdfFiles.length ? await Promise.all(pdfFiles.map(toDataURL)) : [];
     
-    const payload: Project = {
-      id: editing?.id ?? (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
-      created_at: editing?.created_at ?? now,
-      updated_at: now,
-      user_id: "demo",
-      department_slug: form.department_slug ?? null,
-      code: (form.code as string) || null,
-      name: (form.name as string) || null,
-      department: null,
-      domain: (form.domain as string) || null,
-      funding_source: (form.funding_source as string) || null,
-      status: (form.status as string) || null,
-      budget_approved: form.budget_approved ?? null,
-      budget_executed: form.budget_executed ?? null,
-      progress: form.progress ?? 0,
-      notes: (form.notes as string) || null,
-      image_urls: [ ...(editing?.image_urls || []), ...newImageUrls ],
-      file_urls: [ ...(editing?.file_urls || []), ...newPdfUrls ],
-      start_at: form.start_at,
-      end_at: form.end_at,
-      tabar_assignment: (form.tabar_assignment as string) || null,
-    };
-
-    let next: Project[] = [];
-    try {
-      const raw = localStorage.getItem("demo_projects");
-      const list = raw ? (JSON.parse(raw) as Project[]) : [];
-      next = editing ? list.map((x) => (x.id === editing.id ? payload : x)) : [payload, ...list];
-    } catch {
-      next = [payload];
-    }
-    localStorage.setItem("demo_projects", JSON.stringify(next));
-    setProjects(next);
-    toast({ title: editing ? "עודכן" : "נוצר", description: "הפרויקט נשמר (מצב הדגמה)" });
-    setFiles([]);
-    setPdfFiles([]);
-    setOpen(false);
-    return;
-  }
+      // All data saved to Supabase now
 
   if (!user?.id) {
     toast({ title: "נדרש להתחבר", description: "יש להתחבר כדי לבצע פעולה זו", variant: "destructive" });
@@ -647,14 +598,6 @@ function openEdit(p: Project) {
     if (!canDelete) return;
     if (!confirm("למחוק פרויקט זה?")) return;
 
-    if (isDemo) {
-      const next = projects.filter((x) => x.id !== p.id);
-      localStorage.setItem("demo_projects", JSON.stringify(next));
-      setProjects(next);
-      toast({ title: "נמחק", description: "הפרויקט נמחק (מצב הדגמה)" });
-      return;
-    }
-
     const { error } = await supabase.from("projects").delete().eq("id", p.id);
     if (error) {
       toast({ title: "מחיקה נכשלה", description: error.message, variant: "destructive" });
@@ -663,8 +606,6 @@ function openEdit(p: Project) {
       fetchProjects();
     }
   }
-
-  return (
     <div className="space-y-6">
       <header className="flex items-center justify-between">
         <div>

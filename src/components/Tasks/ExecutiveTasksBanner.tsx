@@ -35,55 +35,33 @@ export default function ExecutiveTasksBanner({ department }: Props) {
     async function load() {
       console.log("Executive banner loading - canSee:", canSee, "isDemo:", isDemo, "department:", department);
       
-      if (isDemo) {
-        // Demo mode: read from localStorage
-        try {
-          const raw = localStorage.getItem("demo_tasks");
-          console.log("Executive banner - demo tasks raw:", raw);
-          const list = raw ? (JSON.parse(raw) as any[]) : [];
-          console.log("Executive banner - demo tasks parsed:", list);
-          
-          const filtered = list.filter(t => {
-            const matches = t.department_slug === department &&
-              ['mayor', 'ceo'].includes(t.assigned_by_role) &&
-              !['done', 'cancelled'].includes(t.status);
-            console.log(`Task ${t.title} - dept: ${t.department_slug}, assigned_by: ${t.assigned_by_role}, status: ${t.status}, matches: ${matches}`);
-            return matches;
-          });
-          console.log("Executive banner - filtered tasks:", filtered);
-          
-          if (!active) return;
-          setTasks(filtered);
-          
-          // For demo mode, acknowledgements are also in localStorage
-          const ackRaw = localStorage.getItem("demo_task_acknowledgements");
-          const ackList = ackRaw ? (JSON.parse(ackRaw) as any[]) : [];
-          const userAcks = ackList.filter(a => a.manager_user_id === user!.id);
-          setAckIds(userAcks.map(a => a.task_id));
-        } catch (e) {
-          console.error("Failed to parse demo tasks", e);
-          if (!active) return;
-          setTasks([]);
-          setAckIds([]);
-        }
-      } else {
-        // Real mode: read from Supabase
-        const [{ data: t }, { data: a }] = await Promise.all([
-          supabase
-            .from('tasks')
-            .select('id,title,department_slug,status,due_at,assigned_by_role,created_at')
-            .eq('department_slug', department)
-            .in('assigned_by_role', ['mayor','ceo'])
-            .not('status', 'in', '(\"done\",\"cancelled\")')
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('task_acknowledgements')
-            .select('task_id')
-            .eq('manager_user_id', user!.id)
-        ]);
-        if (!active) return;
-        setTasks((t as any[]) || []);
-        setAckIds(((a as { task_id: string }[]) || []).map(x => x.task_id));
+      const query = supabase
+        .from('tasks')
+        .select('id, title, department_slug, status, assigned_by_role')
+        .eq('department_slug', department)
+        .in('assigned_by_role', ['mayor', 'ceo'])
+        .not('status', 'in', '("done","cancelled")');
+        
+      const { data, error } = await query;
+      console.log("Executive banner - query result:", { data, error });
+      
+      if (error) {
+        console.error("Failed to load executive tasks", error);
+        return;
+      }
+      
+      if (!active) return;
+      setTasks(data || []);
+      
+      // Load acknowledgements
+      const ackQuery = await supabase
+        .from('task_acknowledgements')
+        .select('task_id, manager_user_id')
+        .eq('manager_user_id', user!.id);
+      
+      if (ackQuery.data) {
+        const userAcks = ackQuery.data.filter((a: any) => a.manager_user_id === user!.id);
+        setAckIds(userAcks.map((a: any) => a.task_id));
       }
     }
     
@@ -108,28 +86,8 @@ export default function ExecutiveTasksBanner({ department }: Props) {
   const acknowledge = async (taskId: string) => {
     if (!user?.id) return;
     
-    if (isDemo) {
-      // Demo mode: save to localStorage
-      try {
-        const ackRaw = localStorage.getItem("demo_task_acknowledgements");
-        const ackList = ackRaw ? (JSON.parse(ackRaw) as any[]) : [];
-        const newAck = { 
-          task_id: taskId, 
-          manager_user_id: user.id,
-          acknowledged_at: new Date().toISOString(),
-          manager_name: user.email?.split('@')[0] || 'מנהל מחלקה'
-        };
-        const updated = [...ackList, newAck];
-        localStorage.setItem("demo_task_acknowledgements", JSON.stringify(updated));
-        setAckIds(prev => [...prev, taskId]);
-      } catch (e) {
-        console.error("Failed to save demo acknowledgement", e);
-      }
-    } else {
-      // Real mode: save to Supabase
-      const { error } = await supabase.from('task_acknowledgements').insert({ task_id: taskId, manager_user_id: user.id });
-      if (!error) setAckIds(prev => [...prev, taskId]);
-    }
+    const { error } = await supabase.from('task_acknowledgements').insert({ task_id: taskId, manager_user_id: user.id });
+    if (!error) setAckIds(prev => [...prev, taskId]);
   };
 
   const viewTaskDetails = (taskId: string) => {
