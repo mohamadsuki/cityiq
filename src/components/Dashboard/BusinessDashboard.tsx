@@ -46,28 +46,43 @@ export default function BusinessDashboard() {
   const isUuid = (v?: string | null) => !!v && /^[0-9a-fA-F-]{36}$/.test(v);
   const isDemo = !session || !isUuid(user?.id);
 
-  // Licenses list (DB for auth users)
+  // Licenses list (DB for auth users, localStorage for demo)
   const [licenses, setLicenses] = useState<LicenseRow[]>([]);
   const reloadLicenses = async () => {
     try {
-      const { data } = await supabase
-        .from('licenses')
-        .select('id,business_name,type,status,license_number,expires_at')
-        .order('created_at', { ascending: false });
-      if (data) setLicenses(data as any);
+      if (isDemo) {
+        const raw = localStorage.getItem('demo_licenses');
+        const list = raw ? JSON.parse(raw) as any[] : [];
+        setLicenses(list.map((r) => ({
+          id: r.id,
+          business_name: r.business_name ?? null,
+          type: r.type ?? null,
+          status: r.status ?? null,
+          license_number: r.license_number ?? null,
+          expires_at: r.expires_at ?? null,
+        })));
+      } else {
+        const { data } = await supabase
+          .from('licenses')
+          .select('id,business_name,type,status,license_number,expires_at')
+          .order('created_at', { ascending: false });
+        if (data) setLicenses(data as any);
+      }
     } catch {}
   };
 
   useEffect(() => {
     reloadLicenses();
-    const channel = supabase
-      .channel('public:licenses')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'licenses' }, () => {
-        reloadLicenses();
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, []);
+    if (!isDemo) {
+      const channel = supabase
+        .channel('public:licenses')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'licenses' }, () => {
+          reloadLicenses();
+        })
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [isDemo]);
 
   // Reasons for no license (aggregated from DB, fallback to sample)
   const [reasonData, setReasonData] = useState<{ name: string; value: number }[]>([]);
