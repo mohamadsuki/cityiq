@@ -30,29 +30,12 @@ export default function AddPlanDialog({ onSaved }: { onSaved?: () => void }) {
   const isDemo = !session || !isUuid(user?.id);
 
   async function handleSubmit() {
-    if (!name) { 
-      toast({ title: "שם תוכנית חסר", variant: "destructive" }); 
-      return; 
-    }
+    if (!name) { toast({ title: "שם תוכנית חסר", variant: "destructive" }); return; }
 
     try {
-      if (!user?.id) { 
-        toast({ title: "נדרש להתחבר", variant: "destructive" }); 
-        return; 
-      }
+      if (!user?.id) { toast({ title: "נדרש להתחבר", variant: "destructive" }); return; }
 
-      const create = await supabase.from('plans').insert([{ 
-        user_id: user.id, 
-        department_slug: 'engineering', 
-        name, 
-        plan_number: planNumber || null, 
-        status, 
-        land_use: landUse || null, 
-        address: address || null, 
-        start_at: startAt ? new Date(startAt).toISOString() : null, 
-        end_at: endAt ? new Date(endAt).toISOString() : null 
-      }]).select('id').single();
-      
+      const create = await supabase.from('plans').insert([{ user_id: user.id, department_slug: 'engineering', name, plan_number: planNumber || null, status, land_use: landUse || null, address: address || null, start_at: startAt ? new Date(startAt).toISOString() : null, end_at: endAt ? new Date(endAt).toISOString() : null }]).select('id').single();
       if (create.error) throw create.error;
       const planId = create.data.id as string;
 
@@ -64,7 +47,6 @@ export default function AddPlanDialog({ onSaved }: { onSaved?: () => void }) {
           if (!error) uploadedImages.push(path);
         }
       }
-      
       const uploadedFiles: string[] = [];
       if (files) {
         for (const file of Array.from(files)) {
@@ -75,15 +57,11 @@ export default function AddPlanDialog({ onSaved }: { onSaved?: () => void }) {
       }
 
       if (uploadedImages.length || uploadedFiles.length) {
-        await supabase.from('plans').update({ 
-          image_urls: uploadedImages.length ? uploadedImages : null, 
-          file_urls: uploadedFiles.length ? uploadedFiles : null 
-        }).eq('id', planId);
+        await supabase.from('plans').update({ image_urls: uploadedImages.length ? uploadedImages : null, file_urls: uploadedFiles.length ? uploadedFiles : null }).eq('id', planId);
       }
 
       toast({ title: "נשמר", description: "התוכנית נוספה בהצלחה" });
-      setOpen(false); 
-      onSaved?.();
+      setOpen(false); onSaved?.();
     } catch (e: any) {
       toast({ title: "שגיאה", description: e.message || 'אירעה שגיאה', variant: 'destructive' });
     }
