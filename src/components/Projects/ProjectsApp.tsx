@@ -606,8 +606,6 @@ function openEdit(p: Project) {
       fetchProjects();
     }
   }
-
-  return (
     <div className="space-y-6">
       <header className="flex items-center justify-between">
         <div>
