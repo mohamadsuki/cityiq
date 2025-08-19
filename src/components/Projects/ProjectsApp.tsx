@@ -468,7 +468,8 @@ function openEdit(p: Project) {
       return;
     }
 
-  const basePayload: any = {
+    try {
+      const basePayload: any = {
     department_slug: form.department_slug,
     code: form.code ?? null,
     name: form.name ?? null,
@@ -579,7 +580,10 @@ function openEdit(p: Project) {
     setOpen(false);
     fetchProjects();
   }
-}
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message || 'אירעה שגיאה', variant: 'destructive' });
+    }
+  }
 
   async function deleteProject(p: Project) {
     if (!canDelete) return;
