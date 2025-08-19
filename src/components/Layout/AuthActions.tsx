@@ -31,22 +31,7 @@ export function AuthActions() {
   const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
-    const isUuid = (v: string) => /^[0-9a-fA-F-]{36}$/.test(v);
-    // Demo mode or non-UUID ids: load from per-user localStorage key
-    if (!session || !user?.id || !isUuid(user.id)) {
-      try {
-        const emailKey = user?.email?.toLowerCase();
-        const key = emailKey ? `demo_profile:${emailKey}` : "demo_profile";
-        const raw = localStorage.getItem(key);
-        const p = raw ? (JSON.parse(raw) as { display_name?: string; avatar_url?: string }) : null;
-        setProfileName(p?.display_name || "");
-        setProfileAvatar(p?.avatar_url || "");
-      } catch {
-        setProfileName("");
-        setProfileAvatar("");
-      }
-      return;
-    }
+    if (!session || !user?.id) return;
     supabase
       .from("profiles")
       .select("display_name, avatar_url")
@@ -58,7 +43,7 @@ export function AuthActions() {
           setProfileAvatar(data.avatar_url || "");
         }
       });
-  }, [user?.id, user?.email, session]);
+  }, [user?.id, session]);
 
   if (!user) {
     return (

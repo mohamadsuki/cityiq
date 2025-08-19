@@ -57,16 +57,6 @@ export default function AddBudgetDialog({ onSaved }: { onSaved?: () => void }) {
     } as any;
 
     try {
-      if (isDemo) {
-        const raw = localStorage.getItem("demo_budgets");
-        const list = raw ? (JSON.parse(raw) as any[]) : [];
-        localStorage.setItem("demo_budgets", JSON.stringify([payload, ...list]));
-        toast({ title: "נשמר", description: "התקציב נשמר (מצב הדגמה)" });
-        setOpen(false);
-        onSaved?.();
-        return;
-      }
-
       if (!user?.id) {
         toast({ title: "נדרש להתחבר", description: "יש להתחבר כדי לבצע פעולה זו", variant: "destructive" });
         return;

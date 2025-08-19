@@ -33,22 +33,6 @@ export default function AddPlanDialog({ onSaved }: { onSaved?: () => void }) {
     if (!name) { toast({ title: "שם תוכנית חסר", variant: "destructive" }); return; }
 
     try {
-      if (isDemo) {
-        const id = `demo-${Date.now()}`;
-        // Convert images to data URLs
-        const toDataURL = (file: File) => new Promise<string>((resolve, reject) => {
-          const reader = new FileReader(); reader.onload = () => resolve(reader.result as string); reader.onerror = reject; reader.readAsDataURL(file);
-        });
-        const image_urls: string[] = images ? await Promise.all(Array.from(images).map(toDataURL)) : [];
-        const file_urls: string[] = files ? Array.from(files).map(f => `name:${f.name}`) : [];
-        const raw = localStorage.getItem("demo_plans");
-        const list = raw ? JSON.parse(raw) as any[] : [];
-        const payload = { id, user_id: user?.id || "", department_slug: 'engineering', name, plan_number: planNumber || null, status, land_use: landUse || null, address: address || null, notes: notes || null, start_at: startAt ? new Date(startAt).toISOString() : null, end_at: endAt ? new Date(endAt).toISOString() : null, image_urls, file_urls };
-        localStorage.setItem("demo_plans", JSON.stringify([payload, ...list]));
-        toast({ title: "נשמר", description: "התוכנית נוספה (דמו)" });
-        setOpen(false); onSaved?.(); return;
-      }
-
       if (!user?.id) { toast({ title: "נדרש להתחבר", variant: "destructive" }); return; }
 
       const create = await supabase.from('plans').insert([{ user_id: user.id, department_slug: 'engineering', name, plan_number: planNumber || null, status, land_use: landUse || null, address: address || null, start_at: startAt ? new Date(startAt).toISOString() : null, end_at: endAt ? new Date(endAt).toISOString() : null }]).select('id').single();
@@ -78,6 +62,9 @@ export default function AddPlanDialog({ onSaved }: { onSaved?: () => void }) {
 
       toast({ title: "נשמר", description: "התוכנית נוספה בהצלחה" });
       setOpen(false); onSaved?.();
+    } catch (e: any) {
+      toast({ title: "שגיאה", description: e.message || 'אירעה שגיאה', variant: 'destructive' });
+    }
     } catch (e: any) {
       toast({ title: "שגיאה", description: e.message || 'אירעה שגיאה', variant: 'destructive' });
     }
