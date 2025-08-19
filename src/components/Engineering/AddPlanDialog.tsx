@@ -65,9 +65,6 @@ export default function AddPlanDialog({ onSaved }: { onSaved?: () => void }) {
     } catch (e: any) {
       toast({ title: "שגיאה", description: e.message || 'אירעה שגיאה', variant: 'destructive' });
     }
-    } catch (e: any) {
-      toast({ title: "שגיאה", description: e.message || 'אירעה שגיאה', variant: 'destructive' });
-    }
   }
 
   return (

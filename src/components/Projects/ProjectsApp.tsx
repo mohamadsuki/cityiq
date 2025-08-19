@@ -458,15 +458,15 @@ function openEdit(p: Project) {
   }
 
   async function saveProject() {
-  if (!form.name || !form.department_slug) {
-    toast({ title: "שדות חסרים", description: "שם ומחלקה הינם שדות חובה", variant: "destructive" });
-    return;
-  }
+    if (!form.name || !form.department_slug) {
+      toast({ title: "שדות חסרים", description: "שם ומחלקה הינם שדות חובה", variant: "destructive" });
+      return;
+    }
 
-  if (!user?.id) {
-    toast({ title: "נדרש להתחבר", description: "יש להתחבר כדי לבצע פעולה זו", variant: "destructive" });
-    return;
-  }
+    if (!user?.id) {
+      toast({ title: "נדרש להתחבר", description: "יש להתחבר כדי לבצע פעולה זו", variant: "destructive" });
+      return;
+    }
 
   const basePayload: any = {
     department_slug: form.department_slug,
