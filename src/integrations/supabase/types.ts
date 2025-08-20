@@ -199,30 +199,6 @@ export type Database = {
         }
         Relationships: []
       }
-      demo_user_mapping: {
-        Row: {
-          created_at: string | null
-          demo_id: string
-          departments: Database["public"]["Enums"]["department_slug"][]
-          display_name: string | null
-          role: Database["public"]["Enums"]["app_role"]
-        }
-        Insert: {
-          created_at?: string | null
-          demo_id: string
-          departments: Database["public"]["Enums"]["department_slug"][]
-          display_name?: string | null
-          role: Database["public"]["Enums"]["app_role"]
-        }
-        Update: {
-          created_at?: string | null
-          demo_id?: string
-          departments?: Database["public"]["Enums"]["department_slug"][]
-          display_name?: string | null
-          role?: Database["public"]["Enums"]["app_role"]
-        }
-        Relationships: []
-      }
       grants: {
         Row: {
           amount: number | null
@@ -1030,24 +1006,10 @@ export type Database = {
         }
         Returns: boolean
       }
-      has_department_demo: {
-        Args: {
-          department_param: Database["public"]["Enums"]["department_slug"]
-          user_id_param: string
-        }
-        Returns: boolean
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
-        }
-        Returns: boolean
-      }
-      has_role_demo: {
-        Args: {
-          role_param: Database["public"]["Enums"]["app_role"]
-          user_id_param: string
         }
         Returns: boolean
       }
