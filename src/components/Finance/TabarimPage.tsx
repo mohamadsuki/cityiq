@@ -514,7 +514,7 @@ export default function TabarimPage() {
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">תב"רים בגירעון</CardTitle>
                 <div className="text-xs text-muted-foreground">
-                  טופ 6 עם הגירעון הגדול ביותר
+                  טופ 12 עם הגירעון הגדול ביותר
                 </div>
               </div>
             </CardHeader>
@@ -524,7 +524,7 @@ export default function TabarimPage() {
                   {tabarim
                     .filter(tabar => tabar.surplus_deficit < 0)
                     .sort((a, b) => a.surplus_deficit - b.surplus_deficit) // מיון מהגירעון הכי גדול לקטן
-                    .slice(0, 6)
+                    .slice(0, 12)
                     .map((tabar, index) => {
                       // חישוב אחוז הגירעון (יחס הוצאה-הכנסה)
                       const deficitPercentage = tabar.income_actual > 0 
