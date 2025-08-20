@@ -125,6 +125,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       'welfare': '66666666-6666-6666-6666-666666666666',
       'nonformal': '77777777-7777-7777-7777-777777777777',
       'business': '88888888-8888-8888-8888-888888888888',
+      'cityimprovement': '99999999-9999-9999-9999-999999999999',
+      'enforcement': 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
     };
     
     const userId = realUserMap[uname] || `demo-${uname}`;
