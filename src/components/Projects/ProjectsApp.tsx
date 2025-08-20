@@ -215,9 +215,15 @@ const [form, setForm] = useState<Partial<Project>>({
     setLoading(true);
     
     let query = supabase.from("projects").select("*").order("created_at", { ascending: false });
+    
+    // Filter by department if specific department is selected
     if (department !== "all") {
       query = query.eq("department_slug", department);
+    } else if (role !== "mayor" && role !== "ceo") {
+      // For managers, filter to only show projects from their departments
+      query = query.in("department_slug", visibleDepartments);
     }
+    
     const { data, error } = await query;
     if (error) {
       console.error("Failed to load projects", error);
@@ -236,6 +242,11 @@ const [form, setForm] = useState<Partial<Project>>({
 
   const filtered = useMemo(() => {
     return projects.filter((p) => {
+      // Filter by user's visible departments (additional client-side check)
+      if (role !== "mayor" && role !== "ceo" && p.department_slug && !visibleDepartments.includes(p.department_slug)) {
+        return false;
+      }
+      
       if (q && !(`${p.name ?? ""} ${p.code ?? ""}`.toLowerCase().includes(q.toLowerCase()))) return false;
       if (department !== "all" && p.department_slug !== department) return false;
       if (status !== "all" && (p.status ?? "").toLowerCase() !== status.toLowerCase()) return false;
