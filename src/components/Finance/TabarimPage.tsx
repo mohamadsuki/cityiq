@@ -410,25 +410,25 @@ export default function TabarimPage() {
               </div>
               <div className="bg-background rounded-lg p-4 border shadow-sm">
                 <div className="text-lg font-bold text-blue-600">
-                  {formatCurrency(totalBudget)} <span className="text-xs text-muted-foreground opacity-70">{getCurrencyUnit(totalBudget)}</span>
+                  {formatCurrency(totalBudget)} <span className="text-[10px] text-muted-foreground opacity-70">{getCurrencyUnit(totalBudget)}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">תקציב מאושר</div>
               </div>
               <div className="bg-background rounded-lg p-4 border shadow-sm">
                 <div className="text-lg font-bold text-green-600">
-                  {formatCurrency(totalIncome)} <span className="text-xs text-muted-foreground opacity-70">{getCurrencyUnit(totalIncome)}</span>
+                  {formatCurrency(totalIncome)} <span className="text-[10px] text-muted-foreground opacity-70">{getCurrencyUnit(totalIncome)}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">הכנסות בפועל</div>
               </div>
               <div className="bg-background rounded-lg p-4 border shadow-sm">
                 <div className="text-lg font-bold text-red-600">
-                  {formatCurrency(totalExpense)} <span className="text-xs text-muted-foreground opacity-70">{getCurrencyUnit(totalExpense)}</span>
+                  {formatCurrency(totalExpense)} <span className="text-[10px] text-muted-foreground opacity-70">{getCurrencyUnit(totalExpense)}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">הוצאות בפועל</div>
               </div>
               <div className="bg-background rounded-lg p-4 border shadow-sm">
                 <div className={`text-lg font-bold ${(totalIncome - totalExpense) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(totalIncome - totalExpense)} <span className="text-xs text-muted-foreground opacity-70">{getCurrencyUnit(totalIncome - totalExpense)}</span>
+                  {formatCurrency(totalIncome - totalExpense)} <span className="text-[10px] text-muted-foreground opacity-70">{getCurrencyUnit(totalIncome - totalExpense)}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">עודף/גירעון</div>
               </div>
@@ -492,9 +492,9 @@ export default function TabarimPage() {
                       
                        {/* תקציב */}
                        <div className="min-w-[85px] text-left">
-                         <span className="text-sm font-medium text-muted-foreground">
-                           {formatCurrency(item.budget)} <span className="text-xs opacity-70">{getCurrencyUnit(item.budget)}</span>
-                         </span>
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {formatCurrency(item.budget)} <span className="text-[10px] opacity-70">{getCurrencyUnit(item.budget)}</span>
+                          </span>
                        </div>
                       
                       {/* מספר תב"רים */}
@@ -609,9 +609,9 @@ export default function TabarimPage() {
                         
                          {/* גירעון */}
                          <div className="min-w-[85px] text-left">
-                           <span className="text-sm font-medium text-red-600">
-                             {formatCurrency(Math.abs(tabar.surplus_deficit))}- <span className="text-xs opacity-70">{getCurrencyUnit(Math.abs(tabar.surplus_deficit))}</span>
-                           </span>
+                            <span className="text-sm font-medium text-red-600">
+                              {formatCurrency(Math.abs(tabar.surplus_deficit))}- <span className="text-[10px] opacity-70">{getCurrencyUnit(Math.abs(tabar.surplus_deficit))}</span>
+                            </span>
                          </div>
                         
                         {/* אחוז גירעון */}
