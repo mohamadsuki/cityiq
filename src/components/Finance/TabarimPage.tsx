@@ -460,12 +460,12 @@ export default function TabarimPage() {
                         />
                       </div>
                       
-                      {/* תקציב */}
-                      <div className="min-w-[50px] text-left">
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {item.budgetThousand === 0 ? '0K' : `${item.budgetThousand}K`}
-                        </span>
-                      </div>
+                       {/* תקציב */}
+                       <div className="min-w-[60px] text-left">
+                         <span className="text-sm font-medium text-muted-foreground">
+                           {item.budget.toLocaleString()}
+                         </span>
+                       </div>
                       
                       {/* מספר תב"רים */}
                       <div className="min-w-[30px] text-left ml-4">
@@ -543,12 +543,12 @@ export default function TabarimPage() {
                             />
                           </div>
                           
-                          {/* גירעון */}
-                          <div className="min-w-[60px] text-left">
-                            <span className="text-sm font-medium text-red-600">
-                              {Math.round(Math.abs(tabar.surplus_deficit) / 1000)}K-
-                            </span>
-                          </div>
+                           {/* גירעון */}
+                           <div className="min-w-[70px] text-left">
+                             <span className="text-sm font-medium text-red-600">
+                               {Math.abs(tabar.surplus_deficit).toLocaleString()}-
+                             </span>
+                           </div>
                           
                           {/* אחוז גירעון */}
                           <div className="min-w-[45px] text-left ml-2">
