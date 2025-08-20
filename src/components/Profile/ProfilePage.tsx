@@ -42,6 +42,11 @@ export default function ProfilePage() {
     loadProfile();
   }, [user?.id]);
 
+  const sanitizeFilename = (filename: string): string => {
+    const extension = filename.split('.').pop() || '';
+    return `avatar-${Date.now()}.${extension}`;
+  };
+
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
     setFile(f);
@@ -58,7 +63,7 @@ export default function ProfilePage() {
     try {
       let publicUrl: string | null = null;
       if (file) {
-        const path = `${user.id}/${Date.now()}-${file.name}`;
+        const path = `${user.id}/${sanitizeFilename(file.name)}`;
         const { error: uploadError } = await supabase.storage
           .from("avatars")
           .upload(path, file, { upsert: true, contentType: file.type });
