@@ -544,7 +544,7 @@ export default function TabarimPage() {
                         </div>
                         
                         {/* פרטי hover */}
-                        <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-30 min-w-[200px]">
+                        <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 min-w-[200px]">
                           <div className="text-xs space-y-1">
                             <div className="flex justify-between">
                               <span>מספר תב"רים:</span>
@@ -685,7 +685,7 @@ export default function TabarimPage() {
                           </div>
                           
                           {/* פרטי hover */}
-                          <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 min-w-[280px]">
+                          <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 min-w-[280px]">
                             <div className="text-xs space-y-1">
                               <div className="flex justify-between">
                                 <span>מספר תב"ר:</span>
