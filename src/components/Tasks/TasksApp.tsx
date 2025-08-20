@@ -156,7 +156,7 @@ export default function TasksApp() {
 
   const canCreate = role === "mayor" || role === "ceo";
   const canDelete = role === "mayor" || role === "ceo";
-  const isDemo = !session;
+  
 
   const visibleDepartments: DepartmentSlug[] = (role === "mayor" || role === "ceo") ? ALL_DEPARTMENTS : departments;
 
@@ -206,26 +206,8 @@ export default function TasksApp() {
 
   async function fetchTasks() {
     setLoading(true);
-    console.log("Fetching tasks - isDemo:", isDemo, "session:", !!session);
+    console.log("Fetching tasks - session:", !!session);
     
-    if (isDemo) {
-      try {
-        const raw = localStorage.getItem("demo_tasks");
-        console.log("Demo tasks localStorage raw:", raw);
-        const list = raw ? (JSON.parse(raw) as Task[]) : [];
-        console.log("Demo tasks parsed:", list);
-        const sorted = isManager
-          ? [...list].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          : list;
-        setTasks(sorted);
-      } catch (e) {
-        console.error("Failed to parse demo tasks", e);
-        setTasks([]);
-      }
-      setLoading(false);
-      return;
-    }
-
     const query = supabase
       .from("tasks")
       .select("*");
@@ -278,44 +260,26 @@ export default function TasksApp() {
     async function loadAcks() {
       if (!(role === 'mayor' || role === 'ceo')) return;
       
-      if (isDemo) {
-        // Demo mode: load from localStorage
-        try {
-          const ackRaw = localStorage.getItem("demo_task_acknowledgements");
-          const ackList = ackRaw ? (JSON.parse(ackRaw) as any[]) : [];
-          if (!cancelled) {
-            setAckIds(ackList.map((d: any) => d.task_id));
-            setAcknowledgements(ackList);
-          }
-        } catch (e) {
-          console.error("Failed to load demo acknowledgements", e);
-        }
-      } else {
-        // Real mode: load from Supabase
-        const { data, error } = await supabase
-          .from('task_acknowledgements')
-          .select('task_id, manager_user_id, created_at');
-        if (!error && !cancelled) {
-          setAckIds((data || []).map((d: any) => d.task_id));
-          setAcknowledgements(data || []);
-        }
+      // Load from Supabase
+      const { data, error } = await supabase
+        .from('task_acknowledgements')
+        .select('task_id, manager_user_id, created_at');
+      if (!error && !cancelled) {
+        setAckIds((data || []).map((d: any) => d.task_id));
+        setAcknowledgements(data || []);
       }
     }
     
     loadAcks();
     
-    if (!isDemo) {
-      const ch = supabase
-        .channel('rt-task-acks-app')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'task_acknowledgements' }, () => {
-          loadAcks();
-        })
-        .subscribe();
-      return () => { cancelled = true; supabase.removeChannel(ch); };
-    }
-    
-    return () => { cancelled = true; };
-  }, [role, isDemo]);
+    const ch = supabase
+      .channel('rt-task-acks-app')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_acknowledgements' }, () => {
+        loadAcks();
+      })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [role]);
 
   function openCreate() {
     setEditing(null);
@@ -339,51 +303,8 @@ export default function TasksApp() {
   }
 
   async function saveTask() {
-    if (isDemo) {
-      if (!(form.title && (form.department_slug as string))) {
-        toast({ title: "שדות חסרים", description: "כותרת ומחלקה חובה", variant: "destructive" });
-        return;
-      }
-      const now = new Date().toISOString();
-      const payload: Task = {
-        id: editing?.id ?? (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
-        title: form.title as string,
-        description: (form.description as string) ?? "",
-        created_by: user?.id || "demo",
-        updated_at: now,
-        created_at: editing?.created_at ?? now,
-        due_at: form.due_at || null,
-        progress_percent: (form.progress_percent as number) ?? 0,
-        progress_notes: (form.progress_notes as string) ?? "",
-        department_slug: form.department_slug as DepartmentSlug,
-        priority: (form.priority as TaskPriority) ?? "medium",
-        status: (form.status as TaskStatus) ?? "todo",
-        tags: (form.tags as string[]) ?? [],
-      };
-
-      // Add assigned_by_role for demo mode - determine from current user role
-      const taskWithRole: Task = {
-        ...payload,
-        assigned_by_role: role === 'mayor' ? 'mayor' : (role === 'ceo' ? 'ceo' : 'manager')
-      };
-
-      let next = [] as Task[];
-      try {
-        const raw = localStorage.getItem("demo_tasks");
-        const list = raw ? (JSON.parse(raw) as Task[]) : [];
-        if (editing) {
-          next = list.map((t) => (t.id === editing.id ? { ...taskWithRole } : t));
-        } else {
-          next = [{ ...taskWithRole }, ...list];
-        }
-      } catch {
-        next = [taskWithRole];
-      }
-      console.log("Saving demo task:", taskWithRole, "All tasks:", next);
-      localStorage.setItem("demo_tasks", JSON.stringify(next));
-      setTasks(next);
-      toast({ title: editing ? "עודכן" : "נוצר", description: "המשימה נשמרה (מצב הדגמה)" });
-      setOpen(false);
+    if (!(form.title && (form.department_slug as string))) {
+      toast({ title: "שדות חסרים", description: "כותרת ומחלקה חובה", variant: "destructive" });
       return;
     }
 
@@ -429,14 +350,6 @@ export default function TasksApp() {
     if (!canDelete) return;
     if (!confirm("למחוק משימה זו?")) return;
 
-    if (isDemo) {
-      const next = tasks.filter((t) => t.id !== task.id);
-      localStorage.setItem("demo_tasks", JSON.stringify(next));
-      setTasks(next);
-      toast({ title: "נמחק", description: "המשימה נמחקה (מצב הדגמה)" });
-      return;
-    }
-
     const { error } = await supabase.from("tasks").delete().eq("id", task.id);
     if (error) {
       toast({ title: "מחיקה נכשלה", description: error.message, variant: "destructive" });
@@ -454,59 +367,27 @@ export default function TasksApp() {
   const acknowledgeTask = async (task: Task) => {
     if (!user?.id) return;
     
-    if (isDemo) {
-      // Demo mode: save to localStorage
-      try {
-        const ackRaw = localStorage.getItem("demo_task_acknowledgements");
-        const ackList = ackRaw ? (JSON.parse(ackRaw) as any[]) : [];
-        const newAck = { 
-          task_id: task.id, 
-          manager_user_id: user.id,
-          acknowledged_at: new Date().toISOString(),
-          manager_name: user.email?.split('@')[0] || 'מנהל מחלקה'
-        };
-        const updated = [...ackList, newAck];
-        localStorage.setItem("demo_task_acknowledgements", JSON.stringify(updated));
-        setAckIds(prev => [...prev, task.id]);
-        
-        // Dispatch custom event to notify banner
-        window.dispatchEvent(new CustomEvent('taskAcknowledged', {
-          detail: { taskId: task.id }
-        }));
-        
-        // Close the modal if it's the highlighted task
-        if (highlightedTask?.id === task.id) {
-          setTaskDetailOpen(false);
-        }
-        
-        toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
-      } catch (e) {
-        console.error("Failed to save demo acknowledgement", e);
-        toast({ title: "שגיאה", description: "לא ניתן לאשר את המשימה", variant: "destructive" });
+    // Save to Supabase
+    const { error } = await supabase.from('task_acknowledgements').insert({ 
+      task_id: task.id, 
+      manager_user_id: user.id 
+    });
+    if (!error) {
+      setAckIds(prev => [...prev, task.id]);
+      
+      // Dispatch custom event to notify banner
+      window.dispatchEvent(new CustomEvent('taskAcknowledged', {
+        detail: { taskId: task.id }
+      }));
+      
+      // Close the modal if it's the highlighted task
+      if (highlightedTask?.id === task.id) {
+        setTaskDetailOpen(false);
       }
+      
+      toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
     } else {
-      // Real mode: save to Supabase
-      const { error } = await supabase.from('task_acknowledgements').insert({ 
-        task_id: task.id, 
-        manager_user_id: user.id 
-      });
-      if (!error) {
-        setAckIds(prev => [...prev, task.id]);
-        
-        // Dispatch custom event to notify banner
-        window.dispatchEvent(new CustomEvent('taskAcknowledged', {
-          detail: { taskId: task.id }
-        }));
-        
-        // Close the modal if it's the highlighted task
-        if (highlightedTask?.id === task.id) {
-          setTaskDetailOpen(false);
-        }
-        
-        toast({ title: "תודה", description: "המשימה אושרה כנצפתה" });
-      } else {
-        toast({ title: "שגיאה", description: "לא ניתן לאשר את המשימה", variant: "destructive" });
-      }
+      toast({ title: "שגיאה", description: "לא ניתן לאשר את המשימה", variant: "destructive" });
     }
   };
 

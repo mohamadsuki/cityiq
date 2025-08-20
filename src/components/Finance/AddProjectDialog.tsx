@@ -40,7 +40,7 @@ export default function AddProjectDialog({ onSaved, defaultDepartment, hideDepar
   const [docFiles, setDocFiles] = useState<FileList | null>(null);
 
   const canPickDept = (dep: DepartmentSlug) => departments.includes(dep) || departments.length === 0; // mayor/ceo
-  const isDemo = !session || !isUuid(user?.id);
+  
 
   async function handleSubmit() {
     if (!name) {
@@ -49,41 +49,6 @@ export default function AddProjectDialog({ onSaved, defaultDepartment, hideDepar
     }
 
     try {
-      if (isDemo) {
-        // Convert images to data URLs
-        const toDataURL = (file: File) => new Promise<string>((resolve, reject) => {
-          const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(file);
-        });
-        const image_urls: string[] = imageFiles ? await Promise.all(Array.from(imageFiles).map(toDataURL)) : [];
-        const file_urls: string[] = docFiles ? Array.from(docFiles).map(f => `name:${f.name}`) : [];
-
-        const payload: any = {
-          id: `demo-${Date.now()}`,
-          user_id: user?.id || "",
-          code: code || null,
-          name,
-          department_slug: department,
-          status: status || null,
-          domain: domain || null,
-          budget_approved: budgetApproved ? Number(budgetApproved) : null,
-          budget_executed: budgetExecuted ? Number(budgetExecuted) : null,
-          progress: progress ? Number(progress) : 0,
-          start_at: startAt ? new Date(startAt).toISOString() : null,
-          end_at: endAt ? new Date(endAt).toISOString() : null,
-          image_urls,
-          file_urls,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        const raw = localStorage.getItem("demo_projects");
-        const list = raw ? (JSON.parse(raw) as any[]) : [];
-        localStorage.setItem("demo_projects", JSON.stringify([payload, ...list]));
-        toast({ title: "נשמר", description: "הפרויקט נשמר (מצב דמו)" });
-        setOpen(false);
-        onSaved?.();
-        return;
-      }
-
       if (!user?.id) {
         toast({ title: "נדרש להתחבר", description: "יש להתחבר כדי לבצע פעולה זו", variant: "destructive" });
         return;

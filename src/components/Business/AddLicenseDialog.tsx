@@ -27,24 +27,12 @@ export default function AddLicenseDialog({ onSaved }: { onSaved?: () => void }) 
   const [reasonNoLicense, setReasonNoLicense] = useState("");
   const [images, setImages] = useState<FileList | null>(null);
 
-  const isDemo = !session || !isUuid(user?.id);
+  
 
   async function handleSubmit() {
     if (!businessName) { toast({ title: "שם עסק חסר", variant: "destructive" }); return; }
 
     try {
-      if (isDemo) {
-        const id = `demo-${Date.now()}`;
-        const toDataURL = (file: File) => new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(file); });
-        const image_urls: string[] = images ? await Promise.all(Array.from(images).map(toDataURL)) : [];
-        const raw = localStorage.getItem('demo_licenses');
-        const list = raw ? JSON.parse(raw) as any[] : [];
-        const payload = { id, user_id: user?.id || '', department_slug: 'business', business_name: businessName, owner: owner || null, type: type || null, status: status || null, license_number: licenseNumber || null, expires_at: expiresAt || null, reason_no_license: reasonNoLicense || null, image_urls };
-        localStorage.setItem('demo_licenses', JSON.stringify([payload, ...list]));
-        toast({ title: 'נשמר', description: 'העסק נוסף (דמו)' });
-        setOpen(false); onSaved?.(); return;
-      }
-
       if (!user?.id) { toast({ title: 'נדרש להתחבר', variant: 'destructive' }); return; }
       const create = await supabase.from('licenses').insert([{ user_id: user.id, department_slug: 'business', business_name: businessName, owner: owner || null, type: type || null, status: status || null, license_number: licenseNumber || null, expires_at: expiresAt ? new Date(expiresAt).toISOString().slice(0,10) : null, reason_no_license: reasonNoLicense || null }]).select('id').single();
       if (create.error) throw create.error;

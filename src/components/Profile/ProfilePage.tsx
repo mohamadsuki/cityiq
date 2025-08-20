@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
   const { user, session } = useAuth();
-  const isDemo = !session;
+  
   const { toast } = useToast();
 
   const [displayName, setDisplayName] = useState("");
@@ -24,16 +24,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      if (isDemo) {
-        try {
-          const key = user?.email ? `demo_profile:${user.email.toLowerCase()}` : "demo_profile";
-          const raw = localStorage.getItem(key);
-          const p = raw ? (JSON.parse(raw) as { display_name?: string; avatar_url?: string }) : null;
-          setDisplayName(p?.display_name ?? "");
-          setAvatarUrl(p?.avatar_url ?? "");
-        } catch {}
-        return;
-      }
       if (!user?.id) return;
       const { data, error } = await supabase
         .from("profiles")
@@ -50,7 +40,7 @@ export default function ProfilePage() {
       }
     };
     loadProfile();
-  }, [user?.id, user?.email, isDemo]);
+  }, [user?.id]);
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
@@ -63,19 +53,6 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    if (isDemo) {
-      try {
-        const payload = { display_name: displayName || "", avatar_url: avatarUrl || "" };
-        const key = user?.email ? `demo_profile:${user.email.toLowerCase()}` : "demo_profile";
-        localStorage.setItem(key, JSON.stringify(payload));
-        toast({ title: "נשמר", description: "פרופיל עודכן (מצב הדגמה)" });
-      } catch (e: any) {
-        console.error(e);
-        toast({ title: "שגיאה", description: e.message || "שמירת הפרופיל נכשלה", variant: "destructive" });
-      }
-      return;
-    }
-
     if (!user?.id) return;
     setSaving(true);
     try {

@@ -53,7 +53,7 @@ export default function GrantsApp() {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
 
-  const isDemo = !session;
+  
   const canCreate = role === 'mayor' || role === 'ceo' || role === 'manager';
   const visibleDepartments: DepartmentSlug[] = (role === 'mayor' || role === 'ceo') ?
     ['finance','education','engineering','welfare','non-formal','business'] : departments;
@@ -155,16 +155,7 @@ export default function GrantsApp() {
 
   async function fetchGrants() {
     setLoading(true);
-    if (isDemo) {
-      try {
-        const raw = localStorage.getItem('demo_grants');
-        const list = raw ? (JSON.parse(raw) as Grant[]) : [];
-        setGrants(list);
-      } catch { setGrants([]); }
-      setLoading(false);
-      return;
-    }
-
+    
     let query = supabase.from('grants').select('*').order('created_at', { ascending: false });
     if (department !== 'all') query = query.eq('department_slug', department);
     const { data, error } = await query;
@@ -210,34 +201,6 @@ export default function GrantsApp() {
       return;
     }
 
-    if (isDemo) {
-      const now = new Date().toISOString();
-      const payload: Grant = {
-        id: editing?.id ?? (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
-        created_at: editing?.created_at ?? now,
-        updated_at: now,
-        user_id: 'demo',
-        department_slug: form.department_slug ?? null,
-        name: (form.name as string) ?? null,
-        ministry: (form.ministry as string) ?? null,
-        amount: (form.amount as number) ?? null,
-        status: (form.status as string) ?? 'draft',
-        submitted_at: form.submitted_at || null,
-        decision_at: form.decision_at || null,
-      };
-      let next: Grant[] = [];
-      try {
-        const raw = localStorage.getItem('demo_grants');
-        const list = raw ? (JSON.parse(raw) as Grant[]) : [];
-        next = editing ? list.map((g) => g.id === editing.id ? payload : g) : [payload, ...list];
-      } catch { next = [payload]; }
-      localStorage.setItem('demo_grants', JSON.stringify(next));
-      setGrants(next);
-      toast({ title: editing ? 'עודכן' : 'נוצר', description: 'הקול הקורא נשמר (מצב הדגמה)' });
-      setOpen(false);
-      return;
-    }
-
     if (!user?.id) {
       toast({ title: 'נדרש להתחבר', description: 'יש להתחבר כדי לשמור', variant: 'destructive' });
       return;
@@ -272,13 +235,6 @@ export default function GrantsApp() {
 
   async function deleteGrant(g: Grant) {
     if (!confirm('למחוק רשומת קול קורא זו?')) return;
-    if (isDemo) {
-      const next = grants.filter((x) => x.id !== g.id);
-      localStorage.setItem('demo_grants', JSON.stringify(next));
-      setGrants(next);
-      toast({ title: 'נמחק', description: 'נמחק (מצב הדגמה)' });
-      return;
-    }
     const { error } = await supabase.from('grants').delete().eq('id', g.id);
     if (error) toast({ title: 'מחיקה נכשלה', description: error.message, variant: 'destructive' });
     else { toast({ title: 'נמחק', description: 'נמחק בהצלחה' }); fetchGrants(); }
