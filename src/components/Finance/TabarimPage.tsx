@@ -507,7 +507,7 @@ export default function TabarimPage() {
                       >
                         {/* עמודת רקע יחסית */}
                         <div 
-                          className="absolute inset-0 bg-muted-foreground/20 rounded-sm transition-all duration-300"
+                          className="absolute inset-0 bg-muted-foreground/20 rounded-sm transition-all duration-300 pointer-events-none"
                           style={{ width: `${barWidth}%` }}
                         />
                         
@@ -544,7 +544,7 @@ export default function TabarimPage() {
                         </div>
                         
                         {/* פרטי hover */}
-                        <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20 min-w-[200px]">
+                        <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-30 min-w-[200px]">
                           <div className="text-xs space-y-1">
                             <div className="flex justify-between">
                               <span>מספר תב"רים:</span>
@@ -649,7 +649,7 @@ export default function TabarimPage() {
                         >
                           {/* עמודת רקע יחסית */}
                           <div 
-                            className="absolute inset-0 bg-red-100 rounded-sm transition-all duration-300"
+                            className="absolute inset-0 bg-red-100 rounded-sm transition-all duration-300 pointer-events-none"
                             style={{ width: `${barWidth}%` }}
                           />
 
