@@ -513,6 +513,9 @@ export default function TabarimPage() {
             <CardHeader className="pb-3">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">תב"רים בגירעון</CardTitle>
+                <div className="text-xs text-muted-foreground">
+                  טופ 6 עם הגירעון הגדול ביותר
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-0">
@@ -520,64 +523,86 @@ export default function TabarimPage() {
                 <div className="space-y-1">
                   {tabarim
                     .filter(tabar => tabar.surplus_deficit < 0)
+                    .sort((a, b) => a.surplus_deficit - b.surplus_deficit) // מיון מהגירעון הכי גדול לקטן
                     .slice(0, 6)
-                    .map((tabar, index) => (
-                      <div 
-                        key={tabar.id} 
-                        className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
-                      >
-                        {/* סוגר שמאלי אדום */}
-                        <div className="flex items-center ml-2">
-                          <div 
-                            className="w-1 h-6 rounded-sm bg-red-500"
-                          />
-                        </div>
-                        
-                        {/* גירעון */}
-                        <div className="min-w-[60px] text-left">
-                          <span className="text-sm font-medium text-red-600">
-                            {Math.round(Math.abs(tabar.surplus_deficit) / 1000)}K-
-                          </span>
-                        </div>
-                        
-                        {/* שם התב"ר */}
-                        <div className="flex-1 ml-4">
-                          <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                            {tabar.tabar_name}
-                          </span>
-                        </div>
-                        
-                        {/* פרטי hover */}
-                        <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 min-w-[250px]">
-                          <div className="text-xs space-y-1">
-                            <div className="flex justify-between">
-                              <span>מספר תב"ר:</span>
-                              <span className="font-medium">{tabar.tabar_number}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>תחום:</span>
-                              <span className="font-medium">{domainLabels[tabar.domain] || tabar.domain}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>תקציב מאושר:</span>
-                              <span className="font-medium">₪{tabar.approved_budget.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>הכנסה בפועל:</span>
-                              <span className="font-medium text-green-600">₪{tabar.income_actual.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>הוצאה בפועל:</span>
-                              <span className="font-medium text-red-600">₪{tabar.expense_actual.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between font-bold border-t pt-1">
-                              <span>גירעון:</span>
-                              <span className="font-bold text-red-600">₪{tabar.surplus_deficit.toLocaleString()}</span>
+                    .map((tabar, index) => {
+                      // חישוב אחוז הגירעון (יחס הוצאה-הכנסה)
+                      const deficitPercentage = tabar.income_actual > 0 
+                        ? Math.round(((tabar.expense_actual - tabar.income_actual) / tabar.income_actual) * 100)
+                        : 0;
+                      
+                      return (
+                        <div 
+                          key={tabar.id} 
+                          className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
+                        >
+                          {/* סוגר שמאלי אדום */}
+                          <div className="flex items-center ml-2">
+                            <div 
+                              className="w-1 h-6 rounded-sm bg-red-500"
+                            />
+                          </div>
+                          
+                          {/* גירעון */}
+                          <div className="min-w-[60px] text-left">
+                            <span className="text-sm font-medium text-red-600">
+                              {Math.round(Math.abs(tabar.surplus_deficit) / 1000)}K-
+                            </span>
+                          </div>
+                          
+                          {/* אחוז גירעון */}
+                          <div className="min-w-[45px] text-left ml-2">
+                            <span className="text-xs font-medium text-orange-600">
+                              {deficitPercentage}%
+                            </span>
+                          </div>
+                          
+                          {/* שם התב"ר */}
+                          <div className="flex-1 ml-4">
+                            <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                              {tabar.tabar_name}
+                            </span>
+                          </div>
+                          
+                          {/* פרטי hover */}
+                          <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 min-w-[280px]">
+                            <div className="text-xs space-y-1">
+                              <div className="flex justify-between">
+                                <span>מספר תב"ר:</span>
+                                <span className="font-medium">{tabar.tabar_number}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>תחום:</span>
+                                <span className="font-medium">{domainLabels[tabar.domain] || tabar.domain}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>תקציב מאושר:</span>
+                                <span className="font-medium">₪{tabar.approved_budget.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>הכנסה בפועל:</span>
+                                <span className="font-medium text-green-600">₪{tabar.income_actual.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>הוצאה בפועל:</span>
+                                <span className="font-medium text-red-600">₪{tabar.expense_actual.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between border-t pt-1">
+                                <span>גירעון:</span>
+                                <span className="font-bold text-red-600">₪{tabar.surplus_deficit.toLocaleString()}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>אחוז גירעון:</span>
+                                <span className="font-bold text-orange-600">{deficitPercentage}%</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1 pt-1 border-t">
+                                אחוז הגירעון = (הוצאה - הכנסה) / הכנסה
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               ) : (
                 <div className="text-center py-4 text-muted-foreground text-sm">
