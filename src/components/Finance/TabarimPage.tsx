@@ -503,7 +503,7 @@ export default function TabarimPage() {
                     return (
                       <div 
                         key={item.originalDomain} 
-                        className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative overflow-hidden"
+                        className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
                       >
                         {/* עמודת רקע יחסית */}
                         <div 
@@ -645,7 +645,7 @@ export default function TabarimPage() {
                       return (
                         <div 
                           key={tabar.id} 
-                          className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative overflow-hidden"
+                          className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
                         >
                           {/* עמודת רקע יחסית */}
                           <div 
