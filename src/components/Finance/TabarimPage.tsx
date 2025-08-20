@@ -649,7 +649,7 @@ export default function TabarimPage() {
                         >
                           {/* עמודת רקע יחסית */}
                           <div 
-                            className="absolute inset-0 bg-red-50 rounded-sm transition-all duration-300"
+                            className="absolute inset-0 bg-red-100 rounded-sm transition-all duration-300"
                             style={{ width: `${barWidth}%` }}
                           />
 
