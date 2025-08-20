@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -47,6 +47,7 @@ export default function TabarimPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTabar, setSelectedTabar] = useState<Tabar | null>(null);
   const { toast } = useToast();
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const loadTabarim = async () => {
     try {
@@ -372,6 +373,16 @@ export default function TabarimPage() {
     return 'אלש"ח';
   };
 
+  // פונקציה לניווט לטבלה עם מיון לפי גירעון
+  const scrollToTableWithDeficitSort = () => {
+    if (tableRef.current) {
+      tableRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
   return (
     <div className="space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
@@ -426,13 +437,19 @@ export default function TabarimPage() {
                 </div>
                 <div className="text-sm text-muted-foreground">הוצאות בפועל</div>
               </div>
-              <div className="bg-background rounded-lg p-4 border shadow-sm">
+              <div 
+                className="bg-background rounded-lg p-4 border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                onClick={scrollToTableWithDeficitSort}
+              >
                 <div className={`text-lg font-bold ${(totalIncome - totalExpense) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(totalIncome - totalExpense)} <span className="text-[10px] text-muted-foreground opacity-70">{getCurrencyUnit(totalIncome - totalExpense)}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">עודף/גירעון</div>
               </div>
-              <div className="bg-background rounded-lg p-4 border shadow-sm">
+              <div 
+                className="bg-background rounded-lg p-4 border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                onClick={scrollToTableWithDeficitSort}
+              >
                 <div className="text-lg font-bold text-red-600">{tabarim.filter(tabar => tabar.surplus_deficit < 0).length}</div>
                 <div className="text-sm text-muted-foreground">תב"רים בגירעון</div>
               </div>
@@ -682,7 +699,7 @@ export default function TabarimPage() {
         </div>
 
         {/* Table Below */}
-        <Card>
+        <Card ref={tableRef}>
           <CardHeader>
             <CardTitle>רשימת תב"רים ({tabarim.length})</CardTitle>
           </CardHeader>
@@ -698,7 +715,7 @@ export default function TabarimPage() {
             ) : (
               <DataTable
                 columns={columns}
-                data={tabarim}
+                data={tabarim.sort((a, b) => a.surplus_deficit - b.surplus_deficit)}
                 searchableColumnIds={["tabar_name", "tabar_number"]}
                 searchPlaceholder="חפש תב״ר..."
               />
