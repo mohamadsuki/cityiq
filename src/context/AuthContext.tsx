@@ -22,7 +22,7 @@ interface AuthContextValue {
 // Predefined users with their credentials and access
 const PREDEFINED_USERS = [
   { 
-    id: '1', 
+    id: '11111111-1111-1111-1111-111111111111', 
     username: 'mayor', 
     password: 'mayor123', 
     email: 'mayor@city.gov.il',
@@ -31,7 +31,7 @@ const PREDEFINED_USERS = [
     departments: [] as DepartmentSlug[]
   },
   { 
-    id: '2', 
+    id: '22222222-2222-2222-2222-222222222222', 
     username: 'ceo', 
     password: 'ceo123', 
     email: 'ceo@city.gov.il',
@@ -40,7 +40,7 @@ const PREDEFINED_USERS = [
     departments: [] as DepartmentSlug[]
   },
   { 
-    id: '3', 
+    id: '33333333-3333-3333-3333-333333333333', 
     username: 'finance', 
     password: 'finance123', 
     email: 'finance@city.gov.il',
@@ -49,7 +49,7 @@ const PREDEFINED_USERS = [
     departments: ['finance'] as DepartmentSlug[]
   },
   { 
-    id: '4', 
+    id: '44444444-4444-4444-4444-444444444444', 
     username: 'education', 
     password: 'education123', 
     email: 'education@city.gov.il',
@@ -58,7 +58,7 @@ const PREDEFINED_USERS = [
     departments: ['education'] as DepartmentSlug[]
   },
   { 
-    id: '5', 
+    id: '55555555-5555-5555-5555-555555555555', 
     username: 'engineering', 
     password: 'engineering123', 
     email: 'engineering@city.gov.il',
@@ -67,7 +67,7 @@ const PREDEFINED_USERS = [
     departments: ['engineering'] as DepartmentSlug[]
   },
   { 
-    id: '6', 
+    id: '66666666-6666-6666-6666-666666666666', 
     username: 'welfare', 
     password: 'welfare123', 
     email: 'welfare@city.gov.il',
@@ -76,7 +76,7 @@ const PREDEFINED_USERS = [
     departments: ['welfare'] as DepartmentSlug[]
   },
   { 
-    id: '7', 
+    id: '77777777-7777-7777-7777-777777777777', 
     username: 'nonformal', 
     password: 'nonformal123', 
     email: 'non-formal@city.gov.il',
@@ -85,7 +85,7 @@ const PREDEFINED_USERS = [
     departments: ['non-formal'] as DepartmentSlug[]
   },
   { 
-    id: '8', 
+    id: '88888888-8888-8888-8888-888888888888', 
     username: 'business', 
     password: 'business123', 
     email: 'business@city.gov.il',
