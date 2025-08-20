@@ -332,6 +332,10 @@ export default function TabarimPage() {
   // מצב מיון
   const [sortBy, setSortBy] = useState<'count' | 'budget'>('count');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // מצב מיון עבור תברים בגירעון
+  const [deficitSortBy, setDeficitSortBy] = useState<'amount' | 'percentage'>('amount');
+  const [deficitSortOrder, setDeficitSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // נתונים עבור הטבלה הויזואלית - מיון לפי הבחירה של המשתמש
   const domainSummaryData = Object.entries(domainStats)
@@ -378,40 +382,41 @@ export default function TabarimPage() {
       </div>
 
       <div className="grid gap-6">
-        {/* Summary Cards First */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>סיכום תקציבי</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 gap-4">
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span>תב"רים פעילים</span>
-                  <span className="font-semibold text-primary">{tabarim.length}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span>סה"כ תקציב מאושר</span>
-                  <span className="font-semibold text-blue-600">₪{totalBudget.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span>סה"כ הכנסות בפועל</span>
-                  <span className="font-semibold text-green-600">₪{totalIncome.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span>סה"כ הוצאות בפועל</span>
-                  <span className="font-semibold text-red-600">₪{totalExpense.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b font-bold">
-                  <span>עודף/גירעון כולל</span>
-                  <span className={`font-bold ${(totalIncome - totalExpense) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ₪{(totalIncome - totalExpense).toLocaleString()}
-                  </span>
-                </div>
+        {/* Summary Card - Full Width */}
+        <Card>
+          <CardHeader>
+            <CardTitle>סיכום תקציבי</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="flex justify-between items-center py-2 border-b md:border-b-0 md:border-r md:pr-4">
+                <span>תב"רים פעילים</span>
+                <span className="font-semibold text-primary">{tabarim.length}</span>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex justify-between items-center py-2 border-b md:border-b-0 md:border-r md:pr-4">
+                <span>סה"כ תקציב מאושר</span>
+                <span className="font-semibold text-blue-600">₪{totalBudget.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b md:border-b-0 md:border-r md:pr-4">
+                <span>סה"כ הכנסות בפועל</span>
+                <span className="font-semibold text-green-600">₪{totalIncome.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b md:border-b-0 md:border-r md:pr-4">
+                <span>סה"כ הוצאות בפועל</span>
+                <span className="font-semibold text-red-600">₪{totalExpense.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 font-bold">
+                <span>עודף/גירעון כולל</span>
+                <span className={`font-bold ${(totalIncome - totalExpense) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  ₪{(totalIncome - totalExpense).toLocaleString()}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
+        {/* Two Cards Row */}
+        <div className="grid md:grid-cols-2 gap-6">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex justify-between items-center">
@@ -461,9 +466,9 @@ export default function TabarimPage() {
                       </div>
                       
                        {/* תקציב */}
-                       <div className="min-w-[60px] text-left">
+                       <div className="min-w-[80px] text-left">
                          <span className="text-sm font-medium text-muted-foreground">
-                           {item.budget.toLocaleString()}
+                           {item.budget.toLocaleString()} <span className="text-xs">אלש"ח</span>
                          </span>
                        </div>
                       
@@ -490,11 +495,11 @@ export default function TabarimPage() {
                           </div>
                           <div className="flex justify-between">
                             <span>תקציב:</span>
-                            <span className="font-medium">₪{item.budgetThousand}K ({item.budgetPercentage}%)</span>
+                            <span className="font-medium">₪{item.budget.toLocaleString()} ({item.budgetPercentage}%)</span>
                           </div>
                           <div className="flex justify-between">
                             <span>תקציב ממוצע לתב"ר:</span>
-                            <span className="font-medium">₪{Math.round(item.budget / item.count / 1000)}K</span>
+                            <span className="font-medium">₪{Math.round(item.budget / item.count).toLocaleString()}</span>
                           </div>
                         </div>
                       </div>
@@ -513,8 +518,32 @@ export default function TabarimPage() {
             <CardHeader className="pb-3">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">תב"רים בגירעון</CardTitle>
-                <div className="text-xs text-muted-foreground">
-                  טופ 12 עם הגירעון הגדול ביותר
+                <div className="flex gap-2 text-xs">
+                  <span className="text-xs text-muted-foreground mr-2">טופ 8</span>
+                  <Button
+                    variant={deficitSortBy === 'amount' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDeficitSortBy('amount')}
+                    className="h-7 text-xs"
+                  >
+                    לפי סכום
+                  </Button>
+                  <Button
+                    variant={deficitSortBy === 'percentage' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDeficitSortBy('percentage')}
+                    className="h-7 text-xs"
+                  >
+                    לפי אחוז
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDeficitSortOrder(deficitSortOrder === 'desc' ? 'asc' : 'desc')}
+                    className="h-7 text-xs w-7 p-0"
+                  >
+                    {deficitSortOrder === 'desc' ? '↓' : '↑'}
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -523,86 +552,95 @@ export default function TabarimPage() {
                 <div className="space-y-1">
                   {tabarim
                     .filter(tabar => tabar.surplus_deficit < 0)
-                    .sort((a, b) => a.surplus_deficit - b.surplus_deficit) // מיון מהגירעון הכי גדול לקטן
-                    .slice(0, 12)
-                    .map((tabar, index) => {
-                      // חישוב אחוז הגירעון (יחס הוצאה-הכנסה)
-                      const deficitPercentage = tabar.income_actual > 0 
+                    .map(tabar => ({
+                      ...tabar,
+                      deficitPercentage: tabar.income_actual > 0 
                         ? Math.round(((tabar.expense_actual - tabar.income_actual) / tabar.income_actual) * 100)
-                        : 0;
-                      
-                      return (
-                        <div 
-                          key={tabar.id} 
-                          className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
-                        >
-                          {/* סוגר שמאלי אדום */}
-                          <div className="flex items-center ml-2">
-                            <div 
-                              className="w-1 h-6 rounded-sm bg-red-500"
-                            />
-                          </div>
-                          
-                           {/* גירעון */}
-                           <div className="min-w-[70px] text-left">
-                             <span className="text-sm font-medium text-red-600">
-                               {Math.abs(tabar.surplus_deficit).toLocaleString()}-
-                             </span>
-                           </div>
-                          
-                          {/* אחוז גירעון */}
-                          <div className="min-w-[45px] text-left ml-2">
-                            <span className="text-xs font-medium text-orange-600">
-                              {deficitPercentage}%
-                            </span>
-                          </div>
-                          
-                          {/* שם התב"ר */}
-                          <div className="flex-1 ml-4">
-                            <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                              {tabar.tabar_name}
-                            </span>
-                          </div>
-                          
-                          {/* פרטי hover */}
-                          <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 min-w-[280px]">
-                            <div className="text-xs space-y-1">
-                              <div className="flex justify-between">
-                                <span>מספר תב"ר:</span>
-                                <span className="font-medium">{tabar.tabar_number}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>תחום:</span>
-                                <span className="font-medium">{domainLabels[tabar.domain] || tabar.domain}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>תקציב מאושר:</span>
-                                <span className="font-medium">₪{tabar.approved_budget.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>הכנסה בפועל:</span>
-                                <span className="font-medium text-green-600">₪{tabar.income_actual.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>הוצאה בפועל:</span>
-                                <span className="font-medium text-red-600">₪{tabar.expense_actual.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between border-t pt-1">
-                                <span>גירעון:</span>
-                                <span className="font-bold text-red-600">₪{tabar.surplus_deficit.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>אחוז גירעון:</span>
-                                <span className="font-bold text-orange-600">{deficitPercentage}%</span>
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-1 pt-1 border-t">
-                                אחוז הגירעון = (הוצאה - הכנסה) / הכנסה
-                              </div>
+                        : 0
+                    }))
+                    .sort((a, b) => {
+                      if (deficitSortBy === 'amount') {
+                        return deficitSortOrder === 'desc' 
+                          ? a.surplus_deficit - b.surplus_deficit 
+                          : b.surplus_deficit - a.surplus_deficit;
+                      } else {
+                        return deficitSortOrder === 'desc' 
+                          ? b.deficitPercentage - a.deficitPercentage 
+                          : a.deficitPercentage - b.deficitPercentage;
+                      }
+                    })
+                    .slice(0, 8)
+                    .map((tabar, index) => (
+                      <div 
+                        key={tabar.id} 
+                        className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
+                      >
+                        {/* סוגר שמאלי אדום */}
+                        <div className="flex items-center ml-2">
+                          <div 
+                            className="w-1 h-6 rounded-sm bg-red-500"
+                          />
+                        </div>
+                        
+                         {/* גירעון */}
+                         <div className="min-w-[80px] text-left">
+                           <span className="text-sm font-medium text-red-600">
+                             {Math.abs(tabar.surplus_deficit).toLocaleString()}- <span className="text-xs">אלש"ח</span>
+                           </span>
+                         </div>
+                        
+                        {/* אחוז גירעון */}
+                        <div className="min-w-[45px] text-left ml-2">
+                          <span className="text-xs font-medium text-orange-600">
+                            {tabar.deficitPercentage}%
+                          </span>
+                        </div>
+                        
+                        {/* שם התב"ר */}
+                        <div className="flex-1 ml-4">
+                          <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                            {tabar.tabar_name}
+                          </span>
+                        </div>
+                        
+                        {/* פרטי hover */}
+                        <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10 min-w-[280px]">
+                          <div className="text-xs space-y-1">
+                            <div className="flex justify-between">
+                              <span>מספר תב"ר:</span>
+                              <span className="font-medium">{tabar.tabar_number}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>תחום:</span>
+                              <span className="font-medium">{domainLabels[tabar.domain] || tabar.domain}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>תקציב מאושר:</span>
+                              <span className="font-medium">₪{tabar.approved_budget.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>הכנסה בפועל:</span>
+                              <span className="font-medium text-green-600">₪{tabar.income_actual.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>הוצאה בפועל:</span>
+                              <span className="font-medium text-red-600">₪{tabar.expense_actual.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between border-t pt-1">
+                              <span>גירעון:</span>
+                              <span className="font-bold text-red-600">₪{tabar.surplus_deficit.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>אחוז גירעון:</span>
+                              <span className="font-bold text-orange-600">{tabar.deficitPercentage}%</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1 pt-1 border-t">
+                              אחוז הגירעון = (הוצאה - הכנסה) / הכנסה
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
+                      </div>
+                    ))}
                 </div>
               ) : (
                 <div className="text-center py-4 text-muted-foreground text-sm">
