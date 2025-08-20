@@ -552,11 +552,11 @@ export default function TabarimPage() {
                             </div>
                             <div className="flex justify-between">
                               <span>תקציב:</span>
-                              <span className="font-medium">₪{item.budget.toLocaleString()} ({item.budgetPercentage}%)</span>
+                              <span className="font-medium">אלש"ח {item.budget.toLocaleString()} ({item.budgetPercentage}%)</span>
                             </div>
                             <div className="flex justify-between">
                               <span>תקציב ממוצע לתב"ר:</span>
-                              <span className="font-medium">₪{Math.round(item.budget / item.count).toLocaleString()}</span>
+                              <span className="font-medium">אלש"ח {Math.round(item.budget / item.count).toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
@@ -697,19 +697,19 @@ export default function TabarimPage() {
                               </div>
                               <div className="flex justify-between">
                                 <span>תקציב מאושר:</span>
-                                <span className="font-medium">₪{tabar.approved_budget.toLocaleString()}</span>
+                                <span className="font-medium">אלש"ח {tabar.approved_budget.toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>הכנסה בפועל:</span>
-                                <span className="font-medium text-green-600">₪{tabar.income_actual.toLocaleString()}</span>
+                                <span className="font-medium text-green-600">אלש"ח {tabar.income_actual.toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>הוצאה בפועל:</span>
-                                <span className="font-medium text-red-600">₪{tabar.expense_actual.toLocaleString()}</span>
+                                <span className="font-medium text-red-600">אלש"ח {tabar.expense_actual.toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between border-t pt-1">
                                 <span>גירעון:</span>
-                                <span className="font-bold text-red-600">₪{tabar.surplus_deficit.toLocaleString()}</span>
+                                <span className="font-bold text-red-600">אלש"ח {tabar.surplus_deficit.toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between">
                                 <span>אחוז גירעון:</span>
