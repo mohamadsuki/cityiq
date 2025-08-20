@@ -403,10 +403,14 @@ export default function TabarimPage() {
             <CardTitle className="text-xl text-primary">סיכום תקציבי כללי</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
               <div className="bg-background rounded-lg p-4 border shadow-sm">
                 <div className="text-2xl font-bold text-primary">{tabarim.length}</div>
                 <div className="text-sm text-muted-foreground">תב"רים פעילים</div>
+              </div>
+              <div className="bg-background rounded-lg p-4 border shadow-sm">
+                <div className="text-lg font-bold text-red-600">{tabarim.filter(tabar => tabar.surplus_deficit < 0).length}</div>
+                <div className="text-sm text-muted-foreground">תב"רים בגירעון</div>
               </div>
               <div className="bg-background rounded-lg p-4 border shadow-sm">
                 <div className="text-lg font-bold text-blue-600">
@@ -540,7 +544,7 @@ export default function TabarimPage() {
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg">תב"רים בגירעון</CardTitle>
                 <div className="flex gap-2 text-xs">
-                  <span className="text-xs text-muted-foreground mr-2">טופ 8</span>
+                  <span className="text-xs text-muted-foreground mr-2">טופ 12</span>
                   <Button
                     variant={deficitSortBy === 'amount' ? 'default' : 'outline'}
                     size="sm"
@@ -590,7 +594,7 @@ export default function TabarimPage() {
                           : a.deficitPercentage - b.deficitPercentage;
                       }
                     })
-                    .slice(0, 8)
+                    .slice(0, 12)
                     .map((tabar, index) => (
                       <div 
                         key={tabar.id} 
