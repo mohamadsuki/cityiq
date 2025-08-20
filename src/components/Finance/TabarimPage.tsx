@@ -357,6 +357,21 @@ export default function TabarimPage() {
       }
     });
 
+  // פונקציה לפורמט מספרים
+  const formatCurrency = (amount: number) => {
+    if (amount >= 1000000) {
+      return `${(amount / 1000000).toFixed(1)}`;
+    }
+    return amount.toLocaleString();
+  };
+
+  const getCurrencyUnit = (amount: number) => {
+    if (amount >= 1000000) {
+      return 'מלש"ח';
+    }
+    return 'אלש"ח';
+  };
+
   return (
     <div className="space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
@@ -382,34 +397,40 @@ export default function TabarimPage() {
       </div>
 
       <div className="grid gap-6">
-        {/* Summary Card - Full Width */}
-        <Card>
-          <CardHeader>
-            <CardTitle>סיכום תקציבי</CardTitle>
+        {/* Summary Card - Full Width with Better Design */}
+        <Card className="bg-gradient-to-l from-background to-muted/20">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl text-primary">סיכום תקציבי כללי</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="flex justify-between items-center py-2 border-b md:border-b-0 md:border-r md:pr-4">
-                <span>תב"רים פעילים</span>
-                <span className="font-semibold text-primary">{tabarim.length}</span>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="bg-background rounded-lg p-4 border shadow-sm">
+                <div className="text-2xl font-bold text-primary">{tabarim.length}</div>
+                <div className="text-sm text-muted-foreground">תב"רים פעילים</div>
               </div>
-              <div className="flex justify-between items-center py-2 border-b md:border-b-0 md:border-r md:pr-4">
-                <span>סה"כ תקציב מאושר</span>
-                <span className="font-semibold text-blue-600">₪{totalBudget.toLocaleString()}</span>
+              <div className="bg-background rounded-lg p-4 border shadow-sm">
+                <div className="text-lg font-bold text-blue-600">
+                  {formatCurrency(totalBudget)} <span className="text-xs text-muted-foreground opacity-70">{getCurrencyUnit(totalBudget)}</span>
+                </div>
+                <div className="text-sm text-muted-foreground">תקציב מאושר</div>
               </div>
-              <div className="flex justify-between items-center py-2 border-b md:border-b-0 md:border-r md:pr-4">
-                <span>סה"כ הכנסות בפועל</span>
-                <span className="font-semibold text-green-600">₪{totalIncome.toLocaleString()}</span>
+              <div className="bg-background rounded-lg p-4 border shadow-sm">
+                <div className="text-lg font-bold text-green-600">
+                  {formatCurrency(totalIncome)} <span className="text-xs text-muted-foreground opacity-70">{getCurrencyUnit(totalIncome)}</span>
+                </div>
+                <div className="text-sm text-muted-foreground">הכנסות בפועל</div>
               </div>
-              <div className="flex justify-between items-center py-2 border-b md:border-b-0 md:border-r md:pr-4">
-                <span>סה"כ הוצאות בפועל</span>
-                <span className="font-semibold text-red-600">₪{totalExpense.toLocaleString()}</span>
+              <div className="bg-background rounded-lg p-4 border shadow-sm">
+                <div className="text-lg font-bold text-red-600">
+                  {formatCurrency(totalExpense)} <span className="text-xs text-muted-foreground opacity-70">{getCurrencyUnit(totalExpense)}</span>
+                </div>
+                <div className="text-sm text-muted-foreground">הוצאות בפועל</div>
               </div>
-              <div className="flex justify-between items-center py-2 font-bold">
-                <span>עודף/גירעון כולל</span>
-                <span className={`font-bold ${(totalIncome - totalExpense) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ₪{(totalIncome - totalExpense).toLocaleString()}
-                </span>
+              <div className="bg-background rounded-lg p-4 border shadow-sm">
+                <div className={`text-lg font-bold ${(totalIncome - totalExpense) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(totalIncome - totalExpense)} <span className="text-xs text-muted-foreground opacity-70">{getCurrencyUnit(totalIncome - totalExpense)}</span>
+                </div>
+                <div className="text-sm text-muted-foreground">עודף/גירעון</div>
               </div>
             </div>
           </CardContent>
@@ -466,9 +487,9 @@ export default function TabarimPage() {
                       </div>
                       
                        {/* תקציב */}
-                       <div className="min-w-[80px] text-left">
+                       <div className="min-w-[85px] text-left">
                          <span className="text-sm font-medium text-muted-foreground">
-                           {item.budget.toLocaleString()} <span className="text-xs">אלש"ח</span>
+                           {formatCurrency(item.budget)} <span className="text-xs opacity-70">{getCurrencyUnit(item.budget)}</span>
                          </span>
                        </div>
                       
@@ -583,9 +604,9 @@ export default function TabarimPage() {
                         </div>
                         
                          {/* גירעון */}
-                         <div className="min-w-[80px] text-left">
+                         <div className="min-w-[85px] text-left">
                            <span className="text-sm font-medium text-red-600">
-                             {Math.abs(tabar.surplus_deficit).toLocaleString()}- <span className="text-xs">אלש"ח</span>
+                             {formatCurrency(Math.abs(tabar.surplus_deficit))}- <span className="text-xs opacity-70">{getCurrencyUnit(Math.abs(tabar.surplus_deficit))}</span>
                            </span>
                          </div>
                         
