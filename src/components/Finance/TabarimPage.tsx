@@ -409,10 +409,6 @@ export default function TabarimPage() {
                 <div className="text-sm text-muted-foreground">תב"רים פעילים</div>
               </div>
               <div className="bg-background rounded-lg p-4 border shadow-sm">
-                <div className="text-lg font-bold text-red-600">{tabarim.filter(tabar => tabar.surplus_deficit < 0).length}</div>
-                <div className="text-sm text-muted-foreground">תב"רים בגירעון</div>
-              </div>
-              <div className="bg-background rounded-lg p-4 border shadow-sm">
                 <div className="text-lg font-bold text-blue-600">
                   {formatCurrency(totalBudget)} <span className="text-xs text-muted-foreground opacity-70">{getCurrencyUnit(totalBudget)}</span>
                 </div>
@@ -435,6 +431,10 @@ export default function TabarimPage() {
                   {formatCurrency(totalIncome - totalExpense)} <span className="text-xs text-muted-foreground opacity-70">{getCurrencyUnit(totalIncome - totalExpense)}</span>
                 </div>
                 <div className="text-sm text-muted-foreground">עודף/גירעון</div>
+              </div>
+              <div className="bg-background rounded-lg p-4 border shadow-sm">
+                <div className="text-lg font-bold text-red-600">{tabarim.filter(tabar => tabar.surplus_deficit < 0).length}</div>
+                <div className="text-sm text-muted-foreground">תב"רים בגירעון</div>
               </div>
             </div>
           </CardContent>
