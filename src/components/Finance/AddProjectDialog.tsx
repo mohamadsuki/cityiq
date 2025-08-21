@@ -71,21 +71,35 @@ export default function AddProjectDialog({ onSaved, defaultDepartment, hideDepar
       if (created.error) throw created.error;
       const projId = created.data.id as string;
 
-      // Upload media
+      // Upload media with safe filenames
       const uploadedImages: string[] = [];
       if (imageFiles) {
-        for (const file of Array.from(imageFiles)) {
-          const path = `projects/${projId}/images/${Date.now()}_${file.name}`;
+        for (let i = 0; i < imageFiles.length; i++) {
+          const file = imageFiles[i];
+          const fileExtension = file.name.split('.').pop() || '';
+          const safeName = `${Date.now()}_image_${i}.${fileExtension}`;
+          const path = `projects/${projId}/${safeName}`;
           const { error } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
-          if (!error) uploadedImages.push(path);
+          if (!error) {
+            uploadedImages.push(path);
+          } else {
+            console.error('Image upload error:', error);
+          }
         }
       }
       const uploadedFiles: string[] = [];
       if (docFiles) {
-        for (const file of Array.from(docFiles)) {
-          const path = `projects/${projId}/files/${Date.now()}_${file.name}`;
+        for (let i = 0; i < docFiles.length; i++) {
+          const file = docFiles[i];
+          const fileExtension = file.name.split('.').pop() || '';
+          const safeName = `${Date.now()}_document_${i}.${fileExtension}`;
+          const path = `projects/${projId}/${safeName}`;
           const { error } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
-          if (!error) uploadedFiles.push(path);
+          if (!error) {
+            uploadedFiles.push(path);
+          } else {
+            console.error('Document upload error:', error);
+          }
         }
       }
 
