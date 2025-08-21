@@ -1002,7 +1002,7 @@ export default function TabarimPage() {
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="סינון לפי מאזן" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-50">
                     <SelectItem value="all">כל המאזנים</SelectItem>
                     <SelectItem value="deficit">גירעון</SelectItem>
                     <SelectItem value="surplus">עודף</SelectItem>
@@ -1014,7 +1014,7 @@ export default function TabarimPage() {
                   <SelectTrigger className="w-[140px]">
                     <SelectValue placeholder="סינון לפי תחום" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-50">
                     <SelectItem value="all">כל התחומים</SelectItem>
                     {uniqueDomains.map((domain) => (
                       <SelectItem key={domain} value={domain}>
