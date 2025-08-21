@@ -249,7 +249,16 @@ const [form, setForm] = useState<Partial<Project>>({
       
       if (q && !(`${p.name ?? ""} ${p.code ?? ""}`.toLowerCase().includes(q.toLowerCase()))) return false;
       if (department !== "all" && p.department_slug !== department) return false;
-      if (status !== "all" && (p.status ?? "").toLowerCase() !== status.toLowerCase()) return false;
+      if (status !== "all") {
+        if (status === "delayed") {
+          // Special case for delayed projects - show both "תקוע" and "עיכוב" statuses
+          const projectStatus = (p.status ?? "").toLowerCase();
+          if (projectStatus !== "תקוע" && projectStatus !== "עיכוב") return false;
+        } else {
+          // Normal status filtering
+          if ((p.status ?? "").toLowerCase() !== status.toLowerCase()) return false;
+        }
+      }
       if (domain !== "all" && (p.domain ?? "").toLowerCase() !== domain.toLowerCase()) return false;
       
       // Apply filter from "What's New" section
@@ -356,9 +365,9 @@ const [form, setForm] = useState<Partial<Project>>({
   const handleKpiClick = (filterType: string) => {
     switch (filterType) {
       case 'delayed':
-        // Filter for stuck projects - status "עיכוב"
+        // Filter for delayed projects - status "עיכוב" or "תקוע"
         setQ('');
-        setStatus('עיכוב');
+        setStatus('delayed'); // Special status to handle both עיכוב and תקוע
         setDomain('all');
         break;
       case 'active':
