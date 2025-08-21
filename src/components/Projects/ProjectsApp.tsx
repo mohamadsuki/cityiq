@@ -177,16 +177,27 @@ const [form, setForm] = useState<Partial<Project>>({
     setSelectedImageIndex((prev) => (prev - 1 + resolvedImages.length) % resolvedImages.length);
   };
 
-  const downloadImage = () => {
+  const downloadImage = async () => {
     const imageUrl = resolvedImages[selectedImageIndex];
-    if (!imageUrl) return;
+    if (!imageUrl || !viewing) return;
     
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = `project-image-${selectedImageIndex + 1}.jpg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${viewing.name || 'project'}-image-${selectedImageIndex + 1}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      toast({ title: "שגיאה", description: "הורדת התמונה נכשלה", variant: "destructive" });
+    }
   };
 
   // Keyboard navigation for lightbox
@@ -917,13 +928,24 @@ function openEdit(p: Project) {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => {
-                            const link = document.createElement('a');
-                            link.href = file.url;
-                            link.download = file.name;
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
+                          onClick={async () => {
+                            try {
+                              const response = await fetch(file.url);
+                              const blob = await response.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = file.name.replace(/^.*_/, ''); // Remove timestamp prefix
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              
+                              window.URL.revokeObjectURL(url);
+                            } catch (error) {
+                              console.error('Error downloading file:', error);
+                              toast({ title: "שגיאה", description: "הורדת הקובץ נכשלה", variant: "destructive" });
+                            }
                           }}
                           className="gap-1"
                         >
