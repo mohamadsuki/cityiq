@@ -459,6 +459,9 @@ export default function TabarimPage() {
     });
   }, [tabarim, balanceFilter, domainFilter]);
 
+  // Debug logs
+  console.log("🔍 Filters state:", { balanceFilter, domainFilter, uniqueDomains: uniqueDomains.length });
+
   // חישוב סטטיסטיקות למקורות תקציב של תב"רים בגירעון
   const fundingStats = deficitTabarim.reduce((acc, tabar) => {
     // מקור תקציב 1
