@@ -483,7 +483,7 @@ export default function TabarimPage() {
         return fundingSortOrder === 'desc' ? b.budget - a.budget : a.budget - b.budget;
       }
     })
-    .slice(0, 12); // לקיחת טופ 12
+    .slice(0, 24); // לקיחת טופ 24
 
   return (
     <div className="space-y-6" dir="rtl">
@@ -847,7 +847,7 @@ export default function TabarimPage() {
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg">מקורות תקציב של תב"רים בגירעון</CardTitle>
               <div className="flex gap-2 text-xs">
-                <span className="text-xs text-muted-foreground mr-2">טופ 12</span>
+              <span className="text-xs text-muted-foreground mr-2">טופ 24</span>
                 <Button
                   variant={fundingSortBy === 'count' ? 'default' : 'outline'}
                   size="sm"
@@ -877,7 +877,7 @@ export default function TabarimPage() {
           </CardHeader>
           <CardContent className="pt-0">
             {deficitTabarim.length > 0 ? (
-              <div className="space-y-1">
+              <div className="grid grid-cols-2 gap-x-6">
                 {fundingSummaryData.map((item, index) => {
                   // חישוב רוחב העמודה היחסי
                   const maxValue = Math.max(...fundingSummaryData.map(d => fundingSortBy === 'count' ? d.count : d.budget));
@@ -889,11 +889,11 @@ export default function TabarimPage() {
                       key={item.originalSource} 
                       className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
                     >
-                      {/* עמודת רקע יחסית */}
-                      <div 
-                        className="absolute inset-0 bg-muted-foreground/20 rounded-sm transition-all duration-300 pointer-events-none"
-                        style={{ width: `${barWidth}%` }}
-                      />
+                       {/* עמודת רקע יחסית */}
+                       <div 
+                         className="absolute inset-0 bg-blue-100 rounded-sm transition-all duration-300 pointer-events-none"
+                         style={{ width: `${barWidth}%` }}
+                       />
                       
                       {/* תוכן קיים */}
                       <div className="relative z-10 flex items-center w-full">
