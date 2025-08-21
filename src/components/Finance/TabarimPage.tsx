@@ -510,6 +510,14 @@ export default function TabarimPage() {
     tableRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleAllFundingSourceChartClick = (fundingSource: string) => {
+    setFundingSourceFilter(fundingSource);
+    setBalanceFilter('all');
+    setDomainFilter('all');
+    // גלילה לטבלה
+    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   // חישוב סטטיסטיקות למקורות תקציב של כל התב"רים
   const allFundingStats = tabarim.reduce((acc, tabar) => {
     // מקור תקציב 1
@@ -1030,7 +1038,7 @@ export default function TabarimPage() {
                     <div 
                       key={item.originalSource} 
                       className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative cursor-pointer"
-                      onClick={() => handleFundingSourceChartClick(item.source)}
+                      onClick={() => handleAllFundingSourceChartClick(item.source)}
                     >
                        {/* עמודת רקע יחסית - צהובה */}
                        <div 
