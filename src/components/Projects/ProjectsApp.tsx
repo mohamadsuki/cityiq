@@ -753,9 +753,8 @@ function openEdit(p: Project) {
      <SelectItem value="all">הכל</SelectItem>
      <SelectItem value="תכנון">תכנון</SelectItem>
      <SelectItem value="ביצוע">ביצוע</SelectItem>
-     <SelectItem value="סיום">סיום</SelectItem>
-     <SelectItem value="תקוע">תקוע</SelectItem>
      <SelectItem value="עיכוב">עיכוב</SelectItem>
+     <SelectItem value="סיום">סיום</SelectItem>
   </SelectContent>
 </Select>
           </div>
