@@ -863,7 +863,6 @@ function openEdit(p: Project) {
           <thead>
             <tr className="text-muted-foreground">
               <th className="py-2">שם</th>
-              <th className="py-2">קוד</th>
               <th className="py-2">מחלקה</th>
               <th className="py-2">תחום</th>
               <th className="py-2">סטטוס</th>
@@ -875,15 +874,14 @@ function openEdit(p: Project) {
           </thead>
           <tbody>
             {loading && (
-              <tr><td className="py-6" colSpan={9}>טוען…</td></tr>
-            )}
-            {!loading && filtered.length === 0 && (
-              <tr><td className="py-6" colSpan={9}>לא נמצאו פרויקטים</td></tr>
+               <tr><td className="py-6" colSpan={8}>טוען…</td></tr>
+             )}
+             {!loading && filtered.length === 0 && (
+               <tr><td className="py-6" colSpan={8}>לא נמצאו פרויקטים</td></tr>
             )}
             {!loading && filtered.map((p) => (
               <tr key={p.id} className="border-b border-border">
                 <td className="py-3 font-medium">{p.name || "—"}</td>
-                <td className="py-3">{p.code || "—"}</td>
                 <td className="py-3">{p.department_slug ? DEPARTMENT_LABELS[p.department_slug] : "—"}</td>
                 <td className="py-3">{p.domain || "—"}</td>
                 <td className="py-3">
