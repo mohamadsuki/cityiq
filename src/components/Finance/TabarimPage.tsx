@@ -55,6 +55,7 @@ export default function TabarimPage() {
   const [selectedTabar, setSelectedTabar] = useState<Tabar | null>(null);
   const [balanceFilter, setBalanceFilter] = useState<'all' | 'deficit' | 'surplus'>('all');
   const [domainFilter, setDomainFilter] = useState<string>('all');
+  const [fundingSourceFilter, setFundingSourceFilter] = useState<string>('all');
   const { toast } = useToast();
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -442,6 +443,17 @@ export default function TabarimPage() {
     return domains.map(domain => domainLabels[domain] || domain);
   }, [tabarim]);
 
+  // חישוב מקורות תקציב ייחודיים מכל שלושת העמודות
+  const uniqueFundingSources = useMemo(() => {
+    const sources = new Set<string>();
+    tabarim.forEach(tabar => {
+      if (tabar.funding_source1) sources.add(tabar.funding_source1);
+      if (tabar.funding_source2) sources.add(tabar.funding_source2);
+      if (tabar.funding_source3) sources.add(tabar.funding_source3);
+    });
+    return Array.from(sources).map(source => fundingLabelsForChart[source] || source);
+  }, [tabarim]);
+
   // פילטר תב"רים לפי הסינונים
   const filteredTabarim = useMemo(() => {
     return tabarim.filter(tabar => {
@@ -455,9 +467,20 @@ export default function TabarimPage() {
         if (displayName !== domainFilter) return false;
       }
       
+      // סינון לפי מקור תקציב
+      if (fundingSourceFilter !== 'all') {
+        const hasFundingSource = [tabar.funding_source1, tabar.funding_source2, tabar.funding_source3]
+          .some(source => {
+            if (!source) return false;
+            const displayName = fundingLabelsForChart[source] || source;
+            return displayName === fundingSourceFilter;
+          });
+        if (!hasFundingSource) return false;
+      }
+      
       return true;
     });
-  }, [tabarim, balanceFilter, domainFilter]);
+  }, [tabarim, balanceFilter, domainFilter, fundingSourceFilter]);
 
   // Debug logs
   console.log("🔍 Filters state:", { balanceFilter, domainFilter, uniqueDomains: uniqueDomains.length });
@@ -1019,6 +1042,21 @@ export default function TabarimPage() {
                     {uniqueDomains.map((domain) => (
                       <SelectItem key={domain} value={domain}>
                         {domain}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* סינון לפי מקור תקציב */}
+                <Select value={fundingSourceFilter} onValueChange={setFundingSourceFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="סינון לפי מקור תקציב" />
+                  </SelectTrigger>
+                  <SelectContent className="z-50">
+                    <SelectItem value="all">כל המקורות</SelectItem>
+                    {uniqueFundingSources.map((source) => (
+                      <SelectItem key={source} value={source}>
+                        {source}
                       </SelectItem>
                     ))}
                   </SelectContent>
