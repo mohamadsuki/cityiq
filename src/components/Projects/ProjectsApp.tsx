@@ -121,7 +121,6 @@ export default function ProjectsApp() {
   );
   const [status, setStatus] = useState<string>("all");
   const [domain, setDomain] = useState<string>("all");
-  const [delayedFilter, setDelayedFilter] = useState(false); // Special filter for delayed projects
   const [showDepartmentChart, setShowDepartmentChart] = useState(false);
 
   // Handle filtering from "What's New" section
@@ -242,7 +241,6 @@ const [form, setForm] = useState<Partial<Project>>({
   }, []);
 
   const filtered = useMemo(() => {
-    console.log('Filtering projects with:', { status, delayedFilter });
     return projects.filter((p) => {
       // Filter by user's visible departments (additional client-side check)
       if (role !== "mayor" && role !== "ceo" && p.department_slug && !visibleDepartments.includes(p.department_slug)) {
@@ -251,16 +249,7 @@ const [form, setForm] = useState<Partial<Project>>({
       
       if (q && !(`${p.name ?? ""} ${p.code ?? ""}`.toLowerCase().includes(q.toLowerCase()))) return false;
       if (department !== "all" && p.department_slug !== department) return false;
-      
-      // Handle delayed filter differently from normal status filter
-      if (delayedFilter) {
-        const projectStatus = (p.status ?? "").toLowerCase();
-        if (projectStatus !== "תקוע" && projectStatus !== "עיכוב") return false;
-      } else if (status !== "all") {
-        // Normal status filtering - only apply if delayedFilter is false
-        if ((p.status ?? "").toLowerCase() !== status.toLowerCase()) return false;
-      }
-      
+      if (status !== "all" && (p.status ?? "").toLowerCase() !== status.toLowerCase()) return false;
       if (domain !== "all" && (p.domain ?? "").toLowerCase() !== domain.toLowerCase()) return false;
       
       // Apply filter from "What's New" section
@@ -303,7 +292,7 @@ const [form, setForm] = useState<Partial<Project>>({
       
       return true;
     });
-  }, [projects, q, department, status, domain, delayedFilter, filter, period, fromParam, toParam]);
+  }, [projects, q, department, status, domain, filter, period, fromParam, toParam]);
 
   // Calculate KPI data
   const kpiData = useMemo(() => {
@@ -367,22 +356,19 @@ const [form, setForm] = useState<Partial<Project>>({
   const handleKpiClick = (filterType: string) => {
     switch (filterType) {
       case 'delayed':
-        // Filter for delayed projects - status "עיכוב" or "תקוע"
+        // Filter for stuck projects - status "עיכוב"
         setQ('');
-        setStatus('all'); // Reset normal status filter
-        setDelayedFilter(true); // Use special delayed filter
+        setStatus('עיכוב');
         setDomain('all');
         break;
       case 'active':
         setQ('');
         setStatus('ביצוע');
-        setDelayedFilter(false); // Reset delayed filter
         setDomain('all');
         break;
       case 'planning':
         setQ('');
         setStatus('תכנון');
-        setDelayedFilter(false); // Reset delayed filter
         setDomain('all');
         break;
       case 'departments':
@@ -391,7 +377,6 @@ const [form, setForm] = useState<Partial<Project>>({
       case 'all-active':
         setQ('');
         setStatus('all');
-        setDelayedFilter(false); // Reset delayed filter
         setDomain('all');
         break;
     }
@@ -763,19 +748,10 @@ function openEdit(p: Project) {
           </div>
           <div>
             <Label>סטטוס</Label>
-<Select value={delayedFilter ? "delayed" : status} onValueChange={(v) => {
-  if (v === "delayed") {
-    setDelayedFilter(true);
-    setStatus('all');
-  } else {
-    setStatus(v);
-    setDelayedFilter(false);
-  }
-}}>
-  <SelectTrigger><SelectValue placeholder={delayedFilter ? "פרויקטים בעיכוב (תקוע/עיכוב)" : "סטטוס"} /></SelectTrigger>
+<Select value={status} onValueChange={(v) => setStatus(v)}>
+  <SelectTrigger><SelectValue placeholder="סטטוס" /></SelectTrigger>
   <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
      <SelectItem value="all">הכל</SelectItem>
-     <SelectItem value="delayed">פרויקטים בעיכוב (תקוע/עיכוב)</SelectItem>
      <SelectItem value="תכנון">תכנון</SelectItem>
      <SelectItem value="ביצוע">ביצוע</SelectItem>
      <SelectItem value="סיום">סיום</SelectItem>
