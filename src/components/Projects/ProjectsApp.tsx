@@ -299,9 +299,8 @@ const [form, setForm] = useState<Partial<Project>>({
     const oneMonthAgo = new Date();
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     
-    // Count stuck projects - status "תקוע"
+    // Count delayed projects - status "עיכוב"
     const stuckProjects = projects.filter(p => 
-      (p.status ?? '').toLowerCase() === 'תקוע' || 
       (p.status ?? '').toLowerCase() === 'עיכוב'
     );
     
@@ -356,7 +355,7 @@ const [form, setForm] = useState<Partial<Project>>({
   const handleKpiClick = (filterType: string) => {
     switch (filterType) {
       case 'delayed':
-        // Filter for stuck projects - status "עיכוב"
+        // Filter for delayed projects - status "עיכוב"
         setQ('');
         setStatus('עיכוב');
         setDomain('all');
@@ -620,7 +619,7 @@ function openEdit(p: Project) {
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-red-800">פרויקטים בעיכוב</div>
-              <div className="text-sm text-red-600">פרויקטים בסטטוס תקוע או עיכוב</div>
+              <div className="text-sm text-red-600">פרויקטים בסטטוס עיכוב</div>
             </div>
           </CardContent>
         </Card>
@@ -978,8 +977,8 @@ function openEdit(p: Project) {
     <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
       <SelectItem value="תכנון">תכנון</SelectItem>
       <SelectItem value="ביצוע">ביצוע</SelectItem>
+      <SelectItem value="עיכוב">עיכוב</SelectItem>
       <SelectItem value="סיום">סיום</SelectItem>
-      <SelectItem value="תקוע">תקוע</SelectItem>
     </SelectContent>
   </Select>
 </div>
