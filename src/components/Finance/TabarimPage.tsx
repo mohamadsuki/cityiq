@@ -485,6 +485,31 @@ export default function TabarimPage() {
   // Debug logs
   console.log("🔍 Filters state:", { balanceFilter, domainFilter, uniqueDomains: uniqueDomains.length });
 
+  // מטפלי אירועים לסינון מהגרפים
+  const handleDomainChartClick = (domain: string) => {
+    setDomainFilter(domain);
+    setBalanceFilter('all');
+    setFundingSourceFilter('all');
+    // גלילה לטבלה
+    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleDeficitChartClick = (tabarName: string) => {
+    setBalanceFilter('deficit');
+    setDomainFilter('all');
+    setFundingSourceFilter('all');
+    // גלילה לטבלה
+    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleFundingSourceChartClick = (fundingSource: string) => {
+    setFundingSourceFilter(fundingSource);
+    setBalanceFilter('deficit');
+    setDomainFilter('all');
+    // גלילה לטבלה
+    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   // חישוב סטטיסטיקות למקורות תקציב של תב"רים בגירעון
   const fundingStats = deficitTabarim.reduce((acc, tabar) => {
     // מקור תקציב 1
@@ -663,7 +688,8 @@ export default function TabarimPage() {
                     return (
                       <div 
                         key={item.originalDomain} 
-                        className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
+                        className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative cursor-pointer"
+                        onClick={() => handleDomainChartClick(item.domain)}
                       >
                         {/* עמודת רקע יחסית */}
                         <div 
@@ -805,7 +831,8 @@ export default function TabarimPage() {
                       return (
                         <div 
                           key={tabar.id} 
-                          className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
+                          className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative cursor-pointer"
+                          onClick={() => handleDeficitChartClick(tabar.tabar_name)}
                         >
                           {/* עמודת רקע יחסית */}
                           <div 
@@ -945,7 +972,8 @@ export default function TabarimPage() {
                   return (
                     <div 
                       key={item.originalSource} 
-                      className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
+                      className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative cursor-pointer"
+                      onClick={() => handleFundingSourceChartClick(item.source)}
                     >
                        {/* עמודת רקע יחסית */}
                        <div 
