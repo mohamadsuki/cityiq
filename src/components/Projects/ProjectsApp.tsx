@@ -870,7 +870,7 @@ function openEdit(p: Project) {
               <th className="py-2">תקציב מאושר</th>
               <th className="py-2">תקציב מבוצע</th>
               <th className="py-2">התקדמות</th>
-              <th className="py-2">פעולות</th>
+              <th className="py-2 w-32">פעולות</th>
             </tr>
           </thead>
           <tbody>
@@ -897,18 +897,20 @@ function openEdit(p: Project) {
                     <span className="text-sm text-muted-foreground">{p.progress ?? 0}%</span>
                   </div>
                 </td>
-                <td className="py-3 space-x-2 space-x-reverse">
-                  <Button variant="secondary" size="icon" className="h-6 w-6" onClick={() => openView(p)}>
-                    <Eye className="h-3 w-3" />
-                  </Button>
-                  <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => openEdit(p)}>
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                  {canDelete && (
-                    <Button variant="destructive" size="icon" className="h-6 w-6" onClick={() => deleteProject(p)}>
-                      <Trash2 className="h-3 w-3" />
+                <td className="py-3 w-32">
+                  <div className="flex items-center justify-center gap-1">
+                    <Button variant="secondary" size="icon" className="h-6 w-6" onClick={() => openView(p)}>
+                      <Eye className="h-3 w-3" />
                     </Button>
-                  )}
+                    <Button variant="outline" size="icon" className="h-6 w-6" onClick={() => openEdit(p)}>
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    {canDelete && (
+                      <Button variant="destructive" size="icon" className="h-6 w-6" onClick={() => deleteProject(p)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
