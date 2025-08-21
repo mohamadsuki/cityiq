@@ -1044,7 +1044,20 @@ function openEdit(p: Project) {
 
             <div>
               <Label>תחום</Label>
-              <Input value={(form.domain as string) || ""} onChange={(e) => setForm((f) => ({ ...f, domain: e.target.value }))} placeholder="לדוגמה: מבני ציבור / תשתיות / חינוך" />
+              <Select value={(form.domain as string) || ""} onValueChange={(v) => setForm((f) => ({ ...f, domain: v }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="בחר תחום" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+                  <SelectItem value="מבני ציבור">מבני ציבור</SelectItem>
+                  <SelectItem value="תשתיות">תשתיות</SelectItem>
+                  <SelectItem value="תכנון">תכנון</SelectItem>
+                  <SelectItem value="סביבה">סביבה</SelectItem>
+                  <SelectItem value="כלכלי">כלכלי</SelectItem>
+                  <SelectItem value="אנרגיה">אנרגיה</SelectItem>
+                  <SelectItem value="אחר">אחר</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
 <div>
