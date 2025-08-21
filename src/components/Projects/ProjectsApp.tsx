@@ -498,10 +498,13 @@ function openEdit(p: Project) {
     }
 
 
-    // Upload PDF files
+    // Upload PDF files with safe filenames
     const uploadedPdfPaths: string[] = [];
-    for (const file of pdfFiles) {
-      const path = `projects/${editing.id}/pdf_${Date.now()}_${file.name}`;
+    for (let i = 0; i < pdfFiles.length; i++) {
+      const file = pdfFiles[i];
+      const fileExtension = file.name.split('.').pop() || '';
+      const safeName = `${Date.now()}_document_${i}.${fileExtension}`;
+      const path = `projects/${editing.id}/${safeName}`;
       const { error: upErr } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
       if (upErr) {
         console.error('PDF Upload failed', upErr);
@@ -538,10 +541,13 @@ function openEdit(p: Project) {
     }
     const created = createResp.data as Project;
 
-    // Upload images if any
+    // Upload images with safe filenames
     const uploadedPaths: string[] = [];
-    for (const file of files) {
-      const path = `projects/${created.id}/${Date.now()}_${file.name}`;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const fileExtension = file.name.split('.').pop() || '';
+      const safeName = `${Date.now()}_image_${i}.${fileExtension}`;
+      const path = `projects/${created.id}/${safeName}`;
       const { error: upErr } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
       if (upErr) {
         console.error('Upload failed', upErr);
@@ -551,10 +557,13 @@ function openEdit(p: Project) {
     }
 
 
-    // Upload PDF files
+    // Upload PDF files with safe filenames
     const uploadedPdfPaths: string[] = [];
-    for (const file of pdfFiles) {
-      const path = `projects/${created.id}/pdf_${Date.now()}_${file.name}`;
+    for (let i = 0; i < pdfFiles.length; i++) {
+      const file = pdfFiles[i];
+      const fileExtension = file.name.split('.').pop() || '';
+      const safeName = `${Date.now()}_document_${i}.${fileExtension}`;
+      const path = `projects/${created.id}/${safeName}`;
       const { error: upErr } = await supabase.storage.from('uploads').upload(path, file, { upsert: true });
       if (upErr) {
         console.error('PDF Upload failed', upErr);
