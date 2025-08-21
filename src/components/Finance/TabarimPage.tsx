@@ -383,6 +383,108 @@ export default function TabarimPage() {
     }
   };
 
+  // חישוב נתונים למקורות תקציב של תב"רים בגירעון
+  const fundingLabelsForChart: Record<string, string> = {
+    municipality: "עיריה",
+    education_ministry: "משרד החינוך",
+    interior_ministry: "משרד הפנים",
+    transportation_ministry: "משרד התחבורה",
+    health_ministry: "משרד הבריאות",
+    culture_ministry: "משרד התרבות",
+    energy_ministry: "משרד האנרגיה",
+    agriculture_ministry: "משרד החקלאות",
+    economy_ministry: "משרד הכלכלה",
+    science_technology_ministry: "משרד המדע",
+    construction_housing_ministry: "משרד הבינוי",
+    environmental_protection_ministry: "משרד להגנת הסביבה",
+    planning_administration: "רשות התכנון",
+    lottery: "מפעל הפיס",
+    loan: "הלוואה",
+  };
+
+  const fundingColors: Record<string, string> = {
+    municipality: "hsl(var(--chart-1))",
+    education_ministry: "hsl(var(--chart-2))",
+    interior_ministry: "hsl(var(--chart-3))",
+    transportation_ministry: "hsl(var(--chart-4))",
+    health_ministry: "hsl(var(--chart-5))",
+    culture_ministry: "hsl(var(--primary))",
+    energy_ministry: "hsl(var(--chart-1))",
+    agriculture_ministry: "hsl(var(--chart-2))",
+    economy_ministry: "hsl(var(--chart-3))",
+    science_technology_ministry: "hsl(var(--chart-4))",
+    construction_housing_ministry: "hsl(var(--chart-5))",
+    environmental_protection_ministry: "hsl(var(--primary))",
+    planning_administration: "hsl(var(--chart-1))",
+    lottery: "hsl(var(--chart-2))",
+    loan: "hsl(var(--chart-3))",
+  };
+
+  // מצב מיון עבור מקורות תקציב של תב"רים בגירעון
+  const [fundingSortBy, setFundingSortBy] = useState<'count' | 'budget'>('count');
+  const [fundingSortOrder, setFundingSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // פילטר תב"רים בגירעון
+  const deficitTabarim = tabarim.filter(tabar => tabar.surplus_deficit < 0);
+
+  // חישוב סטטיסטיקות למקורות תקציב של תב"רים בגירעון
+  const fundingStats = deficitTabarim.reduce((acc, tabar) => {
+    // מקור תקציב 1
+    if (tabar.funding_source1) {
+      const source = tabar.funding_source1;
+      if (!acc[source]) {
+        acc[source] = { count: 0, budget: 0 };
+      }
+      acc[source].count += 1;
+      acc[source].budget += tabar.approved_budget || 0;
+    }
+    
+    // מקור תקציב 2
+    if (tabar.funding_source2) {
+      const source = tabar.funding_source2;
+      if (!acc[source]) {
+        acc[source] = { count: 0, budget: 0 };
+      }
+      // אל תוסף לספירה (כדי לא לספור תב"ר פעמיים), רק לתקציב
+      acc[source].budget += tabar.approved_budget || 0;
+    }
+    
+    // מקור תקציב 3
+    if (tabar.funding_source3) {
+      const source = tabar.funding_source3;
+      if (!acc[source]) {
+        acc[source] = { count: 0, budget: 0 };
+      }
+      // אל תוסף לספירה (כדי לא לספור תב"ר פעמיים), רק לתקציב
+      acc[source].budget += tabar.approved_budget || 0;
+    }
+    
+    return acc;
+  }, {} as Record<string, { count: number; budget: number }>);
+
+  const totalDeficitBudget = deficitTabarim.reduce((sum, tabar) => sum + tabar.approved_budget, 0);
+
+  // נתונים עבור הגרף - מיון לפי הבחירה של המשתמש ולקיחת טופ 12
+  const fundingSummaryData = Object.entries(fundingStats)
+    .map(([source, stats]) => ({
+      source: fundingLabelsForChart[source] || source,
+      originalSource: source,
+      count: stats.count,
+      budget: stats.budget,
+      budgetThousand: Math.round(stats.budget / 1000),
+      countPercentage: deficitTabarim.length > 0 ? Math.round((stats.count / deficitTabarim.length) * 100) : 0,
+      budgetPercentage: totalDeficitBudget > 0 ? Math.round((stats.budget / totalDeficitBudget) * 100) : 0,
+      color: fundingColors[source] || "hsl(var(--muted-foreground))"
+    }))
+    .sort((a, b) => {
+      if (fundingSortBy === 'count') {
+        return fundingSortOrder === 'desc' ? b.count - a.count : a.count - b.count;
+      } else {
+        return fundingSortOrder === 'desc' ? b.budget - a.budget : a.budget - b.budget;
+      }
+    })
+    .slice(0, 12); // לקיחת טופ 12
+
   return (
     <div className="space-y-6" dir="rtl">
       <div className="flex justify-between items-center">
@@ -738,6 +840,121 @@ export default function TabarimPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Funding Sources Chart for Deficit Tabarim */}
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-lg">מקורות תקציב של תב"רים בגירעון</CardTitle>
+              <div className="flex gap-2 text-xs">
+                <span className="text-xs text-muted-foreground mr-2">טופ 12</span>
+                <Button
+                  variant={fundingSortBy === 'count' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFundingSortBy('count')}
+                  className="h-7 text-xs"
+                >
+                  לפי מספר
+                </Button>
+                <Button
+                  variant={fundingSortBy === 'budget' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setFundingSortBy('budget')}
+                  className="h-7 text-xs"
+                >
+                  לפי תקציב
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFundingSortOrder(fundingSortOrder === 'desc' ? 'asc' : 'desc')}
+                  className="h-7 text-xs w-7 p-0"
+                >
+                  {fundingSortOrder === 'desc' ? '↓' : '↑'}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {deficitTabarim.length > 0 ? (
+              <div className="space-y-1">
+                {fundingSummaryData.map((item, index) => {
+                  // חישוב רוחב העמודה היחסי
+                  const maxValue = Math.max(...fundingSummaryData.map(d => fundingSortBy === 'count' ? d.count : d.budget));
+                  const currentValue = fundingSortBy === 'count' ? item.count : item.budget;
+                  const barWidth = (currentValue / maxValue) * 100;
+                  
+                  return (
+                    <div 
+                      key={item.originalSource} 
+                      className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative"
+                    >
+                      {/* עמודת רקע יחסית */}
+                      <div 
+                        className="absolute inset-0 bg-muted-foreground/20 rounded-sm transition-all duration-300 pointer-events-none"
+                        style={{ width: `${barWidth}%` }}
+                      />
+                      
+                      {/* תוכן קיים */}
+                      <div className="relative z-10 flex items-center w-full">
+                        {/* סוגר שמאלי צבעוני */}
+                        <div className="flex items-center ml-2">
+                          <div 
+                            className="w-1 h-6 rounded-sm"
+                            style={{ backgroundColor: item.color }}
+                          />
+                        </div>
+                        
+                        {/* תקציב */}
+                        <div className="min-w-[85px] text-left">
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {formatCurrency(item.budget)} <span className="text-[10px] opacity-70">{getCurrencyUnit(item.budget)}</span>
+                          </span>
+                        </div>
+                        
+                        {/* מספר תב"רים */}
+                        <div className="min-w-[30px] text-left ml-4">
+                          <span className="text-base font-semibold">
+                            {item.count}
+                          </span>
+                        </div>
+                        
+                        {/* שם המקור */}
+                        <div className="flex-1 ml-4">
+                          <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
+                            {item.source}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* פרטי hover */}
+                      <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 min-w-[200px]">
+                        <div className="text-xs space-y-1">
+                          <div className="flex justify-between">
+                            <span>מספר תב"רים:</span>
+                            <span className="font-medium">{item.count} ({item.countPercentage}%)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>תקציב:</span>
+                            <span className="font-medium"><span className="text-[10px] text-muted-foreground">אלש"ח</span> {item.budget.toLocaleString()} ({item.budgetPercentage}%)</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>תקציב ממוצע לתב"ר:</span>
+                            <span className="font-medium"><span className="text-[10px] text-muted-foreground">אלש"ח</span> {item.count > 0 ? Math.round(item.budget / item.count).toLocaleString() : '0'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-green-600 text-sm">
+                🎉 אין תב"רים בגירעון
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Table Below */}
         <Card ref={tableRef}>
