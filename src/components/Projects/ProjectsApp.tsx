@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
-import { Target, ListChecks, BarChart3, CheckCircle, X, CalendarIcon, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Target, ListChecks, BarChart3, CheckCircle, X, CalendarIcon, Download, ChevronLeft, ChevronRight, Eye, Pencil, Trash2 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -898,10 +898,16 @@ function openEdit(p: Project) {
                   </div>
                 </td>
                 <td className="py-3 space-x-2 space-x-reverse">
-                  <Button variant="secondary" size="sm" onClick={() => openView(p)}>צפייה</Button>
-                  <Button variant="outline" size="sm" onClick={() => openEdit(p)}>עריכה</Button>
+                  <Button variant="secondary" size="sm" onClick={() => openView(p)}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openEdit(p)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
                   {canDelete && (
-                    <Button variant="destructive" size="sm" onClick={() => deleteProject(p)}>מחיקה</Button>
+                    <Button variant="destructive" size="sm" onClick={() => deleteProject(p)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   )}
                 </td>
               </tr>
