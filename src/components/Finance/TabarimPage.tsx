@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -22,6 +22,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Tabar {
   id: string;
@@ -46,6 +53,8 @@ export default function TabarimPage() {
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTabar, setSelectedTabar] = useState<Tabar | null>(null);
+  const [balanceFilter, setBalanceFilter] = useState<'all' | 'deficit' | 'surplus'>('all');
+  const [domainFilter, setDomainFilter] = useState<string>('all');
   const { toast } = useToast();
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -426,6 +435,29 @@ export default function TabarimPage() {
 
   // פילטר תב"רים בגירעון
   const deficitTabarim = tabarim.filter(tabar => tabar.surplus_deficit < 0);
+
+  // חישוב תחומים ייחודיים
+  const uniqueDomains = useMemo(() => {
+    const domains = Array.from(new Set(tabarim.map(tabar => tabar.domain).filter(Boolean)));
+    return domains.map(domain => domainLabels[domain] || domain);
+  }, [tabarim]);
+
+  // פילטר תב"רים לפי הסינונים
+  const filteredTabarim = useMemo(() => {
+    return tabarim.filter(tabar => {
+      // סינון לפי מאזן
+      if (balanceFilter === 'deficit' && tabar.surplus_deficit >= 0) return false;
+      if (balanceFilter === 'surplus' && tabar.surplus_deficit < 0) return false;
+      
+      // סינון לפי תחום
+      if (domainFilter !== 'all') {
+        const displayName = domainLabels[tabar.domain] || tabar.domain;
+        if (displayName !== domainFilter) return false;
+      }
+      
+      return true;
+    });
+  }, [tabarim, balanceFilter, domainFilter]);
 
   // חישוב סטטיסטיקות למקורות תקציב של תב"רים בגירעון
   const fundingStats = deficitTabarim.reduce((acc, tabar) => {
@@ -959,21 +991,51 @@ export default function TabarimPage() {
         {/* Table Below */}
         <Card ref={tableRef}>
           <CardHeader>
-            <CardTitle>רשימת תב"רים ({tabarim.length})</CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle>רשימת תב"רים ({filteredTabarim.length})</CardTitle>
+              <div className="flex gap-3 items-center">
+                {/* סינון לפי מאזן */}
+                <Select value={balanceFilter} onValueChange={(value: string) => setBalanceFilter(value as 'all' | 'deficit' | 'surplus')}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="סינון לפי מאזן" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">כל המאזנים</SelectItem>
+                    <SelectItem value="deficit">גירעון</SelectItem>
+                    <SelectItem value="surplus">עודף</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* סינון לפי תחום */}
+                <Select value={domainFilter} onValueChange={setDomainFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue placeholder="סינון לפי תחום" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">כל התחומים</SelectItem>
+                    {uniqueDomains.map((domain) => (
+                      <SelectItem key={domain} value={domain}>
+                        {domain}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="text-center py-8 text-muted-foreground">
                 טוען נתונים...
               </div>
-            ) : tabarim.length === 0 ? (
+            ) : filteredTabarim.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                אין תב"רים להצגה
+                אין תב"רים להצגה עם הסינונים הנבחרים
               </div>
             ) : (
               <DataTable
                 columns={columns}
-                data={tabarim.sort((a, b) => a.surplus_deficit - b.surplus_deficit)}
+                data={filteredTabarim.sort((a, b) => a.surplus_deficit - b.surplus_deficit)}
                 searchableColumnIds={["tabar_name", "tabar_number"]}
                 searchPlaceholder="חפש תב״ר..."
               />
