@@ -658,7 +658,7 @@ function openEdit(p: Project) {
               <div className="font-semibold text-red-800">פרויקטים בעיכוב</div>
               <div className="text-sm text-red-600">פרויקטים בסטטוס עיכוב</div>
               <div className="text-lg font-medium text-red-700">
-                ₪{(kpiData.delayedBudget / 1000).toFixed(0)} אלש"ח
+                {(kpiData.delayedBudget / 1000).toFixed(0)} אלש"ח
               </div>
             </div>
           </CardContent>
@@ -677,7 +677,7 @@ function openEdit(p: Project) {
               <div className="font-semibold text-blue-800">פרויקטים בביצוע ותכנון</div>
               <div className="text-sm text-blue-600">{kpiData.activeCount} בביצוע, {kpiData.planningCount} בתכנון</div>
               <div className="text-lg font-medium text-blue-700">
-                ₪{(kpiData.activeAndPlanningBudget / 1000).toFixed(0)} אלש"ח
+                {(kpiData.activeAndPlanningBudget / 1000).toFixed(0)} אלש"ח
               </div>
             </div>
           </CardContent>
@@ -690,14 +690,14 @@ function openEdit(p: Project) {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <BarChart3 className="h-8 w-8 text-green-600" />
-              <div className="text-3xl font-bold text-green-700">₪{(kpiData.totalBudget / 1000).toFixed(0)} אלש"ח</div>
+              <div className="text-3xl font-bold text-green-700">{(kpiData.totalBudget / 1000).toFixed(0)} אלש"ח</div>
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-green-800">התפלגות לפי מחלקות</div>
               <div className="text-sm text-green-600">
                 {kpiData.topDepartments.length > 0 ? (
                   kpiData.topDepartments.map(dept => 
-                    `${DEPARTMENT_LABELS[dept]}: ₪${(kpiData.departmentBudgets[dept]?.budget / 1000 || 0).toFixed(0)} אלש"ח`
+                    `${DEPARTMENT_LABELS[dept]}: ${(kpiData.departmentBudgets[dept]?.budget / 1000 || 0).toFixed(0)} אלש"ח`
                   ).join(', ')
                 ) : (
                   'לא נמצאו פרויקטים עם תקציב'
@@ -720,7 +720,7 @@ function openEdit(p: Project) {
               <div className="font-semibold text-purple-800">סה״כ פרויקטים פעילים</div>
               <div className="text-sm text-purple-600">פרויקטים פעילים בכל המחלקות</div>
               <div className="text-lg font-medium text-purple-700">
-                ₪{(kpiData.allActiveBudget / 1000).toFixed(0)} אלש"ח
+                {(kpiData.allActiveBudget / 1000).toFixed(0)} אלש"ח
               </div>
             </div>
           </CardContent>
