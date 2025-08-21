@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +16,6 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { Target, ListChecks, BarChart3, CheckCircle, X, CalendarIcon, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -119,7 +120,7 @@ export default function ProjectsApp() {
   const [department, setDepartment] = useState<"all" | DepartmentSlug>(
     (searchParams.get("department") as DepartmentSlug) || "all"
   );
-  const [status, setStatus] = useState<string>("all");
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [domain, setDomain] = useState<string>("all");
   const [showDepartmentChart, setShowDepartmentChart] = useState(false);
 
@@ -260,7 +261,7 @@ const [form, setForm] = useState<Partial<Project>>({
       
       if (q && !(`${p.name ?? ""} ${p.code ?? ""}`.toLowerCase().includes(q.toLowerCase()))) return false;
       if (department !== "all" && p.department_slug !== department) return false;
-      if (status !== "all" && (p.status ?? "").toLowerCase() !== status.toLowerCase()) return false;
+      if (selectedStatuses.length > 0 && !selectedStatuses.some(s => (p.status ?? "").toLowerCase() === s.toLowerCase())) return false;
       if (domain !== "all" && (p.domain ?? "").toLowerCase() !== domain.toLowerCase()) return false;
       
       // Apply filter from "What's New" section
@@ -303,7 +304,7 @@ const [form, setForm] = useState<Partial<Project>>({
       
       return true;
     });
-  }, [projects, q, department, status, domain, filter, period, fromParam, toParam]);
+  }, [projects, q, department, selectedStatuses, domain, filter, period, fromParam, toParam]);
 
   // Calculate KPI data
   const kpiData = useMemo(() => {
@@ -368,17 +369,17 @@ const [form, setForm] = useState<Partial<Project>>({
       case 'delayed':
         // Filter for delayed projects - status "עיכוב"
         setQ('');
-        setStatus('עיכוב');
+        setSelectedStatuses(['עיכוב']);
         setDomain('all');
         break;
       case 'active':
         setQ('');
-        setStatus('ביצוע');
+        setSelectedStatuses(['ביצוע']);
         setDomain('all');
         break;
       case 'planning':
         setQ('');
-        setStatus('תכנון');
+        setSelectedStatuses(['תכנון']);
         setDomain('all');
         break;
       case 'departments':
@@ -386,7 +387,9 @@ const [form, setForm] = useState<Partial<Project>>({
         break;
       case 'all-active':
         setQ('');
-        setStatus('all');
+        // Show all statuses except "סיום" (completed)
+        const allStatuses = Array.from(new Set(projects.map(p => p.status).filter(Boolean) as string[]));
+        setSelectedStatuses(allStatuses.filter(status => status.toLowerCase() !== 'סיום'));
         setDomain('all');
         break;
     }
@@ -767,16 +770,55 @@ function openEdit(p: Project) {
           </div>
           <div>
             <Label>סטטוס</Label>
-<Select value={status} onValueChange={(v) => setStatus(v)}>
-  <SelectTrigger><SelectValue placeholder="סטטוס" /></SelectTrigger>
-  <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
-     <SelectItem value="all">הכל</SelectItem>
-     <SelectItem value="תכנון">תכנון</SelectItem>
-     <SelectItem value="ביצוע">ביצוע</SelectItem>
-     <SelectItem value="עיכוב">עיכוב</SelectItem>
-     <SelectItem value="סיום">סיום</SelectItem>
-  </SelectContent>
-</Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full justify-between text-right"
+                >
+                  {selectedStatuses.length === 0 
+                    ? "כל הסטטוסים" 
+                    : selectedStatuses.length === 1 
+                      ? selectedStatuses[0]
+                      : `${selectedStatuses.length} סטטוסים נבחרו`
+                  }
+                  <ChevronLeft className="h-4 w-4 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-0 bg-popover text-popover-foreground shadow-md border z-50">
+                <div className="p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">בחירת סטטוסים</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedStatuses([])}
+                      className="h-auto p-1 text-xs"
+                    >
+                      נקה הכל
+                    </Button>
+                  </div>
+                  {['תכנון', 'ביצוע', 'עיכוב', 'סיום'].map((status) => (
+                    <div key={status} className="flex items-center space-x-2 space-x-reverse">
+                      <Checkbox
+                        id={status}
+                        checked={selectedStatuses.includes(status)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedStatuses([...selectedStatuses, status]);
+                          } else {
+                            setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+                          }
+                        }}
+                      />
+                      <Label htmlFor={status} className="text-sm cursor-pointer">
+                        {status}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           <div>
             <Label>תחום</Label>
