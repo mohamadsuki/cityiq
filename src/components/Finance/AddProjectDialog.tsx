@@ -155,8 +155,21 @@ export default function AddProjectDialog({ onSaved, defaultDepartment, hideDepar
               <Input value={status} onChange={(e)=>setStatus(e.target.value)} placeholder="למשל: בביצוע" />
             </div>
             <div>
-              <Label>דומיין</Label>
-              <Input value={domain} onChange={(e)=>setDomain(e.target.value)} placeholder="למשל: חינוך / תשתיות" />
+              <Label>תחום</Label>
+              <Select value={domain} onValueChange={setDomain}>
+                <SelectTrigger>
+                  <SelectValue placeholder="בחר תחום" />
+                </SelectTrigger>
+                <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+                  <SelectItem value="מבני ציבור">מבני ציבור</SelectItem>
+                  <SelectItem value="תשתיות">תשתיות</SelectItem>
+                  <SelectItem value="תכנון">תכנון</SelectItem>
+                  <SelectItem value="סביבה">סביבה</SelectItem>
+                  <SelectItem value="כלכלי">כלכלי</SelectItem>
+                  <SelectItem value="אנרגיה">אנרגיה</SelectItem>
+                  <SelectItem value="אחר">אחר</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>תקציב מאושר (₪)</Label>
