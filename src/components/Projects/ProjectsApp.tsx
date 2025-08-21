@@ -377,6 +377,11 @@ const [form, setForm] = useState<Partial<Project>>({
         setSelectedStatuses(['ביצוע']);
         setDomain('all');
         break;
+      case 'active-and-planning':
+        setQ('');
+        setSelectedStatuses(['ביצוע', 'תכנון']);
+        setDomain('all');
+        break;
       case 'planning':
         setQ('');
         setSelectedStatuses(['תכנון']);
@@ -649,7 +654,7 @@ function openEdit(p: Project) {
 
         <Card 
           className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
-          onClick={() => handleKpiClick('active')}
+          onClick={() => handleKpiClick('active-and-planning')}
         >
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
