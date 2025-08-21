@@ -690,7 +690,7 @@ function openEdit(p: Project) {
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
               <BarChart3 className="h-8 w-8 text-green-600" />
-              <div className="text-3xl font-bold text-green-700">{(kpiData.totalBudget / 1000).toFixed(0)}<span className="text-sm">אלש"ח</span></div>
+              <div className="text-3xl font-bold text-green-700">{(kpiData.totalBudget / 1000).toFixed(0)}<span className="text-xs">אלש"ח</span></div>
             </div>
             <div className="space-y-1">
               <div className="font-semibold text-green-800">התפלגות לפי מחלקות</div>
@@ -899,14 +899,14 @@ function openEdit(p: Project) {
                 </td>
                 <td className="py-3 space-x-2 space-x-reverse">
                   <Button variant="secondary" size="sm" onClick={() => openView(p)}>
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-3 w-3" />
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => openEdit(p)}>
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-3 w-3" />
                   </Button>
                   {canDelete && (
                     <Button variant="destructive" size="sm" onClick={() => deleteProject(p)}>
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   )}
                 </td>
