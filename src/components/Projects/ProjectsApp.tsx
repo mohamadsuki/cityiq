@@ -899,14 +899,14 @@ function openEdit(p: Project) {
                 </td>
                 <td className="py-3 space-x-2 space-x-reverse">
                   <Button variant="secondary" size="sm" onClick={() => openView(p)}>
-                    <Eye className="h-3 w-3" />
+                    <Eye className="h-2 w-2" />
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => openEdit(p)}>
-                    <Pencil className="h-3 w-3" />
+                    <Pencil className="h-2 w-2" />
                   </Button>
                   {canDelete && (
                     <Button variant="destructive" size="sm" onClick={() => deleteProject(p)}>
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-2 w-2" />
                     </Button>
                   )}
                 </td>
