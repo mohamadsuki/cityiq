@@ -68,11 +68,11 @@ export default function BudgetAuthorizationsPage() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
+      console.log('🔍 Fetched authorizations:', data);
       setAuthorizations(data || []);
     } catch (error) {
       console.error('Error fetching authorizations:', error);
-      // Fallback to mock data if DB fails
-      setAuthorizations(mockAuthorizations);
+      setAuthorizations([]);
     } finally {
       setLoading(false);
     }
@@ -84,31 +84,31 @@ export default function BudgetAuthorizationsPage() {
 
   const columns = [
     {
-      key: "authorizationNumber" as keyof typeof mockAuthorizations[0],
+      key: "authorization_number",
       header: "מספר הרשאה",
       sortable: true
     },
     {
-      key: "ministry" as keyof typeof mockAuthorizations[0],
+      key: "ministry",
       header: "משרד",
       sortable: true
     },
     {
-      key: "program" as keyof typeof mockAuthorizations[0],
-      header: "תוכנית",
+      key: "purpose",
+      header: "מס' תב\"ר",
       sortable: true
     },
     {
-      key: "amount" as keyof typeof mockAuthorizations[0],
+      key: "amount",
       header: "סכום (₪)",
       sortable: true,
-      render: (value: any) => new Intl.NumberFormat('he-IL').format(value)
+      render: (value: any) => new Intl.NumberFormat('he-IL').format(value || 0)
     },
     {
-      key: "status" as keyof typeof mockAuthorizations[0],
+      key: "status",
       header: "סטטוס",
       render: (status: string) => {
-        const statusInfo = statusLabels[status as keyof typeof statusLabels];
+        const statusInfo = statusLabels[status as keyof typeof statusLabels] || statusLabels.pending;
         const Icon = statusInfo?.icon || AlertCircle;
         return (
           <Badge className={`${statusInfo?.color} text-white`}>
@@ -119,16 +119,21 @@ export default function BudgetAuthorizationsPage() {
       }
     },
     {
-      key: "submittedAt" as keyof typeof mockAuthorizations[0],
+      key: "submitted_at",
       header: "תאריך הגשה",
       sortable: true,
-      render: (value: any) => new Date(value).toLocaleDateString('he-IL')
+      render: (value: any) => value ? new Date(value).toLocaleDateString('he-IL') : '-'
     },
     {
-      key: "validUntil" as keyof typeof mockAuthorizations[0],
-      header: "תוקף עד",
+      key: "approved_at", 
+      header: "תאריך אישור",
       sortable: true,
-      render: (value: any) => new Date(value).toLocaleDateString('he-IL')
+      render: (value: any) => value ? new Date(value).toLocaleDateString('he-IL') : '-'
+    },
+    {
+      key: "notes",
+      header: "הערות",
+      render: (value: any) => value || '-'
     }
   ];
 
