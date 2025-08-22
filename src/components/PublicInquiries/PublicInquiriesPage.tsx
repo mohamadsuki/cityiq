@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Filter, X } from "lucide-react";
+import { Plus, Edit, Trash2, Filter, X, Eye } from "lucide-react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { AddInquiryDialog } from "./AddInquiryDialog";
@@ -32,6 +32,8 @@ export function PublicInquiriesPage() {
   const [inquiryToDelete, setInquiryToDelete] = useState<PublicInquiry | null>(null);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewingInquiry, setViewingInquiry] = useState<PublicInquiry | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -70,6 +72,11 @@ export function PublicInquiriesPage() {
       supabase.removeChannel(channel);
     };
   }, [refetch]);
+
+  const handleView = (inquiry: PublicInquiry) => {
+    setViewingInquiry(inquiry);
+    setViewDialogOpen(true);
+  };
 
   const handleEdit = (inquiry: PublicInquiry) => {
     setSelectedInquiry(inquiry);
@@ -304,6 +311,13 @@ export function PublicInquiriesPage() {
             <Button
               size="sm"
               variant="outline"
+              onClick={() => handleView(inquiry)}
+            >
+              <Eye className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => handleEdit(inquiry)}
             >
               <Edit className="h-3 w-3" />
@@ -471,6 +485,101 @@ export function PublicInquiriesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>ביטול</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete}>מחק</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* View Inquiry Dialog */}
+      <AlertDialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <AlertDialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold">
+              פניה מספר {viewingInquiry?.inquiry_number}
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          
+          {viewingInquiry && (
+            <div className="space-y-6">
+              {/* פרטי הפונה */}
+              <div className="bg-muted p-4 rounded-lg">
+                <h3 className="font-semibold mb-3 text-lg">פרטי הפונה</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <strong>שם:</strong> {viewingInquiry.name}
+                  </div>
+                  <div>
+                    <strong>טלפון:</strong> {viewingInquiry.phone || "לא צוין"}
+                  </div>
+                  <div>
+                    <strong>אימייל:</strong> {viewingInquiry.email || "לא צוין"}
+                  </div>
+                  <div>
+                    <strong>כתובת:</strong> {viewingInquiry.address || "לא צוינה"}
+                  </div>
+                </div>
+              </div>
+
+              {/* פרטי הפניה */}
+              <div className="bg-muted p-4 rounded-lg">
+                <h3 className="font-semibold mb-3 text-lg">פרטי הפניה</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <strong>נושא:</strong> {viewingInquiry.subject}
+                  </div>
+                  <div>
+                    <strong>סוג פניה:</strong> {getInquiryTypeLabel(viewingInquiry.inquiry_type)}
+                  </div>
+                  <div>
+                    <strong>תחום:</strong> {getDomainLabel(viewingInquiry.domain)}
+                  </div>
+                  <div>
+                    <strong>מקור פניה:</strong> {getSourceLabel(viewingInquiry.source)}
+                  </div>
+                  <div>
+                    <strong>עדיפות:</strong> {getPriorityBadge(viewingInquiry.priority)}
+                  </div>
+                  <div>
+                    <strong>סטטוס:</strong> {getStatusBadge(viewingInquiry.status)}
+                  </div>
+                  <div>
+                    <strong>תאריך יצירה:</strong> {new Date(viewingInquiry.created_at).toLocaleDateString('he-IL')}
+                  </div>
+                  {viewingInquiry.assigned_handler && (
+                    <div>
+                      <strong>גורם מטפל:</strong> {viewingInquiry.assigned_handler}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* תיאור הפניה */}
+              {viewingInquiry.description && (
+                <div className="bg-muted p-4 rounded-lg">
+                  <h3 className="font-semibold mb-3 text-lg">תיאור הפניה</h3>
+                  <p className="whitespace-pre-wrap">{viewingInquiry.description}</p>
+                </div>
+              )}
+
+              {/* תגובה */}
+              {viewingInquiry.response && (
+                <div className="bg-muted p-4 rounded-lg">
+                  <h3 className="font-semibold mb-3 text-lg">תגובה</h3>
+                  <p className="whitespace-pre-wrap">{viewingInquiry.response}</p>
+                </div>
+              )}
+
+              {/* הערות פנימיות */}
+              {viewingInquiry.internal_notes && (
+                <div className="bg-muted p-4 rounded-lg">
+                  <h3 className="font-semibold mb-3 text-lg">הערות פנימיות</h3>
+                  <p className="whitespace-pre-wrap">{viewingInquiry.internal_notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <AlertDialogFooter>
+            <AlertDialogCancel>סגור</AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
