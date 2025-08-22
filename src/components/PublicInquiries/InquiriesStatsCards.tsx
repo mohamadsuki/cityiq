@@ -64,6 +64,10 @@ export function InquiriesStatsCards({
     urgent: inquiries.filter(i => i.priority === 'urgent').length,
   };
 
+  // Debug log to check the data
+  console.log('Inquiries stats:', stats);
+  console.log('All inquiries:', inquiries.map(i => ({ id: i.id, status: i.status, priority: i.priority })));
+
   // סטטיסטיקות לפי מקור
   const sourceStats = inquiries.reduce((acc, inquiry) => {
     acc[inquiry.source] = (acc[inquiry.source] || 0) + 1;
@@ -177,7 +181,10 @@ export function InquiriesStatsCards({
 
       <Card 
         className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 cursor-pointer"
-        onClick={() => onCardClick?.('status', 'resolved')}
+        onClick={() => {
+          console.log('Resolved card clicked');
+          onCardClick?.('status', 'resolved');
+        }}
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">טופלו בהצלחה</CardTitle>
