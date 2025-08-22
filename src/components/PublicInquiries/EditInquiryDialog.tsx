@@ -203,7 +203,7 @@ export function EditInquiryDialog({ open, onOpenChange, onSuccess, inquiry }: Ed
                 <SelectTrigger>
                   <SelectValue placeholder="בחר סוג פניה" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border shadow-md z-50">
                   <SelectItem value="complaint">תלונה</SelectItem>
                   <SelectItem value="request">בקשה</SelectItem>
                   <SelectItem value="information">בקשת מידע</SelectItem>
@@ -219,7 +219,7 @@ export function EditInquiryDialog({ open, onOpenChange, onSuccess, inquiry }: Ed
                 <SelectTrigger>
                   <SelectValue placeholder="בחר מקור" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border shadow-md z-50">
                   <SelectItem value="whatsapp">ווטסאפ</SelectItem>
                   <SelectItem value="email">אימייל</SelectItem>
                   <SelectItem value="phone">טלפון</SelectItem>
@@ -236,7 +236,7 @@ export function EditInquiryDialog({ open, onOpenChange, onSuccess, inquiry }: Ed
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border shadow-md z-50">
                   <SelectItem value="low">נמוכה</SelectItem>
                   <SelectItem value="medium">בינונית</SelectItem>
                   <SelectItem value="high">גבוהה</SelectItem>
@@ -268,7 +268,7 @@ export function EditInquiryDialog({ open, onOpenChange, onSuccess, inquiry }: Ed
               <SelectTrigger>
                 <SelectValue placeholder="בחר מחלקה" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background border shadow-md z-50">
                 <SelectItem value="finance">פיננסים</SelectItem>
                 <SelectItem value="education">חינוך</SelectItem>
                 <SelectItem value="engineering">הנדסה</SelectItem>
