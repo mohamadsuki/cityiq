@@ -8,7 +8,18 @@ import type { Database } from "@/integrations/supabase/types";
 
 type PublicInquiry = Database['public']['Tables']['public_inquiries']['Row'];
 
-export function InquiriesStatsCards() {
+interface InquiriesStatsCardsProps {
+  onCardClick?: (filterType: 'status' | 'priority', value: string | string[]) => void;
+  statusFilter?: string[];
+  priorityFilter?: string[];
+  onFilterChange?: (statusFilters: string[], priorityFilters: string[]) => void;
+}
+
+export function InquiriesStatsCards({ 
+  onCardClick, 
+  statusFilter = [], 
+  priorityFilter = [] 
+}: InquiriesStatsCardsProps) {
   const { data: inquiries = [], refetch } = useQuery({
     queryKey: ['public-inquiries-stats'],
     queryFn: async () => {
@@ -114,7 +125,10 @@ export function InquiriesStatsCards() {
         </CardContent>
       </Card>
 
-      <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20">
+      <Card 
+        className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-amber-50 to-amber-100/50 dark:from-amber-950/30 dark:to-amber-900/20 cursor-pointer"
+        onClick={() => onCardClick?.('status', ['new', 'in_progress', 'pending'])}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="text-sm font-semibold text-amber-900 dark:text-amber-100">בטיפול</CardTitle>
           <div className="p-2 bg-amber-600 rounded-lg group-hover:scale-110 transition-transform duration-300">
@@ -124,20 +138,44 @@ export function InquiriesStatsCards() {
         <CardContent>
           <div className="text-3xl font-bold text-amber-800 dark:text-amber-200">{stats.inProgress + stats.new + stats.pending}</div>
           <div className="flex flex-wrap gap-1 mt-2">
-            <Badge variant="outline" className="text-xs bg-amber-100 border-amber-300 text-amber-800">
+            <Badge 
+              variant="outline" 
+              className="text-xs bg-amber-100 border-amber-300 text-amber-800 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCardClick?.('status', 'new');
+              }}
+            >
               חדש: {stats.new}
             </Badge>
-            <Badge variant="outline" className="text-xs bg-amber-100 border-amber-300 text-amber-800">
+            <Badge 
+              variant="outline" 
+              className="text-xs bg-amber-100 border-amber-300 text-amber-800 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCardClick?.('status', 'pending');
+              }}
+            >
               המתנה: {stats.pending}
             </Badge>
-            <Badge variant="outline" className="text-xs bg-amber-100 border-amber-300 text-amber-800">
+            <Badge 
+              variant="outline" 
+              className="text-xs bg-amber-100 border-amber-300 text-amber-800 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                onCardClick?.('status', 'in_progress');
+              }}
+            >
               פעיל: {stats.inProgress}
             </Badge>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20">
+      <Card 
+        className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 cursor-pointer"
+        onClick={() => onCardClick?.('status', 'resolved')}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">טופלו בהצלחה</CardTitle>
           <div className="p-2 bg-emerald-600 rounded-lg group-hover:scale-110 transition-transform duration-300">
@@ -160,7 +198,10 @@ export function InquiriesStatsCards() {
         </CardContent>
       </Card>
 
-      <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-950/30 dark:to-red-900/20">
+      <Card 
+        className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-red-50 to-red-100/50 dark:from-red-950/30 dark:to-red-900/20 cursor-pointer"
+        onClick={() => onCardClick?.('priority', 'urgent')}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="text-sm font-semibold text-red-900 dark:text-red-100">דחופות</CardTitle>
           <div className="p-2 bg-red-600 rounded-lg group-hover:scale-110 transition-transform duration-300 animate-pulse">

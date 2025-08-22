@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, Filter, X } from "lucide-react";
 import { DataTable } from "@/components/shared/DataTable";
 import { Badge } from "@/components/ui/badge";
 import { AddInquiryDialog } from "./AddInquiryDialog";
@@ -30,6 +30,8 @@ export function PublicInquiriesPage() {
   const [selectedInquiry, setSelectedInquiry] = useState<PublicInquiry | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [inquiryToDelete, setInquiryToDelete] = useState<PublicInquiry | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -113,8 +115,12 @@ export function PublicInquiriesPage() {
       'new': 'default',
       'in_progress': 'secondary', 
       'pending': 'outline',
-      'resolved': 'secondary',
+      'resolved': 'default', // שינוי לירוק
       'closed': 'destructive'
+    };
+    
+    const colors: Record<string, string> = {
+      'resolved': 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200'
     };
     
     const labels: Record<string, string> = {
@@ -125,7 +131,15 @@ export function PublicInquiriesPage() {
       'closed': 'סגור'
     };
 
-    return <Badge variant={variants[status]}>{labels[status]}</Badge>;
+    const customClass = colors[status] || '';
+    return (
+      <Badge 
+        variant={variants[status]} 
+        className={customClass}
+      >
+        {labels[status]}
+      </Badge>
+    );
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -178,6 +192,29 @@ export function PublicInquiriesPage() {
       'other': 'אחר'
     };
     return labels[domain] || domain || "—";
+  };
+
+  // Filter inquiries based on filters
+  const filteredInquiries = inquiries.filter(inquiry => {
+    const statusMatch = statusFilter.length === 0 || statusFilter.includes(inquiry.status);
+    const priorityMatch = priorityFilter.length === 0 || priorityFilter.includes(inquiry.priority);
+    return statusMatch && priorityMatch;
+  });
+
+  const handleCardClick = (filterType: 'status' | 'priority', value: string | string[]) => {
+    if (filterType === 'status') {
+      if (Array.isArray(value)) {
+        setStatusFilter(value);
+      } else {
+        setStatusFilter([value]);
+      }
+    } else if (filterType === 'priority') {
+      if (Array.isArray(value)) {
+        setPriorityFilter(value);
+      } else {
+        setPriorityFilter([value]);
+      }
+    }
   };
 
   const columns = [
@@ -292,11 +329,59 @@ export function PublicInquiriesPage() {
       </div>
 
       {/* כרטיסיות סטטיסטיקה */}
-      <InquiriesStatsCards />
+      <InquiriesStatsCards 
+        onCardClick={handleCardClick}
+        statusFilter={statusFilter}
+        priorityFilter={priorityFilter}
+        onFilterChange={(statusFilters, priorityFilters) => {
+          setStatusFilter(statusFilters);
+          setPriorityFilter(priorityFilters);
+        }}
+      />
+
+      {/* פילטרים פעילים */}
+      {(statusFilter.length > 0 || priorityFilter.length > 0) && (
+        <div className="mb-4 p-4 bg-muted rounded-lg">
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4" />
+              <span className="text-sm font-medium">פילטרים פעילים:</span>
+            </div>
+            {statusFilter.map(status => (
+              <Badge key={`status-${status}`} variant="secondary" className="flex items-center gap-1">
+                סטטוס: {status}
+                <X 
+                  className="h-3 w-3 cursor-pointer" 
+                  onClick={() => setStatusFilter(prev => prev.filter(s => s !== status))}
+                />
+              </Badge>
+            ))}
+            {priorityFilter.map(priority => (
+              <Badge key={`priority-${priority}`} variant="secondary" className="flex items-center gap-1">
+                עדיפות: {priority}
+                <X 
+                  className="h-3 w-3 cursor-pointer" 
+                  onClick={() => setPriorityFilter(prev => prev.filter(p => p !== priority))}
+                />
+              </Badge>
+            ))}
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={() => {
+                setStatusFilter([]);
+                setPriorityFilter([]);
+              }}
+            >
+              נקה הכל
+            </Button>
+          </div>
+        </div>
+      )}
 
       <DataTable
         columns={columns}
-        data={inquiries}
+        data={filteredInquiries}
         searchableColumnIds={["inquiry_number", "name", "subject"]}
         searchPlaceholder="חיפוש לפי מספר, שם או נושא..."
       />
