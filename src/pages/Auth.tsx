@@ -48,6 +48,7 @@ export default function AuthPage() {
     { username: 'welfare', password: 'welfare123', displayName: 'מנהל/ת רווחה' },
     { username: 'nonformal', password: 'nonformal123', displayName: 'מנהל/ת חינוך בלתי פורמאלי' },
     { username: 'business', password: 'business123', displayName: 'מנהל/ת רישוי עסקים' },
+    { username: 'governmentbudgets', password: 'govbudgets123', displayName: 'מנהל/ת תקציבים ממשלתיים ותמיכות' },
     { username: 'inquiries', password: 'inquiry123', displayName: 'מנהל/ת פניות ציבור' },
   ];
 
