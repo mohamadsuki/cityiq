@@ -251,7 +251,7 @@ export function EditInquiryDialog({ open, onOpenChange, onSuccess, inquiry }: Ed
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border shadow-md z-50">
                   <SelectItem value="new">חדש</SelectItem>
                   <SelectItem value="in_progress">בטיפול</SelectItem>
                   <SelectItem value="pending">בהמתנה</SelectItem>
