@@ -303,9 +303,12 @@ export default function GrantsApp() {
           <h1 className="text-2xl font-bold text-foreground">קולות קוראים</h1>
           <p className="text-sm text-muted-foreground">הוספה/עריכה, סטטוס ולו"ז</p>
         </div>
-        {canCreate && (
-          <Button onClick={openCreate}>קול קורא חדש</Button>
-        )}
+        <div className="flex gap-2">
+          <DataUploader context="grants" onUploadSuccess={() => fetchGrants()} />
+          {canCreate && (
+            <Button onClick={openCreate}>קול קורא חדש</Button>
+          )}
+        </div>
       </header>
 
       {/* Statistics Cards */}
@@ -410,8 +413,6 @@ export default function GrantsApp() {
         </Card>
       </div>
 
-      {/* Data Uploader */}
-      <DataUploader context="grants" onUploadSuccess={() => fetchGrants()} />
 
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
