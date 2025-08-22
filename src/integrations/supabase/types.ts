@@ -1034,6 +1034,7 @@ export type Database = {
         | "ceo"
         | "city-improvement"
         | "enforcement"
+        | "inquiries"
       funding_source:
         | "environmental_protection"
         | "lottery"
@@ -1210,6 +1211,7 @@ export const Constants = {
         "ceo",
         "city-improvement",
         "enforcement",
+        "inquiries",
       ],
       funding_source: [
         "environmental_protection",
