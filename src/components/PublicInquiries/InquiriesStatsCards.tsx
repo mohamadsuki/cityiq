@@ -112,7 +112,10 @@ export function InquiriesStatsCards({
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
       {/* כרטיסי סטטוס עיקריים */}
-      <Card className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20">
+      <Card 
+        className="group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 cursor-pointer"
+        onClick={() => onCardClick?.('status', [])}
+      >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="text-sm font-semibold text-blue-900 dark:text-blue-100">סה"כ פניות</CardTitle>
           <div className="p-2 bg-blue-600 rounded-lg group-hover:scale-110 transition-transform duration-300">

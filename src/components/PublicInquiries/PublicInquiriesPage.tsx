@@ -209,6 +209,10 @@ export function PublicInquiriesPage() {
     if (filterType === 'status') {
       if (Array.isArray(value)) {
         setSelectedStatuses(value);
+      } else if (value === '') {
+        // Clear all filters to show all inquiries
+        setSelectedStatuses([]);
+        setSelectedPriorities([]);
       } else {
         setSelectedStatuses([value]);
       }
