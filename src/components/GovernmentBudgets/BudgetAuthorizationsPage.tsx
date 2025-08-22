@@ -217,10 +217,16 @@ export default function BudgetAuthorizationsPage() {
           <ExportButtons data={authorizations} />
         </CardHeader>
         <CardContent>
-          <DataTable
-            data={authorizations}
-            columns={columns}
-          />
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <DataTable
+              data={authorizations}
+              columns={columns}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
