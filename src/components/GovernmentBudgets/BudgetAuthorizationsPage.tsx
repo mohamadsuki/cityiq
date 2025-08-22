@@ -6,7 +6,8 @@ import { DataTable } from "@/components/shared/DataTable";
 import { ExportButtons } from "@/components/shared/ExportButtons";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, FileCheck, AlertCircle, Clock, CheckCircle } from "lucide-react";
+import { Plus, FileCheck, AlertCircle, Clock, CheckCircle, DollarSign, Upload } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 // נתונים לדוגמה - בעתיד יבואו מהדאטאבייס
 const mockAuthorizations = [
@@ -177,6 +178,29 @@ export default function BudgetAuthorizationsPage() {
     totalAmount: authorizations.filter(a => a.status === 'approved').reduce((sum, a) => sum + a.amount, 0)
   };
 
+  // נתוני גרפים
+  const statusData = [
+    { name: 'מאושרות', value: stats.approved, color: 'hsl(var(--chart-1))' },
+    { name: 'ממתינות', value: stats.pending, color: 'hsl(var(--chart-2))' },
+    { name: 'בבדיקה', value: authorizations.filter(a => a.status === 'in_review').length, color: 'hsl(var(--chart-3))' },
+    { name: 'נדחו', value: authorizations.filter(a => a.status === 'rejected').length, color: 'hsl(var(--chart-4))' }
+  ].filter(item => item.value > 0);
+
+  const ministryData = authorizations.reduce((acc: any[], auth) => {
+    const existing = acc.find(item => item.ministry === auth.ministry);
+    if (existing) {
+      existing.count += 1;
+      existing.amount += auth.amount || 0;
+    } else {
+      acc.push({
+        ministry: auth.ministry || 'לא צוין',
+        count: 1,
+        amount: auth.amount || 0
+      });
+    }
+    return acc;
+  }, []).slice(0, 6);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -184,14 +208,14 @@ export default function BudgetAuthorizationsPage() {
           <h1 className="text-3xl font-bold text-foreground mb-2">הרשאות תקציביות</h1>
           <p className="text-muted-foreground">ניהול הרשאות תקציביות ממשלתיות ותמיכות</p>
         </div>
-        <Button className="bg-gradient-primary text-primary-foreground shadow-glow">
-          <Plus className="h-4 w-4 mr-2" />
-          הרשאה חדשה
-        </Button>
+        <div className="flex gap-2">
+          <DataUploader context="budget_authorizations" onUploadSuccess={() => fetchAuthorizations()} />
+          <Button className="bg-gradient-primary text-primary-foreground shadow-glow">
+            <Plus className="h-4 w-4 mr-2" />
+            הרשאה חדשה
+          </Button>
+        </div>
       </div>
-
-      {/* Data Uploader */}
-      <DataUploader context="budget_authorizations" onUploadSuccess={() => fetchAuthorizations()} />
 
       {/* כרטיסי סטטיסטיקות */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -228,11 +252,74 @@ export default function BudgetAuthorizationsPage() {
         <Card className="border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">סכום מאושר</CardTitle>
-            <FileCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            <DollarSign className="h-4 w-4 text-purple-600 dark:text-purple-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
               ₪{new Intl.NumberFormat('he-IL').format(stats.totalAmount)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* גרפים */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-0 shadow-elevated bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי סטטוס</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-elevated bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי משרדים</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={ministryData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="ministry" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    interval={0}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value, name) => [
+                      name === 'count' ? `${value} הרשאות` : `₪${new Intl.NumberFormat('he-IL').format(value as number)}`,
+                      name === 'count' ? 'מספר הרשאות' : 'סכום כולל'
+                    ]}
+                  />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" name="count" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
