@@ -222,13 +222,13 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
                 <SelectTrigger>
                   <SelectValue placeholder="בחר מקור" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border shadow-md z-50">
                   <SelectItem value="whatsapp">ווטסאפ</SelectItem>
                   <SelectItem value="email">אימייל</SelectItem>
                   <SelectItem value="phone">טלפון</SelectItem>
                   <SelectItem value="in_person">פניה ישירה</SelectItem>
                   <SelectItem value="website">אתר</SelectItem>
-                  <SelectItem value="other">אחר</SelectItem>
+                  <SelectItem value="social_media">רשתות חברתיות</SelectItem>
                 </SelectContent>
               </Select>
             </div>
