@@ -64,7 +64,7 @@ export default function AddBudgetDialog({ onSaved }: { onSaved?: () => void }) {
 
       const { error } = await supabase.from("budgets").insert({
         user_id: user.id,
-        department_slug: department,
+        department_slug: department as any,
         year,
         item_name: itemName,
         amount_approved: approved ? Number(approved) : null,

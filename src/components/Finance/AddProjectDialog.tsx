@@ -59,7 +59,7 @@ export default function AddProjectDialog({ onSaved, defaultDepartment, hideDepar
         user_id: user.id,
         code: code || null,
         name,
-        department_slug: department,
+        department_slug: department as any,
         status: status || null,
         domain: domain || null,
         budget_approved: budgetApproved ? Number(budgetApproved) : null,

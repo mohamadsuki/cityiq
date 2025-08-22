@@ -39,7 +39,7 @@ export default function ExecutiveTasksBanner({ department }: Props) {
         supabase
           .from('tasks')
           .select('id,title,department_slug,status,due_at,assigned_by_role,created_at')
-          .eq('department_slug', department)
+          .eq('department_slug', department as any)
           .in('assigned_by_role', ['mayor','ceo'])
           .not('status', 'in', '(\"done\",\"cancelled\")')
           .order('created_at', { ascending: false }),

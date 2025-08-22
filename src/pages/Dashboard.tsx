@@ -8,6 +8,7 @@ import EngineeringDashboard from "@/components/Dashboard/EngineeringDashboard";
 import WelfareDashboard from "@/components/Dashboard/WelfareDashboard";
 import NonFormalDashboard from "@/components/Dashboard/NonFormalDashboard";
 import BusinessDashboard from "@/components/Dashboard/BusinessDashboard";
+import GovernmentBudgetsDashboard from "@/components/Dashboard/GovernmentBudgetsDashboard";
 import GrantsApp from "@/components/Grants/GrantsApp";
 import ProjectsApp from "@/components/Projects/ProjectsApp";
 import TasksApp from "@/components/Tasks/TasksApp";
@@ -15,6 +16,7 @@ import RegularBudgetPage from "@/components/Finance/RegularBudgetPage";
 import TabarimPage from "@/components/Finance/TabarimPage";
 import CollectionPage from "@/components/Finance/CollectionPage";
 import SalaryPage from "@/components/Finance/SalaryPage";
+import BudgetAuthorizationsPage from "@/components/GovernmentBudgets/BudgetAuthorizationsPage";
 import { useAuth } from "@/context/AuthContext";
 import ProfilePage from "@/components/Profile/ProfilePage";
 import { PublicInquiriesPage } from "@/components/PublicInquiries/PublicInquiriesPage";
@@ -36,6 +38,8 @@ export default function Dashboard() {
     "/welfare": "welfare",
     "/non-formal": "non-formal",
     "/business": "business",
+    "/government-budgets": "government-budgets",
+    "/government-budgets/authorizations": "government-budgets-authorizations",
     "/grants": "grants",
     "/projects": "projects",
     "/tasks": "tasks",
@@ -61,6 +65,8 @@ export default function Dashboard() {
       "welfare": "מחלקת רווחה - דאשבורד עירוני",
       "non-formal": "חינוך בלתי פורמאלי - דאשבורד עירוני",
       "business": "רישוי עסקים - דאשבורד עירוני",
+      "government-budgets": "תקציבים ממשלתיים ותמיכות - דאשבורד עירוני",
+      "government-budgets-authorizations": "הרשאות תקציביות - דאשבורד עירוני",
       "grants": "קולות קוראים - דאשבורד עירוני",
       "projects": "פרויקטים - דאשבורד עירוני",
       "tasks": "משימות - דאשבורד עירוני",
@@ -79,6 +85,8 @@ export default function Dashboard() {
       "welfare": "דאשבורד רווחה: מקבלי שירות, שירותים, מגמות ופילוחים.",
       "non-formal": "חינוך בלתי פורמאלי: תוכניות, משתתפים, מגמות והשתתפות.",
       "business": "רישוי עסקים: סטטוס רישיונות, סוגי עסקים והתראות.",
+      "government-budgets": "תקציבים ממשלתיים ותמיכות: ניהול קולות קוראים והרשאות תקציביות.",
+      "government-budgets-authorizations": "הרשאות תקציביות: ניהול הרשאות תקציביות ממשלתיות ומעקב סטטוס.",
       "grants": "קולות קוראים: סטטוס בקשות, החלטות ומשרדים.",
       "projects": "פרויקטים עירוניים: סטטוס, התקדמות ועלויות.",
       "tasks": "ניהול משימות בין ראש העיר לראשי מחלקות: תעדוף, סטטוס ודד-ליין.",
@@ -109,7 +117,7 @@ export default function Dashboard() {
   const renderDashboard = () => {
     // Access control: if not mayor and section is department not in permissions -> show overview
     if (role !== 'mayor' && role !== 'ceo' && [
-      'finance','education','engineering','welfare','non-formal','business']
+      'finance','education','engineering','welfare','non-formal','business','government-budgets']
       .includes(currentSection) && !departments.includes(currentSection as any)) {
       return (
         <div className="space-y-4">
@@ -142,6 +150,10 @@ export default function Dashboard() {
         return <NonFormalDashboard />;
       case "business":
         return <BusinessDashboard />;
+      case "government-budgets":
+        return <GovernmentBudgetsDashboard />;
+      case "government-budgets-authorizations":
+        return <BudgetAuthorizationsPage />;
       case "grants":
         return <GrantsApp />;
       case "projects":

@@ -232,10 +232,10 @@ const [form, setForm] = useState<Partial<Project>>({
     
     // Filter by department if specific department is selected
     if (department !== "all") {
-      query = query.eq("department_slug", department);
+      query = query.eq("department_slug", department as any);
     } else if (role !== "mayor" && role !== "ceo") {
       // For managers, filter to only show projects from their departments
-      query = query.in("department_slug", visibleDepartments);
+      query = query.in("department_slug", visibleDepartments as any);
     }
     
     const { data, error } = await query;

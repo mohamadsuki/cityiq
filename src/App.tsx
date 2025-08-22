@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
-import GovernmentBudgets from "./pages/GovernmentBudgets";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import { Protected } from "./components/auth/Protected";
@@ -33,7 +32,8 @@ const App = () => (
           <Route path="/welfare" element={<Protected><Index /></Protected>} />
           <Route path="/non-formal" element={<Protected><Index /></Protected>} />
           <Route path="/business" element={<Protected><Index /></Protected>} />
-          <Route path="/government-budgets/*" element={<Protected><GovernmentBudgets /></Protected>} />
+          <Route path="/government-budgets" element={<Protected><Index /></Protected>} />
+          <Route path="/government-budgets/authorizations" element={<Protected><Index /></Protected>} />
           <Route path="/grants" element={<Protected><Index /></Protected>} />
           <Route path="/projects" element={<Protected><Index /></Protected>} />
           <Route path="/tasks" element={<Protected><Index /></Protected>} />

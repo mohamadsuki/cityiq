@@ -157,7 +157,7 @@ export default function GrantsApp() {
     setLoading(true);
     
     let query = supabase.from('grants').select('*').order('created_at', { ascending: false });
-    if (department !== 'all') query = query.eq('department_slug', department);
+    if (department !== 'all') query = query.eq('department_slug', department as any);
     const { data, error } = await query;
     if (error) {
       console.error('Failed to load grants', error);

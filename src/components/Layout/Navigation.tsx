@@ -28,12 +28,12 @@ const navigationItems = [
   { id: "projects", name: "פרויקטים", icon: Building2, url: "/projects" },
   { id: "grants", name: "קולות קוראים", icon: Megaphone, url: "/grants" },
   { id: "finance", name: "פיננסים", icon: BarChart3, url: "/finance" },
+  { id: "government-budgets", name: "תקציבים ממשלתיים ותמיכות", icon: Building2, url: "/government-budgets" },
   { id: "education", name: "חינוך", icon: GraduationCap, url: "/education" },
   { id: "engineering", name: "הנדסה", icon: Building2, url: "/engineering" },
   { id: "welfare", name: "רווחה", icon: Users, url: "/welfare" },
   { id: "non-formal", name: "חינוך בלתי פורמאלי", icon: Activity, url: "/non-formal" },
   { id: "business", name: "רישוי עסקים", icon: Store, url: "/business" },
-  { id: "government-budgets", name: "תקציבים ממשלתיים ותמיכות", icon: Building2, url: "/government-budgets" },
   { id: "inquiries", name: "פניות ציבור", icon: MessageCircle, url: "/inquiries" },
 ];
 
@@ -85,9 +85,9 @@ export default function Navigation() {
               })
               .map((item) => {
                 const Icon = item.icon;
-                const isActive = item.id === 'finance' 
-                  ? (currentPath === item.url || currentPath.startsWith('/finance/'))
-                  : currentPath === item.url;
+                const isActive = (item.id === 'finance' && (currentPath === item.url || currentPath.startsWith('/finance/'))) ||
+                  (item.id === 'government-budgets' && (currentPath === item.url || currentPath.startsWith('/government-budgets/'))) ||
+                  (item.id !== 'finance' && item.id !== 'government-budgets' && currentPath === item.url);
 
                 return (
                   <Button
