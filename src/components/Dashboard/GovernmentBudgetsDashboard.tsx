@@ -103,6 +103,40 @@ export default function GovernmentBudgetsDashboard() {
         <p className="text-muted-foreground">ניהול תקציבים ממשלתיים, קולות קוראים והרשאות תקציביות</p>
       </div>
 
+      {/* מודולים */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {sections.map((section) => {
+          const Icon = section.icon;
+          return (
+            <Card 
+              key={section.title}
+              className={`group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br ${section.color} cursor-pointer`}
+              onClick={() => navigate(section.path)}
+            >
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <div className="space-y-1">
+                  <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                    {section.title}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {section.description}
+                  </p>
+                </div>
+                <Icon className={`h-8 w-8 ${section.iconColor} group-hover:scale-110 transition-transform`} />
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start text-right h-auto p-0 hover:bg-transparent group-hover:text-primary transition-colors"
+                >
+                  <span>כניסה למודול</span>
+                </Button>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
       {/* כרטיסי סטטיסטיקות כללי */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20">
@@ -154,7 +188,75 @@ export default function GovernmentBudgetsDashboard() {
         </Card>
       </div>
 
-      {/* גרפים */}
+      {/* גרף השוואה */}
+      <Card className="border-0 shadow-elevated bg-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-foreground">השוואה בין קולות קוראים והרשאות תקציביות</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center items-center h-80">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={[
+                    { 
+                      category: 'מאושרים',
+                      'קולות קוראים': grantsStats.approved,
+                      'הרשאות תקציביות': authStats.approved
+                    },
+                    { 
+                      category: 'ממתינים',
+                      'קולות קוראים': grantsStats.pending,
+                      'הרשאות תקציביות': authStats.pending
+                    },
+                    { 
+                      category: 'סה"כ',
+                      'קולות קוראים': grantsStats.total,
+                      'הרשאות תקציביות': authStats.total
+                    }
+                  ]} 
+                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis 
+                    dataKey="category" 
+                    tick={{ fontSize: 12 }}
+                    height={60}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip 
+                    formatter={(value, name) => [`${value}`, name]}
+                    labelStyle={{ color: '#374151' }}
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Legend />
+                  <Bar 
+                    dataKey="קולות קוראים" 
+                    fill="#3b82f6"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="הרשאות תקציביות" 
+                    fill="#10b981"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* גרפי התפלגות סטטוס */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-0 shadow-elevated bg-card">
           <CardHeader>
@@ -277,39 +379,74 @@ export default function GovernmentBudgetsDashboard() {
         </Card>
       </div>
 
-      {/* מודולים */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {sections.map((section) => {
-          const Icon = section.icon;
-          return (
-            <Card 
-              key={section.title}
-              className={`group hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br ${section.color} cursor-pointer`}
-              onClick={() => navigate(section.path)}
-            >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <div className="space-y-1">
-                  <CardTitle className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {section.title}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {section.description}
-                  </p>
-                </div>
-                <Icon className={`h-8 w-8 ${section.iconColor} group-hover:scale-110 transition-transform`} />
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start text-right h-auto p-0 hover:bg-transparent group-hover:text-primary transition-colors"
+      {/* גרף הכנסות לעומת סכומים מבוקשים */}
+      <Card className="border-0 shadow-elevated bg-card">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-foreground">תקציבים מאושרים לעומת סכומים מבוקשים</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center items-center h-80">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={[
+                    { 
+                      type: 'קולות קוראים',
+                      'סכום מבוקש': grants.reduce((sum, g) => sum + (g.submission_amount || 0), 0),
+                      'סכום מאושר': grantsStats.totalAmount
+                    },
+                    { 
+                      type: 'הרשאות תקציביות',
+                      'סכום מבוקש': authorizations.reduce((sum, a) => sum + (a.amount || 0), 0),
+                      'סכום מאושר': authStats.totalAmount
+                    }
+                  ]} 
+                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
                 >
-                  <span>כניסה למודול</span>
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis 
+                    dataKey="type" 
+                    tick={{ fontSize: 12 }}
+                    height={60}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `₪${new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(value)}`}
+                  />
+                  <Tooltip 
+                    formatter={(value, name) => [
+                      `₪${new Intl.NumberFormat('he-IL').format(value as number)}`,
+                      name
+                    ]}
+                    labelStyle={{ color: '#374151' }}
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Legend />
+                  <Bar 
+                    dataKey="סכום מבוקש" 
+                    fill="#f59e0b"
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Bar 
+                    dataKey="סכום מאושר" 
+                    fill="#22c55e"
+                    radius={[4, 4, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
