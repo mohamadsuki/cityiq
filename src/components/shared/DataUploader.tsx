@@ -470,27 +470,46 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       break;
       
     case 'grants':
-      mapped.name = normalizedRow.grant_name || normalizedRow['שם הקול קורא'] || normalizedRow['שם'] || '';
-      mapped.ministry = normalizedRow.ministry || normalizedRow['משרד'] || '';
-      mapped.status = normalizedRow.grant_status || normalizedRow['סטטוס גרנט'] || normalizedRow['סטטוס'] || 'draft';
+      // Map according to Excel structure from logs
+      mapped.name = normalizedRow['__empty_1'] || row['__EMPTY_1'] || ''; // שם
+      mapped.ministry = normalizedRow['סטטוס קולות קוראים ליום 11/8/2025'] || row['סטטוס קולות קוראים ליום 11/8/2025'] || ''; // משרד מממן
+      mapped.status = normalizedRow['__empty_6'] || row['__EMPTY_6'] || 'draft'; // סטטוס
       
-      // Handle amount field
-      const amountValue = normalizedRow.grant_amount || normalizedRow['סכום'] || normalizedRow['תקציב גרנט'] || '0';
-      mapped.amount = parseFloat(String(amountValue).replace(/,/g, '')) || 0;
+      // Handle amount field - סך תקציב הקול קורא
+      const amountValue = normalizedRow['__empty_7'] || row['__EMPTY_7'] || '0';
+      mapped.amount = parseFloat(String(amountValue).replace(/,/g, '').trim()) || 0;
       
-      // Handle dates
-      if (normalizedRow.submitted_at || normalizedRow['תאריך הגשה']) {
-        const dateValue = normalizedRow.submitted_at || normalizedRow['תאריך הגשה'];
-        mapped.submitted_at = dateValue;
+      // Map department from __EMPTY_4 (מחלקה)
+      const deptValue = normalizedRow['__empty_4'] || row['__EMPTY_4'] || '';
+      if (deptValue && deptValue.length > 0) {
+        // Map department names to slugs
+        switch(deptValue.toLowerCase()) {
+          case 'ספרייה':
+          case 'תרבות':
+            mapped.department_slug = 'non-formal';
+            break;
+          case 'ספורט':
+            mapped.department_slug = 'welfare'; 
+            break;
+          case 'שפ"ע':
+          case 'חינוך':
+            mapped.department_slug = 'education';
+            break;
+          case 'צעירים':
+            mapped.department_slug = 'welfare';
+            break;
+          default:
+            mapped.department_slug = 'finance';
+        }
+      } else {
+        mapped.department_slug = 'finance';
       }
       
-      if (normalizedRow.decision_at || normalizedRow['תאריך החלטה']) {
-        const dateValue = normalizedRow.decision_at || normalizedRow['תאריך החלטה'];
-        mapped.decision_at = dateValue;
-      }
-      
-      // Skip empty rows
-      if (!mapped.name || mapped.name.length < 2) {
+      // Skip empty rows or header rows
+      if (!mapped.name || mapped.name.length < 2 || 
+          mapped.name.includes('שם') || 
+          mapped.name.includes('מס\'')) {
+        console.log('🚫 Skipping grants row:', mapped.name);
         return null;
       }
       
