@@ -479,6 +479,15 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       const amountValue = normalizedRow['__empty_7'] || row['__EMPTY_7'] || '0';
       mapped.amount = parseFloat(String(amountValue).replace(/,/g, '').trim()) || 0;
       
+      // Add more fields from Excel structure
+      mapped.project_description = normalizedRow['__empty_3'] || row['__EMPTY_3'] || ''; // נושא/פרוייקט
+      mapped.responsible_person = normalizedRow['__empty_5'] || row['__EMPTY_5'] || ''; // אחראי
+      mapped.submission_amount = parseFloat(String(normalizedRow['__empty_8'] || row['__EMPTY_8'] || '0').replace(/,/g, '').trim()) || 0; // סכום הגשה
+      mapped.support_amount = parseFloat(String(normalizedRow['__empty_9'] || row['__EMPTY_9'] || '0').replace(/,/g, '').trim()) || 0; // סכות תמיכה
+      mapped.approved_amount = parseFloat(String(normalizedRow['__empty_10'] || row['__EMPTY_10'] || '0').replace(/,/g, '').trim()) || 0; // סכום אושר
+      mapped.municipality_participation = parseFloat(String(normalizedRow['__empty_11'] || row['__EMPTY_11'] || '0').replace(/,/g, '').trim()) || 0; // סכום השתתפות רשות
+      mapped.notes = normalizedRow['__empty_12'] || row['__EMPTY_12'] || ''; // הערות
+      
       // Map department from __EMPTY_4 (מחלקה)
       const deptValue = normalizedRow['__empty_4'] || row['__EMPTY_4'] || '';
       if (deptValue && deptValue.length > 0) {
@@ -508,7 +517,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       // Skip empty rows or header rows
       if (!mapped.name || mapped.name.length < 2 || 
           mapped.name.includes('שם') || 
-          mapped.name.includes('מס\'')) {
+          mapped.name.includes("מס'")) {
         console.log('🚫 Skipping grants row:', mapped.name);
         return null;
       }
@@ -774,10 +783,19 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
         addLog('success', `הושלם בהצלחה: ${insertedCount} שורות הוכנסו, ${skippedCount} שורות דולגו`);
 
         // Call success callback
-        if (onUploadSuccess) {
-          console.log('🎯 Calling onUploadSuccess callback');
-          onUploadSuccess();
-        }
+      if (onUploadSuccess) {
+        console.log('🎯 Calling onUploadSuccess callback');
+        onUploadSuccess();
+      }
+      
+      // Auto-hide after successful upload (like tabarim)
+      setTimeout(() => {
+        setFile(null);
+        setRows([]);
+        setHeaders([]);
+        setDetected({ table: null, reason: '' });
+        setDebugLogs([]);
+      }, 2000);
 
         // Verification step
         try {

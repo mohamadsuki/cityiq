@@ -302,47 +302,47 @@ export default function GrantsApp() {
       <Card className="p-4 overflow-x-auto">
         <table className="w-full text-right">
           <thead>
-            <tr className="text-muted-foreground">
-              <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('name')}>
+            <tr className="border-b border-border">
+              <th className="py-2 text-right cursor-pointer select-none" onClick={() => toggleSort('name')}>
                 שם {sortBy === 'name' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
               </th>
               <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('ministry')}>
                 משרד {sortBy === 'ministry' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
               </th>
+              <th className="py-2 cursor-pointer select-none">
+                פרויקט/נושא
+              </th>
+              <th className="py-2 cursor-pointer select-none">
+                אחראי
+              </th>
               <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('amount')}>
-                סכום {sortBy === 'amount' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                תקציב קול קורא {sortBy === 'amount' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+              </th>
+              <th className="py-2 cursor-pointer select-none">
+                סכום הגשה
+              </th>
+              <th className="py-2 cursor-pointer select-none">
+                סכום אושר
               </th>
               <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('status')}>
                 סטטוס {sortBy === 'status' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
               </th>
-              <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('submitted_at')}>
-                הוגש {sortBy === 'submitted_at' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-              </th>
-              <th className="py-2 cursor-pointer select-none" onClick={() => toggleSort('decision_at')}>
-                החלטה {sortBy === 'decision_at' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
-              </th>
-              <th className="py-2">לו"ז</th>
               <th className="py-2">פעולות</th>
             </tr>
           </thead>
           <tbody>
-            {loading && (<tr><td className="py-6" colSpan={8}>טוען…</td></tr>)}
-            {!loading && sorted.length === 0 && (<tr><td className="py-6" colSpan={8}>אין נתונים</td></tr>)}
-            {!loading && sorted.map((g) => (
+            {loading && (<tr><td className="py-6" colSpan={9}>טוען…</td></tr>)}
+            {!loading && sorted.length === 0 && (<tr><td className="py-6" colSpan={9}>אין נתונים</td></tr>)}
+            {!loading && sorted.map((g: any) => (
               <tr key={g.id} className="border-b border-border">
                 <td className="py-3 font-medium">{g.name}</td>
                 <td className="py-3">{g.ministry || '—'}</td>
+                <td className="py-3">{g.project_description || '—'}</td>
+                <td className="py-3">{g.responsible_person || '—'}</td>
                 <td className="py-3">{g.amount ? g.amount.toLocaleString('he-IL') : '—'}</td>
+                <td className="py-3">{g.submission_amount ? g.submission_amount.toLocaleString('he-IL') : '—'}</td>
+                <td className="py-3">{g.approved_amount ? g.approved_amount.toLocaleString('he-IL') : '—'}</td>
                 <td className="py-3"><Badge variant={statusVariant(g.status)}>{labelForStatus(g.status)}</Badge></td>
-                <td className="py-3">{g.submitted_at ? new Date(g.submitted_at).toLocaleDateString('he-IL') : '—'}</td>
-                <td className="py-3">{g.decision_at ? new Date(g.decision_at).toLocaleDateString('he-IL') : '—'}</td>
-                <td className="py-3">
-                  {g.decision_at && (
-                    <span className="text-sm text-muted-foreground">
-                      {formatDays(daysLeft(g))}
-                    </span>
-                  )}
-                </td>
                 <td className="py-3 space-x-2 space-x-reverse">
                   <Button size="sm" variant="outline" onClick={() => openEdit(g)}>עריכה</Button>
                   <Button size="sm" variant="destructive" onClick={() => deleteGrant(g)}>מחיקה</Button>
