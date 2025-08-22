@@ -30,8 +30,8 @@ export function PublicInquiriesPage() {
   const [selectedInquiry, setSelectedInquiry] = useState<PublicInquiry | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [inquiryToDelete, setInquiryToDelete] = useState<PublicInquiry | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -194,25 +194,29 @@ export function PublicInquiriesPage() {
     return labels[domain] || domain || "—";
   };
 
+  // Get unique statuses and priorities from data for filter options
+  const allStatuses = Array.from(new Set(inquiries.map(i => i.status).filter(Boolean)));
+  const allPriorities = Array.from(new Set(inquiries.map(i => i.priority).filter(Boolean)));
+
   // Filter inquiries based on filters
   const filteredInquiries = inquiries.filter(inquiry => {
-    const statusMatch = statusFilter.length === 0 || statusFilter.includes(inquiry.status);
-    const priorityMatch = priorityFilter.length === 0 || priorityFilter.includes(inquiry.priority);
+    const statusMatch = selectedStatuses.length === 0 || selectedStatuses.includes(inquiry.status);
+    const priorityMatch = selectedPriorities.length === 0 || selectedPriorities.includes(inquiry.priority);
     return statusMatch && priorityMatch;
   });
 
   const handleCardClick = (filterType: 'status' | 'priority', value: string | string[]) => {
     if (filterType === 'status') {
       if (Array.isArray(value)) {
-        setStatusFilter(value);
+        setSelectedStatuses(value);
       } else {
-        setStatusFilter([value]);
+        setSelectedStatuses([value]);
       }
     } else if (filterType === 'priority') {
       if (Array.isArray(value)) {
-        setPriorityFilter(value);
+        setSelectedPriorities(value);
       } else {
-        setPriorityFilter([value]);
+        setSelectedPriorities([value]);
       }
     }
   };
@@ -331,53 +335,99 @@ export function PublicInquiriesPage() {
       {/* כרטיסיות סטטיסטיקה */}
       <InquiriesStatsCards 
         onCardClick={handleCardClick}
-        statusFilter={statusFilter}
-        priorityFilter={priorityFilter}
-        onFilterChange={(statusFilters, priorityFilters) => {
-          setStatusFilter(statusFilters);
-          setPriorityFilter(priorityFilters);
-        }}
       />
 
-      {/* פילטרים פעילים */}
-      {(statusFilter.length > 0 || priorityFilter.length > 0) && (
-        <div className="mb-4 p-4 bg-muted rounded-lg">
-          <div className="flex flex-wrap gap-2 items-center">
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <span className="text-sm font-medium">פילטרים פעילים:</span>
+      {/* פילטרים */}
+      <div className="mb-6 p-4 bg-card rounded-lg border shadow-sm">
+        <div className="flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            <span className="text-sm font-medium">סינון:</span>
+          </div>
+          
+          {/* סינון לפי סטטוס */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">סטטוס</label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={selectedStatuses.length === 0 ? "default" : "outline"}
+                onClick={() => setSelectedStatuses([])}
+              >
+                הכל
+              </Button>
+              {allStatuses.map(status => (
+                <Button
+                  key={status}
+                  size="sm"
+                  variant={selectedStatuses.includes(status) ? "default" : "outline"}
+                  onClick={() => {
+                    if (selectedStatuses.includes(status)) {
+                      setSelectedStatuses(prev => prev.filter(s => s !== status));
+                    } else {
+                      setSelectedStatuses(prev => [...prev, status]);
+                    }
+                  }}
+                >
+                  {status === 'new' && 'חדש'}
+                  {status === 'in_progress' && 'בטיפול'}
+                  {status === 'pending' && 'בהמתנה'}
+                  {status === 'resolved' && 'טופל'}
+                  {status === 'closed' && 'סגור'}
+                </Button>
+              ))}
             </div>
-            {statusFilter.map(status => (
-              <Badge key={`status-${status}`} variant="secondary" className="flex items-center gap-1">
-                סטטוס: {status}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
-                  onClick={() => setStatusFilter(prev => prev.filter(s => s !== status))}
-                />
-              </Badge>
-            ))}
-            {priorityFilter.map(priority => (
-              <Badge key={`priority-${priority}`} variant="secondary" className="flex items-center gap-1">
-                עדיפות: {priority}
-                <X 
-                  className="h-3 w-3 cursor-pointer" 
-                  onClick={() => setPriorityFilter(prev => prev.filter(p => p !== priority))}
-                />
-              </Badge>
-            ))}
+          </div>
+
+          {/* סינון לפי עדיפות */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium">עדיפות</label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={selectedPriorities.length === 0 ? "default" : "outline"}
+                onClick={() => setSelectedPriorities([])}
+              >
+                הכל
+              </Button>
+              {allPriorities.map(priority => (
+                <Button
+                  key={priority}
+                  size="sm"
+                  variant={selectedPriorities.includes(priority) ? "default" : "outline"}
+                  onClick={() => {
+                    if (selectedPriorities.includes(priority)) {
+                      setSelectedPriorities(prev => prev.filter(p => p !== priority));
+                    } else {
+                      setSelectedPriorities(prev => [...prev, priority]);
+                    }
+                  }}
+                >
+                  {priority === 'low' && 'נמוכה'}
+                  {priority === 'medium' && 'בינונית'}
+                  {priority === 'high' && 'גבוהה'}
+                  {priority === 'urgent' && 'דחוף'}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* נקה פילטרים */}
+          {(selectedStatuses.length > 0 || selectedPriorities.length > 0) && (
             <Button 
               size="sm" 
-              variant="outline" 
+              variant="ghost" 
               onClick={() => {
-                setStatusFilter([]);
-                setPriorityFilter([]);
+                setSelectedStatuses([]);
+                setSelectedPriorities([]);
               }}
             >
+              <X className="h-4 w-4 ml-1" />
               נקה הכל
             </Button>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       <DataTable
         columns={columns}

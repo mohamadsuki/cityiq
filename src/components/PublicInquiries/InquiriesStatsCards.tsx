@@ -219,60 +219,6 @@ export function InquiriesStatsCards({
         </CardContent>
       </Card>
 
-      {/* כרטיס מקורות פניה */}
-      <Card className="md:col-span-2 hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2">
-            <div className="p-2 bg-purple-600 rounded-lg">
-              <Users className="h-5 w-5 text-white" />
-            </div>
-            מקורות פניה
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            {Object.entries(sourceStats).map(([source, count]) => (
-              <div key={source} className="flex items-center gap-3 p-3 bg-white/60 dark:bg-purple-900/20 rounded-lg hover:bg-white/80 transition-colors">
-                <div className="p-2 bg-purple-100 dark:bg-purple-800 rounded-md">
-                  {getSourceIcon(source)}
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-purple-900 dark:text-purple-100">
-                    {getSourceLabel(source)}
-                  </div>
-                  <div className="text-lg font-bold text-purple-700 dark:text-purple-300">{count}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* כרטיס סוגי פניה */}
-      <Card className="md:col-span-2 hover:shadow-lg transition-all duration-300 border-0 bg-gradient-to-br from-indigo-50 to-indigo-100/50 dark:from-indigo-950/30 dark:to-indigo-900/20">
-        <CardHeader>
-          <CardTitle className="text-base font-semibold text-indigo-900 dark:text-indigo-100 flex items-center gap-2">
-            <div className="p-2 bg-indigo-600 rounded-lg">
-              <MessageSquare className="h-5 w-5 text-white" />
-            </div>
-            סוגי פניה
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3">
-            {Object.entries(typeStats).map(([type, count]) => (
-              <div key={type} className="flex items-center justify-between p-3 bg-white/60 dark:bg-indigo-900/20 rounded-lg hover:bg-white/80 transition-colors">
-                <span className="text-sm font-medium text-indigo-900 dark:text-indigo-100">
-                  {getTypeLabel(type)}
-                </span>
-                <Badge className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-3 py-1">
-                  {count}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
