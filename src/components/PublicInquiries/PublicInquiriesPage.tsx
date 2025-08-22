@@ -147,6 +147,17 @@ export function PublicInquiriesPage() {
     return labels[type] || type;
   };
 
+  const getDomainLabel = (domain: string) => {
+    const labels: Record<string, string> = {
+      'cleaning_environment': 'ניקיון וסביבה',
+      'animals': 'בעלי חיים',
+      'infrastructure_hazards': 'תשתיות ומפגעים',
+      'security': 'ביטחון',
+      'other': 'אחר'
+    };
+    return labels[domain] || domain || "—";
+  };
+
   const columns = [
     {
       accessorKey: "inquiry_number",
@@ -159,6 +170,11 @@ export function PublicInquiriesPage() {
     {
       accessorKey: "subject", 
       header: "נושא",
+    },
+    {
+      accessorKey: "domain",
+      header: "תחום",
+      cell: ({ row }: any) => getDomainLabel(row.getValue("domain")),
     },
     {
       accessorKey: "inquiry_type",

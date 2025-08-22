@@ -628,6 +628,7 @@ export type Database = {
           created_at: string
           department_slug: Database["public"]["Enums"]["department_slug"] | null
           description: string | null
+          domain: string | null
           email: string | null
           id: string
           inquiry_number: string
@@ -652,6 +653,7 @@ export type Database = {
             | Database["public"]["Enums"]["department_slug"]
             | null
           description?: string | null
+          domain?: string | null
           email?: string | null
           id?: string
           inquiry_number?: string
@@ -676,6 +678,7 @@ export type Database = {
             | Database["public"]["Enums"]["department_slug"]
             | null
           description?: string | null
+          domain?: string | null
           email?: string | null
           id?: string
           inquiry_number?: string
