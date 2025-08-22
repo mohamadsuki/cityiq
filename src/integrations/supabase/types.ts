@@ -202,19 +202,27 @@ export type Database = {
       grants: {
         Row: {
           amount: number | null
+          approved_amount: number | null
           created_at: string
           decision_at: string | null
           department_slug: Database["public"]["Enums"]["department_slug"] | null
           id: string
           ministry: string | null
+          municipality_participation: number | null
           name: string | null
+          notes: string | null
+          project_description: string | null
+          responsible_person: string | null
           status: string | null
+          submission_amount: number | null
           submitted_at: string | null
+          support_amount: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           amount?: number | null
+          approved_amount?: number | null
           created_at?: string
           decision_at?: string | null
           department_slug?:
@@ -222,14 +230,21 @@ export type Database = {
             | null
           id?: string
           ministry?: string | null
+          municipality_participation?: number | null
           name?: string | null
+          notes?: string | null
+          project_description?: string | null
+          responsible_person?: string | null
           status?: string | null
+          submission_amount?: number | null
           submitted_at?: string | null
+          support_amount?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           amount?: number | null
+          approved_amount?: number | null
           created_at?: string
           decision_at?: string | null
           department_slug?:
@@ -237,9 +252,15 @@ export type Database = {
             | null
           id?: string
           ministry?: string | null
+          municipality_participation?: number | null
           name?: string | null
+          notes?: string | null
+          project_description?: string | null
+          responsible_person?: string | null
           status?: string | null
+          submission_amount?: number | null
           submitted_at?: string | null
+          support_amount?: number | null
           updated_at?: string
           user_id?: string
         }
