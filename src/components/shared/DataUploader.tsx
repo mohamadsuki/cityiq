@@ -48,6 +48,8 @@ const detectDataType = (headers: string[], rows: any[], context?: string) => {
         return { table: 'tabarim', reason: 'זוהה על בסיס הקשר הדף (תב"רים)' };
       case 'grants':
         return { table: 'grants', reason: 'זוהה על בסיס הקשר הדף (קולות קוראים)' };
+      case 'budget_authorizations':
+        return { table: 'budget_authorizations', reason: 'זוהה על בסיס הקשר הדף (הרשאות תקציביות)' };
     }
   }
   
@@ -81,6 +83,19 @@ const detectDataType = (headers: string[], rows: any[], context?: string) => {
   // Check for tabarim-specific keywords
   if (headerStr.includes('תב"ר') || headerStr.includes('תקציב בלתי רגיל') || headerStr.includes('התקבולים והתשלומים')) {
     return { table: 'tabarim', reason: 'זוהה על בסיס כותרות תב"רים' };
+  }
+  
+  // Check for budget authorizations keywords
+  if (headerStr.includes('authorization') || headerStr.includes('הרשאה') || headerStr.includes('הרשאות') || 
+      headerStr.includes('תקציב') || headerStr.includes('budget') || headerStr.includes('אישור')) {
+    return { table: 'budget_authorizations', reason: 'זוהה על בסיס כותרות הרשאות תקציביות' };
+  }
+  
+  // Check for grants-specific keywords
+  if (headerStr.includes('grant') || headerStr.includes('קול קורא') || headerStr.includes('קולות קוראים') || 
+      headerStr.includes('ministry') || headerStr.includes('משרד') || headerStr.includes('גרנט') ||
+      headerStr.includes('ממקם') || headerStr.includes('תגוית') || headerStr.includes('ספורט')) {
+    return { table: 'grants', reason: 'זוהה על בסיס כותרות קולות קוראים' };
   }
   
   if (headerStr.includes('institution') || headerStr.includes('מוסד')) {
@@ -519,6 +534,40 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
           mapped.name.includes('שם') || 
           mapped.name.includes("מס'")) {
         console.log('🚫 Skipping grants row:', mapped.name);
+        return null;
+      }
+      
+      break;
+      
+    case 'budget_authorizations':
+      mapped.authorization_number = normalizedRow['authorization_number'] || normalizedRow['מספר הרשאה'] || normalizedRow['__empty'] || row['__EMPTY'] || '';
+      mapped.ministry = normalizedRow['ministry'] || normalizedRow['משרד'] || normalizedRow['__empty_1'] || row['__EMPTY_1'] || '';
+      mapped.program = normalizedRow['program'] || normalizedRow['תוכנית'] || normalizedRow['__empty_2'] || row['__EMPTY_2'] || '';
+      mapped.purpose = normalizedRow['purpose'] || normalizedRow['מטרה'] || normalizedRow['__empty_3'] || row['__EMPTY_3'] || '';
+      mapped.status = normalizedRow['status'] || normalizedRow['סטטוס'] || normalizedRow['__empty_4'] || row['__EMPTY_4'] || 'pending';
+      
+      // Handle amount field
+      const authAmountValue = normalizedRow['amount'] || normalizedRow['סכום'] || normalizedRow['__empty_5'] || row['__EMPTY_5'] || '0';
+      mapped.amount = parseFloat(String(authAmountValue).replace(/,/g, '').trim()) || 0;
+      
+      // Handle dates
+      const submittedValue = normalizedRow['submitted_at'] || normalizedRow['תאריך הגשה'] || normalizedRow['__empty_6'] || row['__EMPTY_6'] || '';
+      if (submittedValue) mapped.submitted_at = submittedValue;
+      
+      const approvedValue = normalizedRow['approved_at'] || normalizedRow['תאריך אישור'] || normalizedRow['__empty_7'] || row['__EMPTY_7'] || '';
+      if (approvedValue) mapped.approved_at = approvedValue;
+      
+      const validValue = normalizedRow['valid_until'] || normalizedRow['תוקף עד'] || normalizedRow['__empty_8'] || row['__EMPTY_8'] || '';
+      if (validValue) mapped.valid_until = validValue;
+      
+      mapped.notes = normalizedRow['notes'] || normalizedRow['הערות'] || normalizedRow['__empty_9'] || row['__EMPTY_9'] || '';
+      mapped.department_slug = 'government-budgets';
+      
+      // Skip empty rows or header rows
+      if (!mapped.authorization_number || mapped.authorization_number.length < 2 || 
+          mapped.authorization_number.includes('מספר') || 
+          mapped.authorization_number.includes('הרשאה')) {
+        console.log('🚫 Skipping authorization row:', mapped.authorization_number);
         return null;
       }
       

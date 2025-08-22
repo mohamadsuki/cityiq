@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ExportButtons } from "@/components/shared/ExportButtons";
+import { DataUploader } from "@/components/shared/DataUploader";
+import { supabase } from "@/integrations/supabase/client";
 import { Plus, FileCheck, AlertCircle, Clock, CheckCircle } from "lucide-react";
 
 // נתונים לדוגמה - בעתיד יבואו מהדאטאבייס
@@ -54,7 +56,31 @@ const statusLabels = {
 };
 
 export default function BudgetAuthorizationsPage() {
-  const [authorizations] = useState(mockAuthorizations);
+  const [authorizations, setAuthorizations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAuthorizations = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('budget_authorizations')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setAuthorizations(data || []);
+    } catch (error) {
+      console.error('Error fetching authorizations:', error);
+      // Fallback to mock data if DB fails
+      setAuthorizations(mockAuthorizations);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAuthorizations();
+  }, []);
 
   const columns = [
     {
@@ -130,6 +156,9 @@ export default function BudgetAuthorizationsPage() {
           הרשאה חדשה
         </Button>
       </div>
+
+      {/* Data Uploader */}
+      <DataUploader context="budget_authorizations" onUploadSuccess={() => fetchAuthorizations()} />
 
       {/* כרטיסי סטטיסטיקות */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">

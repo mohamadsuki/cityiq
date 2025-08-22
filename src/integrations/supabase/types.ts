@@ -84,6 +84,64 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_authorizations: {
+        Row: {
+          amount: number | null
+          approved_at: string | null
+          authorization_number: string | null
+          created_at: string
+          department_slug: Database["public"]["Enums"]["department_slug"] | null
+          id: string
+          ministry: string | null
+          notes: string | null
+          program: string | null
+          purpose: string | null
+          status: string | null
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+        }
+        Insert: {
+          amount?: number | null
+          approved_at?: string | null
+          authorization_number?: string | null
+          created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
+          id?: string
+          ministry?: string | null
+          notes?: string | null
+          program?: string | null
+          purpose?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+        }
+        Update: {
+          amount?: number | null
+          approved_at?: string | null
+          authorization_number?: string | null
+          created_at?: string
+          department_slug?:
+            | Database["public"]["Enums"]["department_slug"]
+            | null
+          id?: string
+          ministry?: string | null
+          notes?: string | null
+          program?: string | null
+          purpose?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       budgets: {
         Row: {
           amount_approved: number | null
