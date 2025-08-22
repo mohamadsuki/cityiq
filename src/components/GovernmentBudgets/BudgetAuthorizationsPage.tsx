@@ -5,9 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/shared/DataTable";
 import { ExportButtons } from "@/components/shared/ExportButtons";
 import { DataUploader } from "@/components/shared/DataUploader";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, FileCheck, AlertCircle, Clock, CheckCircle, DollarSign, Upload } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { useToast } from "@/hooks/use-toast";
 
 // נתונים לדוגמה - בעתיד יבואו מהדאטאבייס
 const mockAuthorizations = [
@@ -59,6 +62,8 @@ const statusLabels = {
 export default function BudgetAuthorizationsPage() {
   const [authorizations, setAuthorizations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showUploader, setShowUploader] = useState(false);
+  const { toast } = useToast();
 
   const fetchAuthorizations = async () => {
     try {
@@ -77,6 +82,45 @@ export default function BudgetAuthorizationsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const updateAuthorizationStatus = async (id: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('budget_authorizations')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state
+      setAuthorizations(prev => 
+        prev.map(auth => 
+          auth.id === id ? { ...auth, status: newStatus } : auth
+        )
+      );
+
+      toast({
+        title: "הצלחה",
+        description: "הסטטוס עודכן בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לעדכן את הסטטוס",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUploadSuccess = () => {
+    setShowUploader(false);
+    fetchAuthorizations();
+    toast({
+      title: "הצלחה",
+      description: "הקובץ הועלה בהצלחה והנתונים נשמרו",
+    });
   };
 
   useEffect(() => {
@@ -152,15 +196,29 @@ export default function BudgetAuthorizationsPage() {
     {
       accessorKey: "status",
       header: "סטטוס",
-      cell: ({ getValue }: any) => {
+      cell: ({ getValue, row }: any) => {
         const status = getValue();
         const statusInfo = statusLabels[status as keyof typeof statusLabels] || statusLabels.pending;
         const Icon = statusInfo?.icon || AlertCircle;
+        
         return (
-          <Badge className={`${statusInfo?.color} text-white`}>
-            <Icon className="h-3 w-3 mr-1" />
-            {statusInfo?.label || status}
-          </Badge>
+          <Select
+            value={status || 'pending'}
+            onValueChange={(newStatus) => updateAuthorizationStatus(row.original.id, newStatus)}
+          >
+            <SelectTrigger className="w-auto min-w-[120px] h-8">
+              <div className="flex items-center gap-1">
+                <Icon className="h-3 w-3" />
+                <span className="text-xs">{statusInfo?.label || status}</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">ממתין לאישור</SelectItem>
+              <SelectItem value="in_review">בבדיקה</SelectItem>
+              <SelectItem value="approved">אושר</SelectItem>
+              <SelectItem value="rejected">נדחה</SelectItem>
+            </SelectContent>
+          </Select>
         );
       }
     }
@@ -209,7 +267,13 @@ export default function BudgetAuthorizationsPage() {
           <p className="text-muted-foreground">ניהול הרשאות תקציביות ממשלתיות ותמיכות</p>
         </div>
         <div className="flex gap-2">
-          <DataUploader context="budget_authorizations" onUploadSuccess={() => fetchAuthorizations()} />
+          <Button 
+            variant="outline" 
+            onClick={() => setShowUploader(true)}
+          >
+            <Upload className="h-4 w-4 ml-2" />
+            העלה קובץ אקסל
+          </Button>
           <Button className="bg-gradient-primary text-primary-foreground shadow-glow">
             <Plus className="h-4 w-4 mr-2" />
             הרשאה חדשה
@@ -344,6 +408,26 @@ export default function BudgetAuthorizationsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Upload Dialog */}
+      {showUploader && (
+        <Dialog open={showUploader} onOpenChange={setShowUploader}>
+          <DialogContent dir="rtl" className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>ייבוא הרשאות תקציביות מקובץ אקסל</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <DataUploader 
+                context="budget_authorizations"
+                onUploadSuccess={handleUploadSuccess}
+              />
+              <div className="mt-4 text-sm text-muted-foreground">
+                העלה קובץ אקסל עם הרשאות תקציביות. הקובץ צריך להכיל עמודות: מספר הרשאה, משרד מממן, תיאור ההרשאה, סכום ההרשאה, תוקף ההרשאה.
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
