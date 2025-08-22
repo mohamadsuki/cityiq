@@ -46,6 +46,8 @@ const detectDataType = (headers: string[], rows: any[], context?: string) => {
         return { table: 'salary_data', reason: 'זוהה על בסיס הקשר הדף (משכורות)' };
       case 'tabarim':
         return { table: 'tabarim', reason: 'זוהה על בסיס הקשר הדף (תב"רים)' };
+      case 'grants':
+        return { table: 'grants', reason: 'זוהה על בסיס הקשר הדף (קולות קוראים)' };
     }
   }
   
@@ -178,7 +180,17 @@ const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
     'מקור מימון 1': 'funding_source1',
     'תקציב מאושר': 'approved_budget',
     'הכנסות בפועל': 'income_actual',
-    'הוצאות בפועל': 'expense_actual'
+    'הוצאות בפועל': 'expense_actual',
+    
+    // Grants fields
+    'שם הקול קורא': 'grant_name',
+    'שם': 'grant_name', 
+    'משרד': 'ministry',
+    'סכום': 'grant_amount',
+    'תקציב גרנט': 'grant_amount',
+    'סטטוס גרנט': 'grant_status',
+    'תאריך הגשה': 'submitted_at',
+    'תאריך החלטה': 'decision_at'
   };
   
 
@@ -449,6 +461,33 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
           surplus_deficit: mapped.surplus_deficit 
         }
       });
+      
+      break;
+      
+    case 'grants':
+      mapped.name = normalizedRow.grant_name || normalizedRow['שם הקול קורא'] || normalizedRow['שם'] || '';
+      mapped.ministry = normalizedRow.ministry || normalizedRow['משרד'] || '';
+      mapped.status = normalizedRow.grant_status || normalizedRow['סטטוס גרנט'] || normalizedRow['סטטוס'] || 'draft';
+      
+      // Handle amount field
+      const amountValue = normalizedRow.grant_amount || normalizedRow['סכום'] || normalizedRow['תקציב גרנט'] || '0';
+      mapped.amount = parseFloat(String(amountValue).replace(/,/g, '')) || 0;
+      
+      // Handle dates
+      if (normalizedRow.submitted_at || normalizedRow['תאריך הגשה']) {
+        const dateValue = normalizedRow.submitted_at || normalizedRow['תאריך הגשה'];
+        mapped.submitted_at = dateValue;
+      }
+      
+      if (normalizedRow.decision_at || normalizedRow['תאריך החלטה']) {
+        const dateValue = normalizedRow.decision_at || normalizedRow['תאריך החלטה'];
+        mapped.decision_at = dateValue;
+      }
+      
+      // Skip empty rows
+      if (!mapped.name || mapped.name.length < 2) {
+        return null;
+      }
       
       break;
       

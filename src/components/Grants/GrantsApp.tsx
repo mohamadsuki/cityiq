@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { DataUploader } from "@/components/shared/DataUploader";
 
 // Grant types aligned with DB
 export type GrantStatus = 'draft' | 'submitted' | 'pending' | 'approved' | 'rejected';
@@ -259,6 +260,9 @@ export default function GrantsApp() {
           <Button onClick={openCreate}>קול קורא חדש</Button>
         )}
       </header>
+
+      {/* Data Uploader */}
+      <DataUploader context="grants" onUploadSuccess={() => fetchGrants()} />
 
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
