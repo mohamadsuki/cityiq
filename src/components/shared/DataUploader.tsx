@@ -564,12 +564,17 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
       console.log('🐛 Authorization number from first column:', { firstKey, authNumber });
       
-      // Skip header rows or empty rows
+      // Skip header rows or empty rows - more comprehensive check
       if (!authNumber || 
           authNumber.toString().includes('מספר') || 
           authNumber.toString().includes('הרשאה') ||
+          authNumber.toString().includes('הרשאות') ||
+          authNumber.toString() === 'הרשאות' ||
           authNumber.toString().trim() === '' ||
-          authNumber.toString().length < 2) {
+          authNumber.toString().length < 1 ||
+          // Check if this looks like a header row by examining multiple fields
+          (row[Object.keys(row)[1]] && row[Object.keys(row)[1]].toString().includes('מס\' ההרשאה')) ||
+          (row[Object.keys(row)[2]] && row[Object.keys(row)[2]].toString().includes('תיאור ההרשאה'))) {
         console.log('🚫 Skipping budget authorization header/empty row:', authNumber);
         return null;
       }
@@ -580,33 +585,39 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       const allKeys = Object.keys(row);
       console.log('🐛 All available keys for mapping:', allKeys);
       
-      // Ministry from second column
-      mapped.ministry = row[allKeys[1]] || row['__EMPTY_1'] || '';
+      // Ministry from second column (but validate it's not empty or a header)
+      const ministryRaw = row[allKeys[1]] || row['__EMPTY_1'] || '';
+      mapped.ministry = ministryRaw && !ministryRaw.toString().includes('מס\' ההרשאה') ? ministryRaw.toString().trim() : '';
       
-      // Program from third column
-      mapped.program = row[allKeys[2]] || row['__EMPTY_2'] || '';
+      // Program from third column (but validate it's not empty or a header)
+      const programRaw = row[allKeys[2]] || row['__EMPTY_2'] || '';
+      mapped.program = programRaw && !programRaw.toString().includes('תיאור ההרשאה') ? programRaw.toString().trim() : '';
       
       // Purpose/Tabar from fourth column
-      mapped.purpose = row[allKeys[3]] || row['__EMPTY_3'] || '';
+      const purposeRaw = row[allKeys[3]] || row['__EMPTY_3'] || '';
+      mapped.purpose = purposeRaw && !purposeRaw.toString().includes('מס\' תב"ר') ? purposeRaw.toString().trim() : '';
       
       // Amount from fifth column
       const amountRaw = row[allKeys[4]] || row['__EMPTY_4'] || '0';
       mapped.amount = parseFloat(String(amountRaw).replace(/,/g, '').trim()) || 0;
       
-      // Valid until date from sixth column  
+      // Valid until date from sixth column - but validate it's actually a date
       const validUntilRaw = row[allKeys[5]] || row['__EMPTY_5'] || '';
-      if (validUntilRaw && typeof validUntilRaw === 'string' && validUntilRaw.length > 0 && 
+      if (validUntilRaw && 
+          typeof validUntilRaw === 'string' && 
+          validUntilRaw.length > 0 && 
+          !validUntilRaw.includes('תוקף ההרשאה') &&
           !validUntilRaw.includes('מחלקה') && 
+          !validUntilRaw.includes('האנרגיה') &&
           (validUntilRaw.includes('.') || validUntilRaw.includes('/') || validUntilRaw.includes('-') || validUntilRaw.includes('20'))) {
         mapped.valid_until = validUntilRaw;
       }
       
-      // Department from seventh column
+      // Department from seventh column - map to appropriate slug
       const deptRaw = row[allKeys[6]] || row['__EMPTY_6'] || '';
       console.log('🐛 Department value:', deptRaw);
       
-      // Map department to appropriate slug
-      if (deptRaw) {
+      if (deptRaw && !deptRaw.toString().includes('מחלקה מטפלת')) {
         const deptStr = deptRaw.toString().toLowerCase();
         if (deptStr.includes('הנדסה')) {
           mapped.department_slug = 'engineering';
@@ -614,7 +625,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
           mapped.department_slug = 'education';
         } else if (deptStr.includes('תרבות')) {
           mapped.department_slug = 'non-formal';
-        } else if (deptStr.includes('ספורט')) {
+        } else if (deptStr.includes('ספורט') || deptStr.includes('רווחה')) {
           mapped.department_slug = 'welfare';
         } else {
           mapped.department_slug = 'finance';
@@ -623,16 +634,20 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         mapped.department_slug = 'finance';
       }
       
-      // Approved date from eighth column
+      // Approved date from eighth column - validate it's actually a date
       const approvedAtRaw = row[allKeys[7]] || row['__EMPTY_7'] || '';
-      if (approvedAtRaw && typeof approvedAtRaw === 'string' && approvedAtRaw.length > 0 && 
+      if (approvedAtRaw && 
+          typeof approvedAtRaw === 'string' && 
+          approvedAtRaw.length > 0 && 
+          !approvedAtRaw.includes('תאריך אישור מליאה') &&
           !approvedAtRaw.includes('מחלקה') && 
           (approvedAtRaw.includes('.') || approvedAtRaw.includes('/') || approvedAtRaw.includes('-') || approvedAtRaw.includes('20'))) {
         mapped.approved_at = approvedAtRaw;
       }
       
       // Notes from ninth column
-      mapped.notes = row[allKeys[8]] || row['__EMPTY_8'] || '';
+      const notesRaw = row[allKeys[8]] || row['__EMPTY_8'] || '';
+      mapped.notes = notesRaw && !notesRaw.toString().includes('תאריך אישור מליאה') ? notesRaw.toString().trim() : '';
       
       // Default status
       mapped.status = 'pending';
