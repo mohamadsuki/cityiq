@@ -256,7 +256,6 @@ export function EditInquiryDialog({ open, onOpenChange, onSuccess, inquiry }: Ed
                   <SelectItem value="in_progress">בטיפול</SelectItem>
                   <SelectItem value="pending">בהמתנה</SelectItem>
                   <SelectItem value="resolved">טופל</SelectItem>
-                  <SelectItem value="closed">סגור</SelectItem>
                 </SelectContent>
               </Select>
             </div>
