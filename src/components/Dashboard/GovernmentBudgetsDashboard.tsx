@@ -52,7 +52,11 @@ export default function GovernmentBudgetsDashboard() {
     total: grants.length,
     approved: grants.filter(g => g.status === 'approved').length,
     pending: grants.filter(g => g.status === 'pending').length,
-    totalAmount: grants.filter(g => g.status === 'approved').reduce((sum, g) => sum + (g.approved_amount || 0), 0)
+    totalAmount: grants.filter(g => g.status === 'approved').reduce((sum, g) => {
+      // נשתמש ב approved_amount אם קיים, אחרת ב amount
+      const approvedAmount = g.approved_amount || g.amount || 0;
+      return sum + approvedAmount;
+    }, 0)
   };
 
   const authStats = {
