@@ -90,7 +90,12 @@ export default function BudgetAuthorizationsPage() {
     },
     {
       key: "ministry",
-      header: "משרד",
+      header: "משרד מממן",
+      sortable: true
+    },
+    {
+      key: "program",
+      header: "תיאור ההרשאה",
       sortable: true
     },
     {
@@ -100,9 +105,41 @@ export default function BudgetAuthorizationsPage() {
     },
     {
       key: "amount",
-      header: "סכום (₪)",
+      header: "סכום ההרשאה (₪)",
       sortable: true,
       render: (value: any) => new Intl.NumberFormat('he-IL').format(value || 0)
+    },
+    {
+      key: "valid_until",
+      header: "תוקף ההרשאה",
+      sortable: true,
+      render: (value: any) => value ? new Date(value).toLocaleDateString('he-IL') : '-'
+    },
+    {
+      key: "department_slug",
+      header: "מחלקה מטפלת",
+      sortable: true,
+      render: (value: any) => {
+        const deptMap: Record<string, string> = {
+          'finance': 'כספים',
+          'engineering': 'הנדסה',
+          'education': 'חינוך',
+          'welfare': 'רווחה',
+          'non-formal': 'תרבות'
+        };
+        return deptMap[value] || value || '-';
+      }
+    },
+    {
+      key: "approved_at", 
+      header: "תאריך אישור מליאה",
+      sortable: true,
+      render: (value: any) => value ? new Date(value).toLocaleDateString('he-IL') : '-'
+    },
+    {
+      key: "notes",
+      header: "הערות",
+      render: (value: any) => value || '-'
     },
     {
       key: "status",
@@ -117,23 +154,6 @@ export default function BudgetAuthorizationsPage() {
           </Badge>
         );
       }
-    },
-    {
-      key: "submitted_at",
-      header: "תאריך הגשה",
-      sortable: true,
-      render: (value: any) => value ? new Date(value).toLocaleDateString('he-IL') : '-'
-    },
-    {
-      key: "approved_at", 
-      header: "תאריך אישור",
-      sortable: true,
-      render: (value: any) => value ? new Date(value).toLocaleDateString('he-IL') : '-'
-    },
-    {
-      key: "notes",
-      header: "הערות",
-      render: (value: any) => value || '-'
     }
   ];
 
