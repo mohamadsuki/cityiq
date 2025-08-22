@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/context/AuthContext";
 import { useSearchParams } from "react-router-dom";
 import type { DepartmentSlug } from "@/lib/demoAccess";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { DataUploader } from "@/components/shared/DataUploader";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { FileText, TrendingUp, CheckCircle, Clock, AlertCircle, DollarSign } from "lucide-react";
 
 // Grant types aligned with DB
 export type GrantStatus = 'draft' | 'submitted' | 'pending' | 'approved' | 'rejected';
@@ -249,6 +251,51 @@ export default function GrantsApp() {
     return diff;
   };
 
+  // Statistics calculations
+  const stats = useMemo(() => {
+    const total = grants.length;
+    const approved = grants.filter(g => g.status?.toLowerCase() === 'approved').length;
+    const pending = grants.filter(g => g.status?.toLowerCase() === 'pending').length;
+    const rejected = grants.filter(g => g.status?.toLowerCase() === 'rejected').length;
+    const totalAmount = grants.reduce((sum, g) => sum + (g.amount || 0), 0);
+    const approvedAmount = grants.filter(g => g.status?.toLowerCase() === 'approved').reduce((sum, g) => sum + (g.amount || 0), 0);
+    
+    return {
+      total,
+      approved,
+      pending,
+      rejected,
+      totalAmount,
+      approvedAmount,
+      successRate: total > 0 ? Math.round((approved / total) * 100) : 0
+    };
+  }, [grants]);
+
+  // Data for charts
+  const statusChartData = [
+    { name: 'מאושרים', value: stats.approved, color: '#22c55e' },
+    { name: 'ממתינים', value: stats.pending, color: '#f59e0b' },
+    { name: 'נדחים', value: stats.rejected, color: '#ef4444' },
+    { name: 'אחרים', value: stats.total - stats.approved - stats.pending - stats.rejected, color: '#6b7280' }
+  ].filter(item => item.value > 0);
+
+  const departmentData = useMemo(() => {
+    const deptCounts: Record<string, number> = {};
+    const deptAmounts: Record<string, number> = {};
+    
+    grants.forEach(g => {
+      const dept = g.department_slug || 'אחר';
+      deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+      deptAmounts[dept] = (deptAmounts[dept] || 0) + (g.amount || 0);
+    });
+
+    return Object.keys(deptCounts).map(dept => ({
+      name: deptLabel(dept as DepartmentSlug),
+      count: deptCounts[dept],
+      amount: deptAmounts[dept]
+    }));
+  }, [grants]);
+
   return (
     <div className="space-y-6">
       <header className="flex items-center justify-between">
@@ -260,6 +307,108 @@ export default function GrantsApp() {
           <Button onClick={openCreate}>קול קורא חדש</Button>
         )}
       </header>
+
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">סה"כ קולות קוראים</CardTitle>
+            <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{stats.total}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">מאושרים</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-900 dark:text-green-100">{stats.approved}</div>
+            <p className="text-xs text-green-700 dark:text-green-300">
+              {stats.successRate}% שיעור הצלחה
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 dark:from-yellow-950/30 dark:to-yellow-900/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-yellow-900 dark:text-yellow-100">ממתינים</CardTitle>
+            <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats.pending}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">סכום כולל</CardTitle>
+            <DollarSign className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+              ₪{stats.totalAmount.toLocaleString('he-IL')}
+            </div>
+            <p className="text-xs text-purple-700 dark:text-purple-300">
+              מאושר: ₪{stats.approvedAmount.toLocaleString('he-IL')}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-0 shadow-elevated bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי סטטוס</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusChartData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {statusChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-elevated bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי מחלקות</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={departmentData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Data Uploader */}
       <DataUploader context="grants" onUploadSuccess={() => fetchGrants()} />
