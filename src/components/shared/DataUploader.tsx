@@ -553,9 +553,13 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.amount = parseFloat(String(amountFromStatus).replace(/,/g, '').trim()) || 0;
       mapped.status = 'pending';
       
-      // Handle dates - parse from correct columns based on logs
+      // Handle dates - avoid mapping department names to date fields
       const dateValue1 = normalizedRow['submitted_at'] || normalizedRow['תוקף ההרשאה'] || normalizedRow['__empty_5'] || row['__EMPTY_5'] || '';
-      if (dateValue1 && !dateValue1.includes('מחלקה') && !dateValue1.includes('הנדסה') && !dateValue1.includes('תרבות')) {
+      if (dateValue1 && typeof dateValue1 === 'string' && dateValue1.length > 0 && 
+          !dateValue1.includes('מחלקה') && !dateValue1.includes('הנדסה') && 
+          !dateValue1.includes('תרבות') && !dateValue1.includes('ספורט') && 
+          !dateValue1.includes('חינוך') && !dateValue1.includes('מנכ"ל') &&
+          (dateValue1.includes('.') || dateValue1.includes('/') || dateValue1.includes('-') || dateValue1.includes('20'))) {
         mapped.submitted_at = dateValue1;
       }
       
@@ -563,7 +567,11 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       const departmentValue = normalizedRow['approved_at'] || normalizedRow['מחלקה מטפלת'] || normalizedRow['__empty_6'] || row['__EMPTY_6'] || '';
       
       const validDateValue = normalizedRow['valid_until'] || normalizedRow['תאריך אישור מליאה'] || normalizedRow['__empty_7'] || row['__EMPTY_7'] || '';
-      if (validDateValue && !validDateValue.includes('מחלקה') && !validDateValue.includes('הנדסה') && !validDateValue.includes('תרבות')) {
+      if (validDateValue && typeof validDateValue === 'string' && validDateValue.length > 0 && 
+          !validDateValue.includes('מחלקה') && !validDateValue.includes('הנדסה') && 
+          !validDateValue.includes('תרבות') && !validDateValue.includes('ספורט') && 
+          !validDateValue.includes('חינוך') && !validDateValue.includes('מנכ"ל') &&
+          (validDateValue.includes('.') || validDateValue.includes('/') || validDateValue.includes('-') || validDateValue.includes('20'))) {
         mapped.approved_at = validDateValue;
       }
       
