@@ -51,8 +51,13 @@ const detectDataType = (headers: string[], rows: any[], context?: string) => {
     }
   }
   
-  // Also check in the first few rows content for regular budget indicators
+  // Also check in the first few rows content for grants indicators  
   const allContent = [...headers, ...rows.flatMap(row => Object.values(row).filter(v => typeof v === 'string'))].join(' ').toLowerCase();
+  
+  if (allContent.includes('קולות קוראים') || allContent.includes('משרד') || allContent.includes('ממקם') || 
+      allContent.includes('תגוית') || allContent.includes('ספורט') || allContent.includes('grant')) {
+    return { table: 'grants', reason: 'זוהה על בסיס תוכן הקובץ (קולות קוראים)' };
+  }
   
   if (allContent.includes('תמצית נתוני התקציב הרגיל') || allContent.includes('תקציב שנתי מאושר') || allContent.includes('תקציב יחסי')) {
     return { table: 'regular_budget', reason: 'זוהה על בסיס תוכן הקובץ (תקציב רגיל)' };
