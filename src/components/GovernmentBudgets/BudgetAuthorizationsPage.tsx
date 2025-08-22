@@ -238,10 +238,10 @@ export default function BudgetAuthorizationsPage() {
 
   // נתוני גרפים
   const statusData = [
-    { name: 'מאושרות', value: stats.approved, color: 'hsl(var(--chart-1))' },
-    { name: 'ממתינות', value: stats.pending, color: 'hsl(var(--chart-2))' },
-    { name: 'בבדיקה', value: authorizations.filter(a => a.status === 'in_review').length, color: 'hsl(var(--chart-3))' },
-    { name: 'נדחו', value: authorizations.filter(a => a.status === 'rejected').length, color: 'hsl(var(--chart-4))' }
+    { name: 'מאושרות', value: stats.approved, color: '#22c55e', icon: '✓' },
+    { name: 'ממתינות', value: stats.pending, color: '#f59e0b', icon: '⏳' },
+    { name: 'בבדיקה', value: authorizations.filter(a => a.status === 'in_review').length, color: '#3b82f6', icon: '👁️' },
+    { name: 'נדחו', value: authorizations.filter(a => a.status === 'rejected').length, color: '#ef4444', icon: '✗' }
   ].filter(item => item.value > 0);
 
   const ministryData = authorizations.reduce((acc: any[], auth) => {
@@ -258,6 +258,9 @@ export default function BudgetAuthorizationsPage() {
     }
     return acc;
   }, []).slice(0, 6);
+
+  // צבעים לגרף משרדים
+  const ministryColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
   return (
     <div className="space-y-6">
@@ -342,16 +345,36 @@ export default function BudgetAuthorizationsPage() {
                     cy="50%"
                     labelLine={false}
                     label={({ name, value, percent }) => `${name}: ${value} (${(percent * 100).toFixed(0)}%)`}
-                    outerRadius={80}
+                    outerRadius={100}
+                    innerRadius={40}
                     fill="#8884d8"
                     dataKey="value"
+                    stroke="#fff"
+                    strokeWidth={2}
                   >
                     {statusData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip />
-                  <Legend />
+                  <Tooltip 
+                    formatter={(value: any, name: any) => [
+                      `${value} הרשאות`,
+                      name
+                    ]}
+                    labelStyle={{ color: '#374151' }}
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    iconType="circle"
+                    wrapperStyle={{ paddingTop: '10px' }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -366,22 +389,35 @@ export default function BudgetAuthorizationsPage() {
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={ministryData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                   <XAxis 
                     dataKey="ministry" 
                     angle={-45}
                     textAnchor="end"
                     height={80}
                     interval={0}
+                    tick={{ fontSize: 12 }}
                   />
-                  <YAxis />
+                  <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip 
                     formatter={(value, name) => [
                       name === 'count' ? `${value} הרשאות` : `₪${new Intl.NumberFormat('he-IL').format(value as number)}`,
                       name === 'count' ? 'מספר הרשאות' : 'סכום כולל'
                     ]}
+                    labelStyle={{ color: '#374151' }}
+                    contentStyle={{ 
+                      backgroundColor: '#fff', 
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '6px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                    }}
                   />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" name="count" />
+                  <Bar 
+                    dataKey="count" 
+                    fill="#3b82f6"
+                    name="count"
+                    radius={[4, 4, 0, 0]}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
