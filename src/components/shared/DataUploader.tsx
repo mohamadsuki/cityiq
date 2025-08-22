@@ -85,9 +85,12 @@ const detectDataType = (headers: string[], rows: any[], context?: string) => {
     return { table: 'tabarim', reason: 'זוהה על בסיס כותרות תב"רים' };
   }
   
-  // Check for budget authorizations keywords
-  if (headerStr.includes('authorization') || headerStr.includes('הרשאה') || headerStr.includes('הרשאות') || 
-      headerStr.includes('תקציב') || headerStr.includes('budget') || headerStr.includes('אישור')) {
+  // Check for budget authorizations keywords (more specific)
+  if (headerStr.includes('הרשאה') || headerStr.includes('הרשאות') || 
+      headerStr.includes('authorization') || headerStr.includes('מספר הרשאה') ||
+      headerStr.includes('תוקף ההרשאה') || headerStr.includes('סכום ההרשאה') ||
+      (headerStr.includes('משרד') && headerStr.includes('תב"ר')) ||
+      (headerStr.includes('ministry') && headerStr.includes('authorization'))) {
     return { table: 'budget_authorizations', reason: 'זוהה על בסיס כותרות הרשאות תקציביות' };
   }
   
@@ -210,7 +213,18 @@ const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
     'תקציב גרנט': 'grant_amount',
     'סטטוס גרנט': 'grant_status',
     'תאריך הגשה': 'submitted_at',
-    'תאריך החלטה': 'decision_at'
+    'תאריך החלטה': 'decision_at',
+    
+    // Budget Authorization fields
+    'מספר הרשאה': 'authorization_number',
+    'משרד מממן': 'ministry',
+    'תוכנית': 'program',
+    'מס\' תב"ר': 'purpose',
+    'סכום ההרשאה': 'amount',
+    'תוקף ההרשאה': 'valid_until',
+    'מחלקה מטפלת': 'department',
+    'תאריך אישור מליאה': 'approved_at',
+    'הערות': 'notes'
   };
   
 
@@ -540,51 +554,90 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       break;
       
     case 'budget_authorizations':
-      mapped.authorization_number = normalizedRow['authorization_number'] || normalizedRow['מספר הרשאה'] || normalizedRow['__empty'] || row['__EMPTY'] || '';
-      mapped.ministry = normalizedRow['ministry'] || normalizedRow['משרד'] || normalizedRow['__empty_1'] || row['__EMPTY_1'] || '';
-      mapped.program = normalizedRow['program'] || normalizedRow['תוכנית'] || normalizedRow['__empty_2'] || row['__EMPTY_2'] || '';
+      console.log('🐛 BUDGET_AUTHORIZATIONS MAPPING DEBUG:');
+      console.log('🐛 All row keys:', Object.keys(row));
+      console.log('🐛 Raw row values:', Object.values(row).slice(0, 10));
       
-      // Parse tabar number from column 3
-      const tabarValue = normalizedRow['purpose'] || normalizedRow['מס\' תב"ר'] || normalizedRow['__empty_3'] || row['__EMPTY_3'] || '';
-      mapped.purpose = tabarValue;
+      // Get the first column (authorization number) - usually the first key
+      const firstKey = Object.keys(row)[0];
+      const authNumber = row[firstKey] || '';
       
-      // Parse amount from column 4 (status was getting amount values)
-      const amountFromStatus = normalizedRow['status'] || normalizedRow['סכום'] || normalizedRow['סכום ההרשאה'] || normalizedRow['__empty_4'] || row['__EMPTY_4'] || '0';
-      mapped.amount = parseFloat(String(amountFromStatus).replace(/,/g, '').trim()) || 0;
-      mapped.status = 'pending';
+      console.log('🐛 Authorization number from first column:', { firstKey, authNumber });
       
-      // Handle dates - avoid mapping department names to date fields
-      const dateValue1 = normalizedRow['submitted_at'] || normalizedRow['תוקף ההרשאה'] || normalizedRow['__empty_5'] || row['__EMPTY_5'] || '';
-      if (dateValue1 && typeof dateValue1 === 'string' && dateValue1.length > 0 && 
-          !dateValue1.includes('מחלקה') && !dateValue1.includes('הנדסה') && 
-          !dateValue1.includes('תרבות') && !dateValue1.includes('ספורט') && 
-          !dateValue1.includes('חינוך') && !dateValue1.includes('מנכ"ל') &&
-          (dateValue1.includes('.') || dateValue1.includes('/') || dateValue1.includes('-') || dateValue1.includes('20'))) {
-        mapped.submitted_at = dateValue1;
-      }
-      
-      // Department is in column 6-7 - don't map as dates
-      const departmentValue = normalizedRow['approved_at'] || normalizedRow['מחלקה מטפלת'] || normalizedRow['__empty_6'] || row['__EMPTY_6'] || '';
-      
-      const validDateValue = normalizedRow['valid_until'] || normalizedRow['תאריך אישור מליאה'] || normalizedRow['__empty_7'] || row['__EMPTY_7'] || '';
-      if (validDateValue && typeof validDateValue === 'string' && validDateValue.length > 0 && 
-          !validDateValue.includes('מחלקה') && !validDateValue.includes('הנדסה') && 
-          !validDateValue.includes('תרבות') && !validDateValue.includes('ספורט') && 
-          !validDateValue.includes('חינוך') && !validDateValue.includes('מנכ"ל') &&
-          (validDateValue.includes('.') || validDateValue.includes('/') || validDateValue.includes('-') || validDateValue.includes('20'))) {
-        mapped.approved_at = validDateValue;
-      }
-      
-      mapped.notes = normalizedRow['notes'] || normalizedRow['הערות'] || normalizedRow['__empty_8'] || row['__EMPTY_8'] || '';
-      mapped.department_slug = 'finance';
-      
-      // Skip empty rows or header rows
-      if (!mapped.authorization_number || mapped.authorization_number.length < 2 || 
-          mapped.authorization_number.includes('מספר') || 
-          mapped.authorization_number.includes('הרשאה')) {
-        console.log('🚫 Skipping authorization row:', mapped.authorization_number);
+      // Skip header rows or empty rows
+      if (!authNumber || 
+          authNumber.toString().includes('מספר') || 
+          authNumber.toString().includes('הרשאה') ||
+          authNumber.toString().trim() === '' ||
+          authNumber.toString().length < 2) {
+        console.log('🚫 Skipping budget authorization header/empty row:', authNumber);
         return null;
       }
+      
+      mapped.authorization_number = authNumber.toString().trim();
+      
+      // Map other columns based on Excel structure
+      const allKeys = Object.keys(row);
+      console.log('🐛 All available keys for mapping:', allKeys);
+      
+      // Ministry from second column
+      mapped.ministry = row[allKeys[1]] || row['__EMPTY_1'] || '';
+      
+      // Program from third column
+      mapped.program = row[allKeys[2]] || row['__EMPTY_2'] || '';
+      
+      // Purpose/Tabar from fourth column
+      mapped.purpose = row[allKeys[3]] || row['__EMPTY_3'] || '';
+      
+      // Amount from fifth column
+      const amountRaw = row[allKeys[4]] || row['__EMPTY_4'] || '0';
+      mapped.amount = parseFloat(String(amountRaw).replace(/,/g, '').trim()) || 0;
+      
+      // Valid until date from sixth column  
+      const validUntilRaw = row[allKeys[5]] || row['__EMPTY_5'] || '';
+      if (validUntilRaw && typeof validUntilRaw === 'string' && validUntilRaw.length > 0 && 
+          !validUntilRaw.includes('מחלקה') && 
+          (validUntilRaw.includes('.') || validUntilRaw.includes('/') || validUntilRaw.includes('-') || validUntilRaw.includes('20'))) {
+        mapped.valid_until = validUntilRaw;
+      }
+      
+      // Department from seventh column
+      const deptRaw = row[allKeys[6]] || row['__EMPTY_6'] || '';
+      console.log('🐛 Department value:', deptRaw);
+      
+      // Map department to appropriate slug
+      if (deptRaw) {
+        const deptStr = deptRaw.toString().toLowerCase();
+        if (deptStr.includes('הנדסה')) {
+          mapped.department_slug = 'engineering';
+        } else if (deptStr.includes('חינוך')) {
+          mapped.department_slug = 'education';
+        } else if (deptStr.includes('תרבות')) {
+          mapped.department_slug = 'non-formal';
+        } else if (deptStr.includes('ספורט')) {
+          mapped.department_slug = 'welfare';
+        } else {
+          mapped.department_slug = 'finance';
+        }
+      } else {
+        mapped.department_slug = 'finance';
+      }
+      
+      // Approved date from eighth column
+      const approvedAtRaw = row[allKeys[7]] || row['__EMPTY_7'] || '';
+      if (approvedAtRaw && typeof approvedAtRaw === 'string' && approvedAtRaw.length > 0 && 
+          !approvedAtRaw.includes('מחלקה') && 
+          (approvedAtRaw.includes('.') || approvedAtRaw.includes('/') || approvedAtRaw.includes('-') || approvedAtRaw.includes('20'))) {
+        mapped.approved_at = approvedAtRaw;
+      }
+      
+      // Notes from ninth column
+      mapped.notes = row[allKeys[8]] || row['__EMPTY_8'] || '';
+      
+      // Default status
+      mapped.status = 'pending';
+      
+      console.log('🐛 Final budget authorization mapping:', mapped);
       
       break;
       
