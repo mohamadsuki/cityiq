@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,28 @@ export function PublicInquiriesPage() {
     },
     enabled: !!user,
   });
+
+  // Real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('public-inquiries-table-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'public_inquiries'
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   const handleEdit = (inquiry: PublicInquiry) => {
     setSelectedInquiry(inquiry);

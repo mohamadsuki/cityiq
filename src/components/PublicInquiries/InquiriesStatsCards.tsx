@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,7 @@ import type { Database } from "@/integrations/supabase/types";
 type PublicInquiry = Database['public']['Tables']['public_inquiries']['Row'];
 
 export function InquiriesStatsCards() {
-  const { data: inquiries = [] } = useQuery({
+  const { data: inquiries = [], refetch } = useQuery({
     queryKey: ['public-inquiries-stats'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -19,6 +20,28 @@ export function InquiriesStatsCards() {
       return data as PublicInquiry[];
     },
   });
+
+  // Real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('public-inquiries-stats-channel')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'public_inquiries'
+        },
+        () => {
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
 
   // חישוב סטטיסטיקות
   const stats = {
