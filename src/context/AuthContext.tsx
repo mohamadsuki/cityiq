@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 
-export type DepartmentSlug = 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'city-improvement' | 'enforcement' | 'ceo';
+export type DepartmentSlug = 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'city-improvement' | 'enforcement' | 'ceo' | 'inquiries';
 
 interface User {
   id: string;
@@ -92,6 +92,15 @@ const PREDEFINED_USERS = [
     displayName: 'מנהל/ת רישוי עסקים',
     role: 'manager' as const,
     departments: ['business'] as DepartmentSlug[]
+  },
+  { 
+    id: '99999999-9999-9999-9999-999999999999', 
+    username: 'inquiries', 
+    password: 'inquiry123', 
+    email: 'inquiries@city.gov.il',
+    displayName: 'מנהל/ת פניות ציבור',
+    role: 'manager' as const,
+    departments: ['inquiries'] as DepartmentSlug[]
   },
 ];
 

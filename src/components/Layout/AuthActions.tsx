@@ -21,6 +21,7 @@ const DEPT_LABELS: Record<DepartmentSlug, string> = {
   "city-improvement": "מחלקת שיפור פני העיר",
   enforcement: "אכיפה",
   ceo: "מנכ\"ל",
+  inquiries: "פניות ציבור",
 };
 
 export function AuthActions() {

@@ -76,6 +76,7 @@ const DEPARTMENT_LABELS: Record<DepartmentSlug, string> = {
   "city-improvement": "מחלקת שיפור פני העיר",
   enforcement: "אכיפה",
   ceo: "מנכ\"ל",
+  inquiries: "פניות ציבור",
 };
 
 function statusBadgeVariant(status: TaskStatus): "default" | "secondary" | "destructive" | "outline" {
