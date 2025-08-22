@@ -94,6 +94,15 @@ const PREDEFINED_USERS = [
     departments: ['business'] as DepartmentSlug[]
   },
   { 
+    id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 
+    username: 'governmentbudgets', 
+    password: 'govbudgets123', 
+    email: 'government-budgets@city.gov.il',
+    displayName: 'מנהל/ת תקציבים ממשלתיים ותמיכות',
+    role: 'manager' as const,
+    departments: ['government-budgets'] as DepartmentSlug[]
+  },
+  { 
     id: '99999999-9999-9999-9999-999999999999', 
     username: 'inquiries', 
     password: 'inquiry123', 
