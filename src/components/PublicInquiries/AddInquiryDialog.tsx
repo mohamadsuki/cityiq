@@ -53,6 +53,7 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
     setIsLoading(true);
     try {
       console.log('Submitting inquiry with user ID:', user.id);
+      console.log('User object:', user);
       const inquiryData = {
         name: formData.name,
         phone: formData.phone,
