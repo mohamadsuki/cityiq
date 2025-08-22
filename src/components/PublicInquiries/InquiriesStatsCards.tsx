@@ -207,7 +207,7 @@ export function InquiriesStatsCards({
       >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
           <CardTitle className="text-sm font-semibold text-red-900 dark:text-red-100">דחופות</CardTitle>
-          <div className="p-2 bg-red-600 rounded-lg group-hover:scale-110 transition-transform duration-300 animate-pulse">
+          <div className="p-2 bg-red-600 rounded-lg group-hover:scale-110 transition-transform duration-300">
             <AlertTriangle className="h-5 w-5 text-white" />
           </div>
         </CardHeader>
