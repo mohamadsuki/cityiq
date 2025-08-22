@@ -205,6 +205,29 @@ export function PublicInquiriesPage() {
       },
     },
     {
+      accessorKey: "assigned_handler",
+      header: "גורם מטפל",
+      cell: ({ row }) => {
+        const assignedHandler = row.getValue("assigned_handler") as string;
+        const assignedAt = (row.original as any).assigned_at;
+        
+        if (!assignedHandler) {
+          return <span className="text-muted-foreground">לא הועבר</span>;
+        }
+        
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium">{assignedHandler}</span>
+            {assignedAt && (
+              <span className="text-xs text-muted-foreground">
+                {new Date(assignedAt).toLocaleDateString('he-IL')}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       id: "actions",
       header: "פעולות",
       cell: ({ row }: any) => {

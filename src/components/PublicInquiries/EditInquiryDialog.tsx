@@ -48,6 +48,8 @@ export function EditInquiryDialog({ open, onOpenChange, onSuccess, inquiry }: Ed
     department_slug: "",
     internal_notes: "",
     response: "",
+    assigned_handler: "",
+    assigned_at: null as Date | null,
   });
 
   useEffect(() => {
@@ -66,6 +68,8 @@ export function EditInquiryDialog({ open, onOpenChange, onSuccess, inquiry }: Ed
         department_slug: inquiry.department_slug || "",
         internal_notes: inquiry.internal_notes || "",
         response: inquiry.response || "",
+        assigned_handler: (inquiry as any).assigned_handler || "",
+        assigned_at: (inquiry as any).assigned_at ? new Date((inquiry as any).assigned_at) : null,
       });
     }
   }, [inquiry]);
@@ -91,6 +95,8 @@ export function EditInquiryDialog({ open, onOpenChange, onSuccess, inquiry }: Ed
         internal_notes: formData.internal_notes,
         response: formData.response,
         resolved_at: formData.status === 'resolved' ? new Date().toISOString() : null,
+        assigned_handler: formData.assigned_handler,
+        assigned_at: formData.assigned_at ? formData.assigned_at.toISOString().split('T')[0] : null,
       };
 
       const { error } = await supabase
@@ -298,6 +304,36 @@ export function EditInquiryDialog({ open, onOpenChange, onSuccess, inquiry }: Ed
               rows={3}
               placeholder="הערות למעקב פנימי..."
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="assigned_handler">הפניה הועברה לטיפול</Label>
+              <Input
+                id="assigned_handler"
+                value={formData.assigned_handler}
+                onChange={(e) => updateFormData("assigned_handler", e.target.value)}
+                placeholder="שם הגורם שיטפל בפניה"
+              />
+              <p className="text-sm text-muted-foreground">
+                יש לכתוב את שם הגורם שיטפל בפניה
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>בתאריך</Label>
+              <Input
+                type="date"
+                value={formData.assigned_at ? formData.assigned_at.toISOString().split('T')[0] : ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    assigned_at: value ? new Date(value) : null 
+                  }));
+                }}
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">

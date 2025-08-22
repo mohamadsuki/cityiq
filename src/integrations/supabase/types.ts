@@ -624,6 +624,8 @@ export type Database = {
       public_inquiries: {
         Row: {
           address: string | null
+          assigned_at: string | null
+          assigned_handler: string | null
           assigned_to: string | null
           created_at: string
           department_slug: Database["public"]["Enums"]["department_slug"] | null
@@ -647,6 +649,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          assigned_at?: string | null
+          assigned_handler?: string | null
           assigned_to?: string | null
           created_at?: string
           department_slug?:
@@ -672,6 +676,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          assigned_at?: string | null
+          assigned_handler?: string | null
           assigned_to?: string | null
           created_at?: string
           department_slug?:
