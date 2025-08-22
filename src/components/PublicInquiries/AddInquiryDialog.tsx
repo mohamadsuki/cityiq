@@ -248,22 +248,6 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>מחלקה אחראית</Label>
-            <Select value={formData.department_slug} onValueChange={(value) => updateFormData("department_slug", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="בחר מחלקה" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="finance">פיננסים</SelectItem>
-                <SelectItem value="education">חינוך</SelectItem>
-                <SelectItem value="engineering">הנדסה</SelectItem>
-                <SelectItem value="welfare">רווחה</SelectItem>
-                <SelectItem value="business">רישוי עסקים</SelectItem>
-                <SelectItem value="non-formal">חינוך בלתי פורמאלי</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
