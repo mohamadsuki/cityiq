@@ -77,7 +77,13 @@ export default function Navigation() {
           <nav className="space-y-2">
             {navigationItems
               .filter((item) => {
-                if (!role || role === 'mayor' || role === 'ceo') return true;
+                if (!role || role === 'mayor' || role === 'ceo') {
+                  // עבור מנכ"ל וראש העיר - הסתר קולות קוראים ישירות, הם יראו אותם דרך תקציבים ממשלתיים
+                  if (item.id === 'grants') return false;
+                  return true;
+                }
+                // עבור משתמשים אחרים - הסתר תקציבים ממשלתיים, הם יראו קולות קוראים ישירות
+                if (item.id === 'government-budgets') return false;
                 // Always allow overview and global modules
                 if (['overview','tasks','grants','projects'].includes(item.id)) return true;
                 // Allow only permitted departments for managers
@@ -86,7 +92,7 @@ export default function Navigation() {
               .map((item) => {
                 const Icon = item.icon;
                 const isActive = (item.id === 'finance' && (currentPath === item.url || currentPath.startsWith('/finance/'))) ||
-                  (item.id === 'government-budgets' && (currentPath === item.url || currentPath.startsWith('/government-budgets/'))) ||
+                  (item.id === 'government-budgets' && (currentPath === item.url || currentPath.startsWith('/government-budgets/') || currentPath === '/grants')) ||
                   (item.id !== 'finance' && item.id !== 'government-budgets' && currentPath === item.url);
 
                 return (
