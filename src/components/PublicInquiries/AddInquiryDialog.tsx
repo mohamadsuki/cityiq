@@ -38,6 +38,7 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
     email: "",
     address: "",
     subject: "",
+    domain: "",
     description: "",
     inquiry_type: "",
     source: "",
@@ -58,6 +59,7 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
         email: formData.email,
         address: formData.address,
         subject: formData.subject,
+        domain: formData.domain,
         description: formData.description,
         inquiry_type: formData.inquiry_type,
         source: formData.source,
@@ -85,6 +87,7 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
         email: "",
         address: "",
         subject: "",
+        domain: "",
         description: "",
         inquiry_type: "",
         source: "",
@@ -167,6 +170,22 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
               onChange={(e) => updateFormData("subject", e.target.value)}
               required
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label>תחום *</Label>
+            <Select value={formData.domain} onValueChange={(value) => updateFormData("domain", value)} required>
+              <SelectTrigger>
+                <SelectValue placeholder="בחר תחום" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cleaning_environment">ניקיון וסביבה</SelectItem>
+                <SelectItem value="animals">בעלי חיים</SelectItem>
+                <SelectItem value="infrastructure_hazards">תשתיות ומפגעים</SelectItem>
+                <SelectItem value="security">ביטחון</SelectItem>
+                <SelectItem value="other">אחר</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
