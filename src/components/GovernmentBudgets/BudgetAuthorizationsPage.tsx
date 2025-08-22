@@ -84,42 +84,46 @@ export default function BudgetAuthorizationsPage() {
 
   const columns = [
     {
-      key: "authorization_number",
+      accessorKey: "authorization_number",
       header: "מספר הרשאה",
-      sortable: true
+      enableSorting: true
     },
     {
-      key: "ministry",
+      accessorKey: "ministry",
       header: "משרד מממן",
-      sortable: true
+      enableSorting: true
     },
     {
-      key: "program",
+      accessorKey: "program",
       header: "תיאור ההרשאה",
-      sortable: true
+      enableSorting: true
     },
     {
-      key: "purpose",
+      accessorKey: "purpose",
       header: "מס' תב\"ר",
-      sortable: true
+      enableSorting: true
     },
     {
-      key: "amount",
+      accessorKey: "amount",
       header: "סכום ההרשאה (₪)",
-      sortable: true,
-      render: (value: any) => new Intl.NumberFormat('he-IL').format(value || 0)
+      enableSorting: true,
+      cell: ({ getValue }: any) => new Intl.NumberFormat('he-IL').format(getValue() || 0)
     },
     {
-      key: "valid_until",
+      accessorKey: "valid_until",
       header: "תוקף ההרשאה",
-      sortable: true,
-      render: (value: any) => value ? new Date(value).toLocaleDateString('he-IL') : '-'
+      enableSorting: true,
+      cell: ({ getValue }: any) => {
+        const value = getValue();
+        return value ? new Date(value).toLocaleDateString('he-IL') : '-';
+      }
     },
     {
-      key: "department_slug",
+      accessorKey: "department_slug",
       header: "מחלקה מטפלת",
-      sortable: true,
-      render: (value: any) => {
+      enableSorting: true,
+      cell: ({ getValue }: any) => {
+        const value = getValue();
         const deptMap: Record<string, string> = {
           'finance': 'כספים',
           'engineering': 'הנדסה',
@@ -131,20 +135,24 @@ export default function BudgetAuthorizationsPage() {
       }
     },
     {
-      key: "approved_at", 
+      accessorKey: "approved_at", 
       header: "תאריך אישור מליאה",
-      sortable: true,
-      render: (value: any) => value ? new Date(value).toLocaleDateString('he-IL') : '-'
+      enableSorting: true,
+      cell: ({ getValue }: any) => {
+        const value = getValue();
+        return value ? new Date(value).toLocaleDateString('he-IL') : '-';
+      }
     },
     {
-      key: "notes",
+      accessorKey: "notes",
       header: "הערות",
-      render: (value: any) => value || '-'
+      cell: ({ getValue }: any) => getValue() || '-'
     },
     {
-      key: "status",
+      accessorKey: "status",
       header: "סטטוס",
-      render: (status: string) => {
+      cell: ({ getValue }: any) => {
+        const status = getValue();
         const statusInfo = statusLabels[status as keyof typeof statusLabels] || statusLabels.pending;
         const Icon = statusInfo?.icon || AlertCircle;
         return (
