@@ -43,7 +43,7 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
     inquiry_type: "",
     source: "",
     priority: "medium",
-    department_slug: "",
+    department_slug: "inquiries",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,7 +64,7 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
         inquiry_type: formData.inquiry_type,
         source: formData.source,
         priority: formData.priority,
-        department_slug: formData.department_slug as any || null,
+        department_slug: 'inquiries' as any,
         user_id: user.id,
       };
       console.log('Inquiry data:', inquiryData);
@@ -92,7 +92,7 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
         inquiry_type: "",
         source: "",
         priority: "medium",
-        department_slug: "",
+        department_slug: "inquiries",
       });
     } catch (error: any) {
       toast({
