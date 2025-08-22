@@ -543,25 +543,32 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.authorization_number = normalizedRow['authorization_number'] || normalizedRow['מספר הרשאה'] || normalizedRow['__empty'] || row['__EMPTY'] || '';
       mapped.ministry = normalizedRow['ministry'] || normalizedRow['משרד'] || normalizedRow['__empty_1'] || row['__EMPTY_1'] || '';
       mapped.program = normalizedRow['program'] || normalizedRow['תוכנית'] || normalizedRow['__empty_2'] || row['__EMPTY_2'] || '';
-      mapped.purpose = normalizedRow['purpose'] || normalizedRow['מטרה'] || normalizedRow['__empty_3'] || row['__EMPTY_3'] || '';
-      mapped.status = normalizedRow['status'] || normalizedRow['סטטוס'] || normalizedRow['__empty_4'] || row['__EMPTY_4'] || 'pending';
       
-      // Handle amount field
-      const authAmountValue = normalizedRow['amount'] || normalizedRow['סכום'] || normalizedRow['__empty_5'] || row['__EMPTY_5'] || '0';
-      mapped.amount = parseFloat(String(authAmountValue).replace(/,/g, '').trim()) || 0;
+      // Parse tabar number from column 3
+      const tabarValue = normalizedRow['purpose'] || normalizedRow['מס\' תב"ר'] || normalizedRow['__empty_3'] || row['__EMPTY_3'] || '';
+      mapped.purpose = tabarValue;
       
-      // Handle dates
-      const submittedValue = normalizedRow['submitted_at'] || normalizedRow['תאריך הגשה'] || normalizedRow['__empty_6'] || row['__EMPTY_6'] || '';
-      if (submittedValue) mapped.submitted_at = submittedValue;
+      // Parse amount from column 4 (status was getting amount values)
+      const amountFromStatus = normalizedRow['status'] || normalizedRow['סכום'] || normalizedRow['סכום ההרשאה'] || normalizedRow['__empty_4'] || row['__EMPTY_4'] || '0';
+      mapped.amount = parseFloat(String(amountFromStatus).replace(/,/g, '').trim()) || 0;
+      mapped.status = 'pending';
       
-      const approvedValue = normalizedRow['approved_at'] || normalizedRow['תאריך אישור'] || normalizedRow['__empty_7'] || row['__EMPTY_7'] || '';
-      if (approvedValue) mapped.approved_at = approvedValue;
+      // Handle dates - parse from correct columns based on logs
+      const dateValue1 = normalizedRow['submitted_at'] || normalizedRow['תוקף ההרשאה'] || normalizedRow['__empty_5'] || row['__EMPTY_5'] || '';
+      if (dateValue1 && !dateValue1.includes('מחלקה') && !dateValue1.includes('הנדסה') && !dateValue1.includes('תרבות')) {
+        mapped.submitted_at = dateValue1;
+      }
       
-      const validValue = normalizedRow['valid_until'] || normalizedRow['תוקף עד'] || normalizedRow['__empty_8'] || row['__EMPTY_8'] || '';
-      if (validValue) mapped.valid_until = validValue;
+      // Department is in column 6-7 - don't map as dates
+      const departmentValue = normalizedRow['approved_at'] || normalizedRow['מחלקה מטפלת'] || normalizedRow['__empty_6'] || row['__EMPTY_6'] || '';
       
-      mapped.notes = normalizedRow['notes'] || normalizedRow['הערות'] || normalizedRow['__empty_9'] || row['__EMPTY_9'] || '';
-      mapped.department_slug = 'government-budgets';
+      const validDateValue = normalizedRow['valid_until'] || normalizedRow['תאריך אישור מליאה'] || normalizedRow['__empty_7'] || row['__EMPTY_7'] || '';
+      if (validDateValue && !validDateValue.includes('מחלקה') && !validDateValue.includes('הנדסה') && !validDateValue.includes('תרבות')) {
+        mapped.approved_at = validDateValue;
+      }
+      
+      mapped.notes = normalizedRow['notes'] || normalizedRow['הערות'] || normalizedRow['__empty_8'] || row['__EMPTY_8'] || '';
+      mapped.department_slug = 'finance';
       
       // Skip empty rows or header rows
       if (!mapped.authorization_number || mapped.authorization_number.length < 2 || 
