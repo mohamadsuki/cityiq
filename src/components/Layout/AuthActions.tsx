@@ -18,6 +18,7 @@ const DEPT_LABELS: Record<DepartmentSlug, string> = {
   welfare: "רווחה",
   "non-formal": "חינוך בלתי פורמלי",
   business: "עסקים",
+  "government-budgets": "תקציבים ממשלתיים ותמיכות",
   "city-improvement": "מחלקת שיפור פני העיר",
   enforcement: "אכיפה",
   ceo: "מנכ\"ל",

@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 
-export type DepartmentSlug = 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'city-improvement' | 'enforcement' | 'ceo' | 'inquiries';
+export type DepartmentSlug = 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'government-budgets' | 'city-improvement' | 'enforcement' | 'ceo' | 'inquiries';
 
 interface User {
   id: string;

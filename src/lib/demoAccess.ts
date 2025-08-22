@@ -1,4 +1,4 @@
-export type DepartmentSlug = 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'city-improvement' | 'enforcement' | 'ceo' | 'inquiries';
+export type DepartmentSlug = 'finance' | 'education' | 'engineering' | 'welfare' | 'non-formal' | 'business' | 'government-budgets' | 'city-improvement' | 'enforcement' | 'ceo' | 'inquiries';
 
 export type DemoUser = {
   email: string;
@@ -9,14 +9,15 @@ export type DemoUser = {
 };
 
 export const DEMO_USERS: DemoUser[] = [
-  { email: 'mayor@city.gov.il', password: 'mayor123', role: 'mayor', departments: ['finance','education','engineering','welfare','non-formal','business','city-improvement','enforcement','inquiries'], displayName: 'ראש העיר' },
-  { email: 'ceo@city.gov.il', password: 'ceo123', role: 'ceo', departments: ['finance','education','engineering','welfare','non-formal','business','city-improvement','enforcement','inquiries'], displayName: 'מנכ"ל העירייה' },
+  { email: 'mayor@city.gov.il', password: 'mayor123', role: 'mayor', departments: ['finance','education','engineering','welfare','non-formal','business','government-budgets','city-improvement','enforcement','inquiries'], displayName: 'ראש העיר' },
+  { email: 'ceo@city.gov.il', password: 'ceo123', role: 'ceo', departments: ['finance','education','engineering','welfare','non-formal','business','government-budgets','city-improvement','enforcement','inquiries'], displayName: 'מנכ"ל העירייה' },
   { email: 'finance@city.gov.il', password: 'finance123', role: 'manager', departments: ['finance'], displayName: 'מנהל/ת פיננסים' },
   { email: 'education@city.gov.il', password: 'education123', role: 'manager', departments: ['education'], displayName: 'מנהל/ת חינוך' },
   { email: 'engineering@city.gov.il', password: 'engineering123', role: 'manager', departments: ['engineering'], displayName: 'מנהל/ת הנדסה' },
   { email: 'welfare@city.gov.il', password: 'welfare123', role: 'manager', departments: ['welfare'], displayName: 'מנהל/ת רווחה' },
   { email: 'non-formal@city.gov.il', password: 'nonformal123', role: 'manager', departments: ['non-formal'], displayName: 'מנהל/ת חינוך בלתי פורמאלי' },
   { email: 'business@city.gov.il', password: 'business123', role: 'manager', departments: ['business'], displayName: 'מנהל/ת רישוי עסקים' },
+  { email: 'government-budgets@city.gov.il', password: 'govbudgets123', role: 'manager', departments: ['government-budgets'], displayName: 'מנהל/ת תקציבים ממשלתיים ותמיכות' },
   { email: 'city-improvement@city.gov.il', password: 'cityimprovement123', role: 'manager', departments: ['city-improvement'], displayName: 'מנהל/ת שיפור פני העיר' },
   { email: 'enforcement@city.gov.il', password: 'enforcement123', role: 'manager', departments: ['enforcement'], displayName: 'מנהל/ת אכיפה' },
   { email: 'inquiries@city.gov.il', password: 'inquiry123', role: 'manager', departments: ['inquiries'], displayName: 'מנהל/ת פניות ציבור' },
@@ -39,6 +40,7 @@ export function departmentFromPath(path: string): DepartmentSlug | null {
     '/welfare': 'welfare',
     '/non-formal': 'non-formal',
     '/business': 'business',
+    '/government-budgets': 'government-budgets',
     '/inquiries': 'inquiries',
   };
   return map[path] || null;

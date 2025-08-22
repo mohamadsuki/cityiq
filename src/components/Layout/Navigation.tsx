@@ -33,6 +33,7 @@ const navigationItems = [
   { id: "welfare", name: "רווחה", icon: Users, url: "/welfare" },
   { id: "non-formal", name: "חינוך בלתי פורמאלי", icon: Activity, url: "/non-formal" },
   { id: "business", name: "רישוי עסקים", icon: Store, url: "/business" },
+  { id: "government-budgets", name: "תקציבים ממשלתיים ותמיכות", icon: Building2, url: "/government-budgets" },
   { id: "inquiries", name: "פניות ציבור", icon: MessageCircle, url: "/inquiries" },
 ];
 
