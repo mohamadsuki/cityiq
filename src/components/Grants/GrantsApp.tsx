@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { FileText, TrendingUp, CheckCircle, Clock, AlertCircle, DollarSign } from "lucide-react";
+import { FileText, TrendingUp, CheckCircle, Clock, AlertCircle, DollarSign, Upload } from "lucide-react";
 
 // Grant types aligned with DB
 export type GrantStatus = 'draft' | 'submitted' | 'pending' | 'approved' | 'rejected';
@@ -55,7 +55,7 @@ export default function GrantsApp() {
   const { role, departments, user, session } = useAuth();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
-
+  const [showUploader, setShowUploader] = useState(false);
   
   const canCreate = role === 'mayor' || role === 'ceo' || role === 'manager';
   const visibleDepartments: DepartmentSlug[] = (role === 'mayor' || role === 'ceo') ?
@@ -171,6 +171,45 @@ export default function GrantsApp() {
     }
     setLoading(false);
   }
+
+  const updateGrantStatus = async (id: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('grants')
+        .update({ status: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Update local state
+      setGrants(prev => 
+        prev.map(grant => 
+          grant.id === id ? { ...grant, status: newStatus } : grant
+        )
+      );
+
+      toast({
+        title: "הצלחה",
+        description: "הסטטוס עודכן בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לעדכן את הסטטוס",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUploadSuccess = () => {
+    setShowUploader(false);
+    fetchGrants();
+    toast({
+      title: "הצלחה",
+      description: "הקובץ הועלה בהצלחה והנתונים נשמרו",
+    });
+  };
 
   useEffect(() => { fetchGrants(); }, []);
 
@@ -304,7 +343,13 @@ export default function GrantsApp() {
           <p className="text-sm text-muted-foreground">הוספה/עריכה, סטטוס ולו"ז</p>
         </div>
         <div className="flex gap-2">
-          <DataUploader context="grants" onUploadSuccess={() => fetchGrants()} />
+          <Button 
+            variant="outline" 
+            onClick={() => setShowUploader(true)}
+          >
+            <Upload className="h-4 w-4 ml-2" />
+            העלה קובץ אקסל
+          </Button>
           {canCreate && (
             <Button onClick={openCreate}>קול קורא חדש</Button>
           )}
@@ -492,7 +537,23 @@ export default function GrantsApp() {
                 <td className="py-3">{g.amount ? g.amount.toLocaleString('he-IL') : '—'}</td>
                 <td className="py-3">{g.submission_amount ? g.submission_amount.toLocaleString('he-IL') : '—'}</td>
                 <td className="py-3">{g.approved_amount ? g.approved_amount.toLocaleString('he-IL') : '—'}</td>
-                <td className="py-3"><Badge variant={statusVariant(g.status)}>{labelForStatus(g.status)}</Badge></td>
+                <td className="py-3">
+                  <Select
+                    value={g.status || 'draft'}
+                    onValueChange={(newStatus) => updateGrantStatus(g.id, newStatus)}
+                  >
+                    <SelectTrigger className="w-auto min-w-[100px] h-8">
+                      <span className="text-xs">{labelForStatus(g.status)}</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">טיוטה</SelectItem>
+                      <SelectItem value="submitted">הוגש</SelectItem>
+                      <SelectItem value="pending">ממתין</SelectItem>
+                      <SelectItem value="approved">אושר</SelectItem>
+                      <SelectItem value="rejected">נדחה</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </td>
                 <td className="py-3 space-x-2 space-x-reverse">
                   <Button size="sm" variant="outline" onClick={() => openEdit(g)}>עריכה</Button>
                   <Button size="sm" variant="destructive" onClick={() => deleteGrant(g)}>מחיקה</Button>
@@ -563,6 +624,26 @@ export default function GrantsApp() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Upload Dialog */}
+      {showUploader && (
+        <Dialog open={showUploader} onOpenChange={setShowUploader}>
+          <DialogContent dir="rtl" className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>ייבוא קולות קוראים מקובץ אקסל</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <DataUploader 
+                context="grants"
+                onUploadSuccess={handleUploadSuccess}
+              />
+              <div className="mt-4 text-sm text-muted-foreground">
+                העלה קובץ אקסל עם קולות קוראים. הקובץ צריך להכיל עמודות: שם, משרד, תיאור פרויקט, אחראי, תקציב קול קורא, סכום הגשה, סכום אושר, סטטוס.
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
