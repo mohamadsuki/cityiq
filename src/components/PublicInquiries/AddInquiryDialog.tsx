@@ -229,6 +229,7 @@ export function AddInquiryDialog({ open, onOpenChange, onSuccess }: AddInquiryDi
                   <SelectItem value="in_person">פניה ישירה</SelectItem>
                   <SelectItem value="website">אתר</SelectItem>
                   <SelectItem value="social_media">רשתות חברתיות</SelectItem>
+                  <SelectItem value="other">אחר</SelectItem>
                 </SelectContent>
               </Select>
             </div>
