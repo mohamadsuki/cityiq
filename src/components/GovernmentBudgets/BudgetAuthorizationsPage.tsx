@@ -98,6 +98,8 @@ export default function BudgetAuthorizationsPage() {
         const cleanedData = filteredData.map(item => {
           console.log('🔍 Processing item:', item);
           
+          const approvalDate = extractDateFromNotes(item.notes) || item.approved_at;
+          
           const cleanedItem = {
             ...item,
             // authorization_number should be the ministry field (which contains the actual codes)
@@ -111,11 +113,13 @@ export default function BudgetAuthorizationsPage() {
             // ministry - map from the authorization_number field or extract from program
             ministry: mapSequenceToMinistry(item.authorization_number, item.program),
             // valid_until - calculate validity period (typically 1 year from approval)
-            valid_until: calculateValidityDate(extractDateFromNotes(item.notes)),
+            valid_until: calculateValidityDate(approvalDate),
             // department_slug - map based on program content
             department_slug: mapProgramToDepartment(item.program),
             // approved_at - if we have date in notes, it means it's approved
-            approved_at: extractDateFromNotes(item.notes) || null,
+            approved_at: approvalDate,
+            // status - automatically set to approved if we have approval date
+            status: approvalDate ? 'approved' : (item.status || 'pending'),
             // notes - only use actual notes column if it has content (not dates)
             notes: cleanNotes(item.notes)
           };
@@ -240,19 +244,73 @@ export default function BudgetAuthorizationsPage() {
 
   const updateAuthorizationStatus = async (id: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('budget_authorizations')
-        .update({ status: newStatus })
-        .eq('id', id);
+      // If changing to approved, ask for approval date
+      if (newStatus === 'approved') {
+        const dateInput = prompt('אנא הכנס תאריך אישור מליאה (בפורמט DD.MM.YYYY):');
+        if (!dateInput) {
+          toast({
+            title: "בוטל",
+            description: "לא ניתן לשנות סטטוס ל'אושר' ללא תאריך אישור",
+            variant: "destructive",
+          });
+          return;
+        }
 
-      if (error) throw error;
+        // Validate date format
+        const datePattern = /^\d{1,2}\.\d{1,2}\.\d{4}$/;
+        if (!datePattern.test(dateInput)) {
+          toast({
+            title: "שגיאה",
+            description: "פורמט תאריך לא תקין. השתמש בפורמט DD.MM.YYYY",
+            variant: "destructive",
+          });
+          return;
+        }
 
-      // Update local state
-      setAuthorizations(prev => 
-        prev.map(auth => 
-          auth.id === id ? { ...auth, status: newStatus } : auth
-        )
-      );
+        // Convert to ISO format
+        const [day, month, year] = dateInput.split('.');
+        const approvalDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+        // Update both status and approval date
+        const { error } = await supabase
+          .from('budget_authorizations')
+          .update({ 
+            status: newStatus,
+            approved_at: approvalDate
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        // Update local state
+        setAuthorizations(prev => 
+          prev.map(auth => 
+            auth.id === id ? { ...auth, status: newStatus, approved_at: approvalDate } : auth
+          )
+        );
+      } else {
+        // For other status changes, clear approval date if changing from approved
+        const currentAuth = authorizations.find(a => a.id === id);
+        const updateData: any = { status: newStatus };
+        
+        if (currentAuth?.status === 'approved' && newStatus !== 'approved') {
+          updateData.approved_at = null;
+        }
+
+        const { error } = await supabase
+          .from('budget_authorizations')
+          .update(updateData)
+          .eq('id', id);
+
+        if (error) throw error;
+
+        // Update local state
+        setAuthorizations(prev => 
+          prev.map(auth => 
+            auth.id === id ? { ...auth, ...updateData } : auth
+          )
+        );
+      }
 
       toast({
         title: "הצלחה",
