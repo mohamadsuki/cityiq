@@ -12,6 +12,7 @@ import {
 
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -28,6 +29,12 @@ export interface DataTableProps<TData, TValue> {
   searchableColumnIds?: string[]; // if not provided: global search over all columns
   searchPlaceholder?: string;
   className?: string;
+  filterableColumns?: {
+    [key: string]: {
+      label: string;
+      options: Array<{ label: string; value: string }>;
+    };
+  };
 }
 
 export function DataTable<TData, TValue>({
@@ -36,9 +43,11 @@ export function DataTable<TData, TValue>({
   searchableColumnIds,
   searchPlaceholder = "חיפוש...",
   className,
+  filterableColumns,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState("");
+  const [columnFilters, setColumnFilters] = React.useState({} as Record<string, string>);
 
   const table = useReactTable({
     data,
@@ -49,34 +58,91 @@ export function DataTable<TData, TValue>({
     },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
-    globalFilterFn: "auto",
+    globalFilterFn: (row, columnId, value, addMeta) => {
+      // Apply column filters first
+      const columnFilterValues = Object.values(columnFilters).filter(Boolean);
+      if (columnFilterValues.length > 0) {
+        const ministryFilter = columnFilters['ministry'];
+        const departmentFilter = columnFilters['department_slug'];
+        
+        let passesFilters = true;
+        
+        if (ministryFilter && ministryFilter !== 'all') {
+          const rowValue = row.getValue('ministry') as string;
+          passesFilters = passesFilters && rowValue === ministryFilter;
+        }
+        
+        if (departmentFilter && departmentFilter !== 'all') {
+          const rowValue = row.getValue('department_slug') as string;
+          passesFilters = passesFilters && rowValue === departmentFilter;
+        }
+        
+        if (!passesFilters) return false;
+      }
+      
+      // Then apply global search
+      if (!value) return true;
+      
+      if (searchableColumnIds && searchableColumnIds.length > 0) {
+        return searchableColumnIds.some(id => {
+          const cellValue = row.getValue(id);
+          return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
+        });
+      }
+      
+      // Global search across all columns
+      return Object.values(row.getAllCells()).some(cell => {
+        const cellValue = cell.getValue();
+        return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
+      });
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
 
-  // Simple global search over all or specific columns
-  React.useEffect(() => {
-    if (!searchableColumnIds || searchableColumnIds.length === 0) return;
-    // Clear filters first
-    table.resetColumnFilters(false);
-    const value = globalFilter;
-    searchableColumnIds.forEach((id) => {
-      const col = table.getColumn(id);
-      col?.setFilterValue(value);
-    });
-  }, [globalFilter]);
+  // Handle column filters
+  const handleColumnFilterChange = (columnId: string, value: string) => {
+    setColumnFilters(prev => ({
+      ...prev,
+      [columnId]: value
+    }));
+    // Trigger global filter to reprocess
+    table.setGlobalFilter(globalFilter || ' ');
+    table.setGlobalFilter(globalFilter);
+  };
 
   return (
     <div className={cn("space-y-3", className)} dir="rtl">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Input
           placeholder={searchPlaceholder}
           value={globalFilter ?? ""}
           onChange={(e) => setGlobalFilter(e.target.value)}
           className="max-w-[240px]"
         />
+        
+        {/* Column Filters */}
+        {filterableColumns && Object.entries(filterableColumns).map(([columnId, config]) => (
+          <Select
+            key={columnId}
+            value={columnFilters[columnId] || 'all'}
+            onValueChange={(value) => handleColumnFilterChange(columnId, value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder={config.label} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">כל {config.label}</SelectItem>
+              {config.options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ))}
         <div className="ml-auto flex items-center gap-2">
           <Button
             variant="outline"

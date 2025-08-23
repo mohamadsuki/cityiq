@@ -609,6 +609,23 @@ export default function BudgetAuthorizationsPage() {
               columns={columns}
               searchableColumnIds={["ministry", "department_slug"]}
               searchPlaceholder="חפש לפי משרד מממן או מחלקה..."
+              filterableColumns={{
+                ministry: {
+                  label: "המשרדים",
+                  options: Array.from(new Set(authorizations.map(a => a.ministry).filter(Boolean)))
+                    .map(ministry => ({ label: ministry, value: ministry }))
+                },
+                department_slug: {
+                  label: "המחלקות",
+                  options: [
+                    { label: 'כספים', value: 'finance' },
+                    { label: 'הנדסה', value: 'engineering' },
+                    { label: 'חינוך', value: 'education' },
+                    { label: 'רווחה', value: 'welfare' },
+                    { label: 'תרבות', value: 'non-formal' }
+                  ].filter(dept => authorizations.some(a => a.department_slug === dept.value))
+                }
+              }}
             />
           )}
         </CardContent>
