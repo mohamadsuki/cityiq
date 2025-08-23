@@ -271,21 +271,22 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       break;
       
     case 'licenses':
-      mapped.business_name = normalizedRow.business_name || normalizedRow['שם העסק'] || '';
-      mapped.owner = normalizedRow.owner || normalizedRow['בעל הרישיון'] || normalizedRow['בעל'] || '';
-      mapped.license_number = normalizedRow.license_number || normalizedRow['מספר רישיון'] || '';
-      mapped.type = normalizedRow.type || normalizedRow['סוג הרישיון'] || normalizedRow['סוג'] || 'כללי';
-      mapped.address = normalizedRow.address || normalizedRow['כתובת'] || '';
+      // Special mapping for business licenses Excel format
+      mapped.business_name = normalizedRow['__empty_9'] || normalizedRow['__empty_10'] || normalizedRow.business_name || normalizedRow['שם העסק'] || '';
+      mapped.owner = normalizedRow['__empty_12'] || normalizedRow.owner || normalizedRow['בעל הרישיון'] || normalizedRow['בעל'] || '';
+      mapped.license_number = normalizedRow['__empty_11'] || normalizedRow.license_number || normalizedRow['מספר רישיון'] || '';
+      mapped.type = normalizedRow['__empty_7'] || normalizedRow.type || normalizedRow['סוג הרישיון'] || normalizedRow['סוג'] || 'כללי';
+      mapped.address = normalizedRow['__empty_3'] || normalizedRow.address || normalizedRow['כתובת'] || '';
+      mapped.status = normalizedRow['__empty_1'] || normalizedRow['__empty_6'] || normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
       
       // Handle dates  
-      if (normalizedRow.expires_at || normalizedRow['תאריך תפוגה'] || normalizedRow['תוקף עד']) {
-        const dateValue = normalizedRow.expires_at || normalizedRow['תאריך תפוגה'] || normalizedRow['תוקף עד'];
+      if (normalizedRow['__empty_4'] || normalizedRow.expires_at || normalizedRow['תאריך תפוגה'] || normalizedRow['תוקף עד']) {
+        const dateValue = normalizedRow['__empty_4'] || normalizedRow.expires_at || normalizedRow['תאריך תפוגה'] || normalizedRow['תוקף עד'];
         mapped.expires_at = dateValue;
       }
       
-      mapped.status = normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
       mapped.reason_no_license = normalizedRow.reason_no_license || normalizedRow['סיבה ללא רישוי'] || '';
-      // user_id יוגדר למטה בשורה 897
+      // user_id יוגדר למטה בשורה 900+
       break;
       
     case 'business_licenses':
