@@ -375,114 +375,55 @@ export default function GovernmentBudgetsDashboard() {
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : ministryComparisonData.length > 0 ? (
-            <div className="space-y-6">
-              {/* הצגת טבלה נוספת לפירוט */}
-              <div className="bg-muted/30 rounded-lg p-4">
-                <h4 className="text-sm font-semibold text-foreground mb-3">פירוט נתונים לפי משרדים:</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {ministryComparisonData.slice(0, 6).map((item, index) => (
-                    <div key={index} className="bg-background/50 rounded-lg p-3 border border-border/50">
-                      <div className="text-sm font-medium text-foreground mb-2 truncate" title={item.ministry}>
-                        {item.ministry}
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                        <span>קולות קוראים: <span className="text-blue-600 font-medium">{item['קולות קוראים']}</span></span>
-                        <span>הרשאות: <span className="text-green-600 font-medium">{item['הרשאות תקציביות']}</span></span>
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        סה"כ: <span className="font-medium">{item['קולות קוראים'] + item['הרשאות תקציביות']}</span>
-                      </div>
-                      
-                      {/* הצגה ויזואלית פשוטה */}
-                      <div className="mt-3 space-y-1">
-                        {item['קולות קוראים'] > 0 && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-blue-500" />
-                            <div className="flex-1 bg-blue-100 rounded-full h-2">
-                              <div 
-                                className="bg-blue-500 h-full rounded-full"
-                                style={{ 
-                                  width: `${(item['קולות קוראים'] / Math.max(...ministryComparisonData.map(d => d['קולות קוראים']))) * 100}%` 
-                                }}
-                              />
-                            </div>
-                            <span className="text-xs text-blue-600">{item['קולות קוראים']}</span>
-                          </div>
-                        )}
-                        {item['הרשאות תקציביות'] > 0 && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500" />
-                            <div className="flex-1 bg-green-100 rounded-full h-2">
-                              <div 
-                                className="bg-green-500 h-full rounded-full"
-                                style={{ 
-                                  width: `${(item['הרשאות תקציביות'] / Math.max(...ministryComparisonData.map(d => d['הרשאות תקציביות']))) * 100}%` 
-                                }}
-                              />
-                            </div>
-                            <span className="text-xs text-green-600">{item['הרשאות תקציביות']}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* גרף אופקי - פשוט יותר */}
-              {ministryComparisonData.some(item => item['קולות קוראים'] > 0 || item['הרשאות תקציביות'] > 0) && (
-                <div className="space-y-4">
-                  <h4 className="text-sm font-semibold text-foreground">השוואה ויזואלית:</h4>
-                  {ministryComparisonData.slice(0, 8).map((item, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-foreground truncate" title={item.ministry}>
-                          {item.ministry}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          סה"כ: {item['קולות קוראים'] + item['הרשאות תקציביות']}
-                        </span>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-blue-600 w-20">קולות קוראים</span>
-                          <div className="flex-1 bg-blue-100 rounded-full h-3 overflow-hidden">
-                            <div 
-                              className="bg-blue-500 h-full transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-1"
-                              style={{ 
-                                width: item['קולות קוראים'] > 0 
-                                  ? `${Math.max(10, (item['קולות קוראים'] / Math.max(...ministryComparisonData.map(d => d['קולות קוראים']))) * 100)}%`
-                                  : '0%'
-                              }}
-                            >
-                              {item['קולות קוראים'] > 0 && (
-                                <span className="text-xs text-white font-medium">{item['קולות קוראים']}</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-green-600 w-20">הרשאות</span>
-                          <div className="flex-1 bg-green-100 rounded-full h-3 overflow-hidden">
-                            <div 
-                              className="bg-green-500 h-full transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-1"
-                              style={{ 
-                                width: item['הרשאות תקציביות'] > 0 
-                                  ? `${Math.max(10, (item['הרשאות תקציביות'] / Math.max(...ministryComparisonData.map(d => d['הרשאות תקציביות']))) * 100)}%`
-                                  : '0%'
-                              }}
-                            >
-                              {item['הרשאות תקציביות'] > 0 && (
-                                <span className="text-xs text-white font-medium">{item['הרשאות תקציביות']}</span>
-                              )}
-                            </div>
-                          </div>
+            <div className="space-y-4">
+              {ministryComparisonData.slice(0, 8).map((item, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-foreground truncate" title={item.ministry}>
+                      {item.ministry}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      סה"כ: {item['קולות קוראים'] + item['הרשאות תקציביות']}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-blue-600 w-20">קולות קוראים</span>
+                      <div className="flex-1 bg-blue-100 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="bg-blue-500 h-full transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-1"
+                          style={{ 
+                            width: item['קולות קוראים'] > 0 
+                              ? `${Math.max(10, (item['קולות קוראים'] / Math.max(...ministryComparisonData.map(d => d['קולות קוראים']))) * 100)}%`
+                              : '0%'
+                          }}
+                        >
+                          {item['קולות קוראים'] > 0 && (
+                            <span className="text-xs text-white font-medium">{item['קולות קוראים']}</span>
+                          )}
                         </div>
                       </div>
                     </div>
-                  ))}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-green-600 w-20">הרשאות</span>
+                      <div className="flex-1 bg-green-100 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="bg-green-500 h-full transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-1"
+                          style={{ 
+                            width: item['הרשאות תקציביות'] > 0 
+                              ? `${Math.max(10, (item['הרשאות תקציביות'] / Math.max(...ministryComparisonData.map(d => d['הרשאות תקציביות']))) * 100)}%`
+                              : '0%'
+                          }}
+                        >
+                          {item['הרשאות תקציביות'] > 0 && (
+                            <span className="text-xs text-white font-medium">{item['הרשאות תקציביות']}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           ) : (
             <div className="flex flex-col justify-center items-center h-80 text-muted-foreground">
