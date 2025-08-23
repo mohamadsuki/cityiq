@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { DataTable } from "@/components/shared/DataTable";
 import { ExportButtons } from "@/components/shared/ExportButtons";
 import { DataUploader } from "@/components/shared/DataUploader";
@@ -76,6 +78,17 @@ export default function BudgetAuthorizationsPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [statusUpdateId, setStatusUpdateId] = useState<string>('');
+  const [showNewAuthDialog, setShowNewAuthDialog] = useState(false);
+  const [newAuthData, setNewAuthData] = useState({
+    authorization_number: '',
+    ministry: '',
+    program: '',
+    purpose: '',
+    amount: '',
+    valid_until: '',
+    department_slug: 'finance',
+    notes: ''
+  });
   const { toast } = useToast();
 
   const fetchAuthorizations = async () => {
@@ -345,6 +358,67 @@ export default function BudgetAuthorizationsPage() {
     }
   };
 
+  const handleCreateNewAuth = async () => {
+    try {
+      // Validate required fields
+      if (!newAuthData.authorization_number || !newAuthData.ministry || !newAuthData.program || !newAuthData.amount) {
+        toast({
+          title: "שגיאה",
+          description: "נא למלא את כל השדות הנדרשים",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const authData = {
+        ...newAuthData,
+        amount: parseFloat(newAuthData.amount) || 0,
+        status: 'pending' as const,
+        user_id: '11111111-1111-1111-1111-111111111111', // Demo user ID
+        department_slug: newAuthData.department_slug as any,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('budget_authorizations')
+        .insert(authData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add to local state
+      setAuthorizations(prev => [data, ...prev]);
+      
+      // Reset form
+      setNewAuthData({
+        authorization_number: '',
+        ministry: '',
+        program: '',
+        purpose: '',
+        amount: '',
+        valid_until: '',
+        department_slug: 'finance',
+        notes: ''
+      });
+      
+      setShowNewAuthDialog(false);
+
+      toast({
+        title: "הצלחה",
+        description: "ההרשאה נוספה בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error creating authorization:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן ליצור את ההרשאה",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleUploadSuccess = () => {
     setShowUploader(false);
     fetchAuthorizations();
@@ -569,7 +643,10 @@ export default function BudgetAuthorizationsPage() {
             <Upload className="h-4 w-4 ml-2" />
             העלה קובץ אקסל
           </Button>
-          <Button className="bg-gradient-primary text-primary-foreground shadow-glow">
+          <Button 
+            className="bg-gradient-primary text-primary-foreground shadow-glow"
+            onClick={() => setShowNewAuthDialog(true)}
+          >
             <Plus className="h-4 w-4 mr-2" />
             הרשאה חדשה
           </Button>
@@ -978,6 +1055,137 @@ export default function BudgetAuthorizationsPage() {
                 </Button>
                 <Button onClick={handleDateConfirm}>
                   אישור
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* New Authorization Dialog */}
+      {showNewAuthDialog && (
+        <Dialog open={showNewAuthDialog} onOpenChange={setShowNewAuthDialog}>
+          <DialogContent dir="rtl" className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>הוספת הרשאה חדשה</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="auth-number">מספר הרשאה *</Label>
+                  <Input
+                    id="auth-number"
+                    value={newAuthData.authorization_number}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, authorization_number: e.target.value }))}
+                    placeholder="מספר הרשאה"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ministry">משרד מממן *</Label>
+                  <Input
+                    id="ministry"
+                    value={newAuthData.ministry}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, ministry: e.target.value }))}
+                    placeholder="שם המשרד"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="program">תיאור ההרשאה *</Label>
+                <Textarea
+                  id="program"
+                  value={newAuthData.program}
+                  onChange={(e) => setNewAuthData(prev => ({ ...prev, program: e.target.value }))}
+                  placeholder="תיאור מפורט של ההרשאה"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="purpose">מס' תב"ר</Label>
+                  <Input
+                    id="purpose"
+                    value={newAuthData.purpose}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, purpose: e.target.value }))}
+                    placeholder="מספר תב&quot;ר (אופציונלי)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">סכום ההרשאה (₪) *</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={newAuthData.amount}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, amount: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="valid-until">תוקף ההרשאה</Label>
+                  <Input
+                    id="valid-until"
+                    type="date"
+                    value={newAuthData.valid_until}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, valid_until: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="department">מחלקה מטפלת</Label>
+                  <Select
+                    value={newAuthData.department_slug}
+                    onValueChange={(value) => setNewAuthData(prev => ({ ...prev, department_slug: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="בחר מחלקה" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="finance">כספים</SelectItem>
+                      <SelectItem value="engineering">הנדסה</SelectItem>
+                      <SelectItem value="education">חינוך</SelectItem>
+                      <SelectItem value="welfare">רווחה</SelectItem>
+                      <SelectItem value="non-formal">תרבות</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">הערות</Label>
+                <Textarea
+                  id="notes"
+                  value={newAuthData.notes}
+                  onChange={(e) => setNewAuthData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="הערות נוספות (אופציונלי)"
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowNewAuthDialog(false);
+                    setNewAuthData({
+                      authorization_number: '',
+                      ministry: '',
+                      program: '',
+                      purpose: '',
+                      amount: '',
+                      valid_until: '',
+                      department_slug: 'finance',
+                      notes: ''
+                    });
+                  }}
+                >
+                  ביטול
+                </Button>
+                <Button onClick={handleCreateNewAuth}>
+                  שמור הרשאה
                 </Button>
               </div>
             </div>
