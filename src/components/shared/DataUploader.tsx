@@ -163,6 +163,34 @@ const findHebrewColumns = (headers: string[]) => {
   return columnMapping;
 };
 
+// Helper function to validate if a value is a valid date
+const isValidDate = (value: any): boolean => {
+  if (!value) return false;
+  if (typeof value === 'string') {
+    // Skip obvious non-date text like headers or descriptions
+    if (value.includes('מספר') || value.includes('עסק') || value.includes('רישיון') || 
+        value.includes('בעל') || value.includes('כתובת') || value.includes('סוג') ||
+        value.length > 50) {
+      return false;
+    }
+  }
+  const date = new Date(value);
+  return date instanceof Date && !isNaN(date.getTime()) && date.getFullYear() > 1900;
+};
+
+// Helper function to check if a row contains header/descriptive text
+const isHeaderRow = (row: any): boolean => {
+  const values = Object.values(row).filter(v => v && typeof v === 'string');
+  const headerKeywords = ['מספר עסקים', 'שם העסק', 'בעל הרישיון', 'כתובת', 'סוג', 'רישיון', 'תאריך', 'סטטוס'];
+  
+  // If more than half the values contain header keywords, it's likely a header row
+  const headerCount = values.filter(v => 
+    headerKeywords.some(keyword => String(v).includes(keyword))
+  ).length;
+  
+  return headerCount > values.length / 2;
+};
+
 const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
   const original = k;
   let normalized = k.toLowerCase().trim();
@@ -251,6 +279,12 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
   console.log('🐛 DEBUG - Original row sample keys:', Object.keys(row).slice(0, 5));
   console.log('🐛 DEBUG - Row has project name key:', !!row['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיל לפי פרקי התקציב']);
   
+  // Skip header rows or rows with descriptive text
+  if (isHeaderRow(row)) {
+    console.log('⏭️ Skipping header row:', row);
+    return null;
+  }
+  
   const mapped: Record<string, any> = {};
   
   // Normalize all keys first
@@ -279,10 +313,19 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.address = normalizedRow['__empty_3'] || normalizedRow.address || normalizedRow['כתובת'] || '';
       mapped.status = normalizedRow['__empty_1'] || normalizedRow['__empty_6'] || normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
       
-      // Handle dates  
-      if (normalizedRow['__empty_4'] || normalizedRow.expires_at || normalizedRow['תאריך תפוגה'] || normalizedRow['תוקף עד']) {
-        const dateValue = normalizedRow['__empty_4'] || normalizedRow.expires_at || normalizedRow['תאריך תפוגה'] || normalizedRow['תוקף עד'];
-        mapped.expires_at = dateValue;
+      // Handle dates with validation
+      const possibleDateValues = [
+        normalizedRow['__empty_4'], 
+        normalizedRow.expires_at, 
+        normalizedRow['תאריך תפוגה'], 
+        normalizedRow['תוקף עד']
+      ];
+      
+      for (const dateValue of possibleDateValues) {
+        if (dateValue && isValidDate(dateValue)) {
+          mapped.expires_at = dateValue;
+          break;
+        }
       }
       
       mapped.reason_no_license = normalizedRow.reason_no_license || normalizedRow['סיבה ללא רישוי'] || '';
