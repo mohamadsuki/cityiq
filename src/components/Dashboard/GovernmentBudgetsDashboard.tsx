@@ -358,17 +358,21 @@ export default function GovernmentBudgetsDashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart 
                   data={ministryComparisonData}
-                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  layout="horizontal"
+                  margin={{ top: 20, right: 30, left: 120, bottom: 20 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                   <XAxis 
+                    type="number"
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    type="category"
                     dataKey="ministry" 
                     tick={{ fontSize: 11 }}
-                    height={80}
-                    angle={-45}
+                    width={110}
                     textAnchor="end"
                   />
-                  <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip 
                     formatter={(value, name) => [`${value}`, name]}
                     labelStyle={{ color: '#374151' }}
@@ -383,12 +387,12 @@ export default function GovernmentBudgetsDashboard() {
                   <Bar 
                     dataKey="קולות קוראים" 
                     fill="#3b82f6"
-                    radius={[4, 4, 0, 0]}
+                    radius={[0, 4, 4, 0]}
                   />
                   <Bar 
                     dataKey="הרשאות תקציביות" 
                     fill="#10b981"
-                    radius={[4, 4, 0, 0]}
+                    radius={[0, 4, 4, 0]}
                   />
                 </BarChart>
               </ResponsiveContainer>
