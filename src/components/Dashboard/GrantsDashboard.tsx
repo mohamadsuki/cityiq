@@ -5,55 +5,57 @@ import { Megaphone, FileSpreadsheet } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-interface GrantsStats {
-  total: number;
-  submitted: number;
-  approved: number;
-}
-
 export default function GrantsDashboard() {
-  console.log('🏁 GrantsDashboard component mounting...');
-  
-  const [stats, setStats] = useState<GrantsStats>({
-    total: 0,
-    submitted: 0,
-    approved: 0
-  });
+  const [total, setTotal] = useState(0);
+  const [submitted, setSubmitted] = useState(0);
+  const [approved, setApproved] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  console.log('📊 Current stats state:', stats);
-
   useEffect(() => {
-    const fetchGrantsStats = async () => {
+    let isMounted = true;
+    
+    const fetchStats = async () => {
       try {
-        const { data: grants, error } = await supabase
+        const { data, error } = await supabase
           .from('grants')
           .select('status');
 
+        if (!isMounted) return;
+
         if (error) {
-          console.error('Error fetching grants:', error);
-          setLoading(false);
+          console.error('Error:', error);
           return;
         }
 
-        if (grants) {
-          const total = grants.length;
-          const submitted = grants.filter(grant => grant.status === 'הוגש').length;
-          const approved = grants.filter(grant => grant.status === 'אושר').length;
-
-          setStats({ total, submitted, approved });
+        if (data) {
+          // Count directly
+          const totalCount = data.length;
+          const submittedCount = data.filter(item => item.status === 'הוגש').length;
+          const approvedCount = data.filter(item => item.status === 'אושר').length;
+          
+          setTotal(totalCount);
+          setSubmitted(submittedCount);
+          setApproved(approvedCount);
+          
+          console.log('Updated stats:', { totalCount, submittedCount, approvedCount });
         }
-      } catch (error) {
-        console.error('Error:', error);
+      } catch (err) {
+        console.error('Fetch error:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    fetchGrantsStats();
+    fetchStats();
+    
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  console.log('🎨 Rendering with stats:', stats, 'loading:', loading);
+  console.log('🎨 Rendering with stats:', { total, submitted, approved }, 'loading:', loading);
   
   return (
     <div className="space-y-6">
@@ -74,15 +76,15 @@ export default function GrantsDashboard() {
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-md bg-muted">
             <div className="text-sm text-muted-foreground">סה"כ בקשות</div>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.total}</div>
+            <div className="text-2xl font-bold">{loading ? '...' : total}</div>
           </div>
           <div className="p-4 rounded-md bg-muted">
             <div className="text-sm text-muted-foreground">הוגשו</div>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.submitted}</div>
+            <div className="text-2xl font-bold">{loading ? '...' : submitted}</div>
           </div>
           <div className="p-4 rounded-md bg-muted">
             <div className="text-sm text-muted-foreground">מאושרים</div>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.approved}</div>
+            <div className="text-2xl font-bold">{loading ? '...' : approved}</div>
           </div>
         </CardContent>
       </Card>
