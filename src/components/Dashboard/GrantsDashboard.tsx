@@ -12,12 +12,16 @@ interface GrantsStats {
 }
 
 export default function GrantsDashboard() {
+  console.log('🏁 GrantsDashboard component mounting...');
+  
   const [stats, setStats] = useState<GrantsStats>({
     total: 0,
     submitted: 0,
     approved: 0
   });
   const [loading, setLoading] = useState(true);
+
+  console.log('📊 Current stats state:', stats);
 
   useEffect(() => {
     console.log('🚀 Starting grants fetch...');
@@ -33,31 +37,41 @@ export default function GrantsDashboard() {
 
         if (error) {
           console.error('❌ Error fetching grants:', error);
+          setLoading(false);
           return;
         }
 
-        if (grants) {
+        if (grants && grants.length > 0) {
           console.log('✅ All grants fetched:', grants.length);
-          console.log('📝 All grant statuses:', grants.map(g => ({ name: g.name, status: g.status })));
+          
+          // Print all unique statuses to see what we have
+          const uniqueStatuses = [...new Set(grants.map(g => g.status))];
+          console.log('🏷️ Unique statuses found:', uniqueStatuses);
           
           const total = grants.length;
+          let submitted = 0;
+          let approved = 0;
           
-          // Debug each status filtering
-          const submittedGrants = grants.filter(grant => grant.status === 'הוגש');
-          const approvedGrants = grants.filter(grant => grant.status === 'אושר');
-          
-          console.log('🔍 Submitted grants found:', submittedGrants.length, submittedGrants.map(g => g.name));
-          console.log('✅ Approved grants found:', approvedGrants.length, approvedGrants.map(g => g.name));
-          
-          const submitted = submittedGrants.length;
-          const approved = approvedGrants.length;
+          // Count manually with detailed logging
+          grants.forEach(grant => {
+            console.log(`Grant "${grant.name}" has status: "${grant.status}"`);
+            if (grant.status === 'הוגש') {
+              submitted++;
+            } else if (grant.status === 'אושר') {
+              approved++;
+            }
+          });
 
-          console.log('🎯 Final calculated stats:', { total, submitted, approved });
+          console.log('🎯 Manual count results:', { total, submitted, approved });
 
           setStats({ total, submitted, approved });
+        } else {
+          console.log('⚠️ No grants found or empty array');
+          setStats({ total: 0, submitted: 0, approved: 0 });
         }
       } catch (error) {
         console.error('💥 Error:', error);
+        setStats({ total: 0, submitted: 0, approved: 0 });
       } finally {
         setLoading(false);
       }
@@ -66,6 +80,8 @@ export default function GrantsDashboard() {
     fetchGrantsStats();
   }, []);
 
+  console.log('🎨 Rendering with stats:', stats, 'loading:', loading);
+  
   return (
     <div className="space-y-6">
       <header className="flex items-center justify-between">
