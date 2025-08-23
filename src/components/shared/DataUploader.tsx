@@ -698,14 +698,26 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         mapped.department_slug = 'finance';
       }
       
+      // Debug: Log all keys and their values to understand the structure
+      console.log('🐛 DETAILED ROW DEBUG:');
+      allKeys.forEach((key, index) => {
+        console.log(`🐛 Column ${index} (${key}):`, row[key]);
+      });
+      
       // Approved date from eighth column (H = index 7) - validate it's actually a date
       const approvedAtRaw = row[allKeys[7]] || row['__EMPTY_7'] || '';
       console.log('🐛 APPROVAL DATE DEBUG:', { 
         column: 'index 7 (column H)', 
+        allKeysLength: allKeys.length,
+        keyAtIndex7: allKeys[7],
         raw: approvedAtRaw, 
         type: typeof approvedAtRaw 
       });
       
+      // Try multiple approaches to find the approval date
+      let foundApprovalDate = null;
+      
+      // Approach 1: Check column H (index 7)
       if (approvedAtRaw && 
           approvedAtRaw.toString().trim().length > 0 && 
           !approvedAtRaw.toString().includes('תאריך אישור מליאה') &&
@@ -713,42 +725,69 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
           !approvedAtRaw.toString().includes('מחלקה')) {
         
         const dateStr = approvedAtRaw.toString().trim();
-        console.log('🐛 Processing date string:', dateStr);
-        
-        // Handle different date formats
-        if (dateStr.includes('.')) {
-          // DD.MM.YYYY format
-          const parts = dateStr.split('.');
-          if (parts.length === 3) {
-            const [day, month, year] = parts;
-            const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            mapped.approved_at = formattedDate;
-            console.log('🐛 Converted date:', formattedDate);
+        console.log('🐛 Processing date string from column H:', dateStr);
+        foundApprovalDate = processDateString(dateStr);
+      }
+      
+      // Approach 2: If not found, search all columns for a date pattern
+      if (!foundApprovalDate) {
+        console.log('🐛 Date not found in column H, searching all columns...');
+        for (let i = 0; i < allKeys.length; i++) {
+          const colValue = row[allKeys[i]];
+          if (colValue && typeof colValue === 'string') {
+            const trimmed = colValue.trim();
+            // Look for date patterns
+            if (trimmed.match(/^\d{1,2}\.\d{1,2}\.(\d{2}|\d{4})$/) || 
+                trimmed.match(/^\d{1,2}\/\d{1,2}\/(\d{2}|\d{4})$/)) {
+              console.log(`🐛 Found potential date in column ${i} (${allKeys[i]}):`, trimmed);
+              foundApprovalDate = processDateString(trimmed);
+              if (foundApprovalDate) break;
+            }
           }
-        } else if (dateStr.includes('/')) {
-          // DD/MM/YYYY format
-          const parts = dateStr.split('/');
-          if (parts.length === 3) {
-            const [day, month, year] = parts;
-            const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-            mapped.approved_at = formattedDate;
-            console.log('🐛 Converted date:', formattedDate);
-          }
-        } else if (dateStr.includes('-') && dateStr.includes('20')) {
-          // Already in YYYY-MM-DD format
-          mapped.approved_at = dateStr;
-          console.log('🐛 Date already formatted:', dateStr);
-        } else if (dateStr.match(/^\d{1,2}\.\d{1,2}\.\d{2,4}$/)) {
-          // Handle incomplete year (e.g., 10.9.24)
-          const parts = dateStr.split('.');
-          let [day, month, year] = parts;
-          if (year.length === 2) {
-            year = '20' + year; // Convert 24 to 2024
-          }
-          const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-          mapped.approved_at = formattedDate;
-          console.log('🐛 Converted short year date:', formattedDate);
         }
+      }
+      
+      if (foundApprovalDate) {
+        mapped.approved_at = foundApprovalDate;
+        console.log('🐛 Final approved date set:', foundApprovalDate);
+      }
+      
+      // Helper function to process date strings
+      function processDateString(dateStr) {
+        try {
+          if (dateStr.includes('.')) {
+            // DD.MM.YYYY format
+            const parts = dateStr.split('.');
+            if (parts.length === 3) {
+              let [day, month, year] = parts;
+              if (year.length === 2) {
+                year = '20' + year; // Convert 24 to 2024
+              }
+              const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+              console.log('🐛 Converted date:', formattedDate);
+              return formattedDate;
+            }
+          } else if (dateStr.includes('/')) {
+            // DD/MM/YYYY format
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+              let [day, month, year] = parts;
+              if (year.length === 2) {
+                year = '20' + year;
+              }
+              const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+              console.log('🐛 Converted date:', formattedDate);
+              return formattedDate;
+            }
+          } else if (dateStr.includes('-') && dateStr.includes('20')) {
+            // Already in YYYY-MM-DD format
+            console.log('🐛 Date already formatted:', dateStr);
+            return dateStr;
+          }
+        } catch (error) {
+          console.log('🐛 Error processing date:', error);
+        }
+        return null;
       }
       
       // Notes from tenth column (J = index 9)
