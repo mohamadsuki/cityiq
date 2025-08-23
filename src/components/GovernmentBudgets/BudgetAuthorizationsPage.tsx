@@ -100,24 +100,24 @@ export default function BudgetAuthorizationsPage() {
           
           const cleanedItem = {
             ...item,
-            // authorization_number is correct - these are the row numbers from Excel
-            authorization_number: item.authorization_number?.toString() || 'לא צוין',
+            // authorization_number should be the ministry field (which contains the actual codes)
+            authorization_number: item.ministry || item.authorization_number?.toString() || 'לא צוין',
             // program contains the actual authorization description
             program: item.program || 'לא צוין',
             // purpose contains the tabar number
             purpose: item.purpose || 'לא צוין',
             // amount is correct
             amount: item.amount || 0,
-            // ministry contains reference numbers - we need to map these to actual ministry names
-            ministry: mapReferenceToMinistry(item.ministry),
-            // valid_until is empty - we'll use a default or extract from somewhere else
-            valid_until: item.valid_until || null,
-            // department_slug is correct
-            department_slug: item.department_slug || 'finance',
-            // approved_at is empty
-            approved_at: item.approved_at || null,
-            // notes is empty - generate from available data
-            notes: item.notes || generateNotes(item)
+            // ministry - map from the authorization_number field or extract from program
+            ministry: mapSequenceToMinistry(item.authorization_number, item.program),
+            // valid_until - try to extract from notes if it contains date
+            valid_until: extractDateFromNotes(item.notes) || null,
+            // department_slug - map based on program content
+            department_slug: mapProgramToDepartment(item.program),
+            // approved_at - if we have date in notes, it means it's approved
+            approved_at: extractDateFromNotes(item.notes) || null,
+            // notes - only use actual notes column if it has content (not dates)
+            notes: cleanNotes(item.notes)
           };
           
           console.log('🔍 Cleaned item:', cleanedItem);
@@ -135,42 +135,86 @@ export default function BudgetAuthorizationsPage() {
     }
   };
 
-  // Map reference numbers to actual ministry names
-  const mapReferenceToMinistry = (reference: string): string => {
-    if (!reference) return 'לא צוין';
+  // Map sequence number to ministry based on patterns
+  const mapSequenceToMinistry = (seqNumber: any, program: string): string => {
+    const seq = seqNumber?.toString() || '';
+    const prog = program || '';
     
-    // Common patterns in the reference numbers
-    if (reference.includes('1893155') || reference.includes('1891837')) {
-      return 'משרד הפנים'; // Interior Ministry
-    }
-    if (reference.includes('1001835') || reference.includes('1001839') || reference.includes('1001817') || reference.includes('1001823') || reference.includes('1001841')) {
-      return 'משרד הבטחון הפנימי'; // Internal Security Ministry  
-    }
-    if (reference.includes('2025020201')) {
-      return 'משרד החינוך'; // Education Ministry
-    }
-    if (reference.includes('ק"ק')) {
-      return 'קרן קיימת לישראל'; // KKL
+    // Educational institutions
+    if (prog.includes('חט"ע') || prog.includes('כיתות לימוד') || prog.includes('בית ספר') || prog.includes('גן')) {
+      return 'משרד החינוך';
     }
     
-    // Default based on content patterns
-    return 'משרד הפנים';
+    // Sports and culture
+    if (prog.includes('ספורט') || prog.includes('אולם') || prog.includes('אצטדיון')) {
+      return 'משרד התרבות והספורט';
+    }
+    
+    // Health
+    if (prog.includes('טיפת חלב') || prog.includes('בריאות')) {
+      return 'משרד הבריאות';
+    }
+    
+    // Security and enforcement
+    if (prog.includes('אכיפה') || prog.includes('חירום') || prog.includes('בטחון')) {
+      return 'משרד הבטחון הפנימי';
+    }
+    
+    // Infrastructure and construction
+    if (prog.includes('בניה') || prog.includes('שיפוץ') || prog.includes('תשתית') || prog.includes('תכנון')) {
+      return 'משרד הפנים';
+    }
+    
+    // Environment and energy
+    if (prog.includes('אנרגיה') || prog.includes('סביבה')) {
+      return 'משרד האנרגיה';
+    }
+    
+    return 'משרד הפנים'; // Default
   };
 
-  // Generate meaningful notes from available data
-  const generateNotes = (item: any): string => {
-    const parts = [];
+  // Map program to department
+  const mapProgramToDepartment = (program: string): string => {
+    const prog = program || '';
     
-    if (item.status === 'approved') parts.push('הרשאה מאושרת');
-    else if (item.status === 'pending') parts.push('ממתין לאישור מליאה');
-    else if (item.status === 'in_review') parts.push('בבדיקה');
+    if (prog.includes('חט"ע') || prog.includes('כיתות לימוד') || prog.includes('בית ספר')) {
+      return 'education';
+    }
+    if (prog.includes('ספורט') || prog.includes('תרבות')) {
+      return 'non-formal';
+    }
+    if (prog.includes('בניה') || prog.includes('תכנון') || prog.includes('הנדס')) {
+      return 'engineering';
+    }
+    if (prog.includes('רווחה') || prog.includes('טיפת חלב') || prog.includes('קשישים')) {
+      return 'welfare';
+    }
     
-    if (item.purpose) parts.push(`תב״ר מספר: ${item.purpose}`);
+    return 'finance'; // Default
+  };
+
+  // Extract date from notes (format: dd.mm.yyyy)
+  const extractDateFromNotes = (notes: string): string | null => {
+    if (!notes) return null;
     
-    // Add ministry reference for tracking
-    if (item.ministry) parts.push(`מספר פניה: ${item.ministry}`);
+    const dateMatch = notes.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (dateMatch) {
+      const [, day, month, year] = dateMatch;
+      // Convert to ISO format
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
     
-    return parts.length > 0 ? parts.join(' • ') : 'ממתין למילוי פרטים נוספים';
+    return null;
+  };
+
+  // Clean notes - remove dates, keep only actual notes
+  const cleanNotes = (notes: string): string => {
+    if (!notes || !notes.trim()) return '';
+    
+    // Remove date patterns
+    const cleanedNotes = notes.replace(/\d{1,2}\.\d{1,2}\.\d{4}/g, '').trim();
+    
+    return cleanedNotes || '';
   };
 
   const updateAuthorizationStatus = async (id: string, newStatus: string) => {
@@ -267,7 +311,8 @@ export default function BudgetAuthorizationsPage() {
         console.log('🔍 Valid until value:', value);
         if (!value) return 'לא הוגדר תוקף';
         try {
-          return new Date(value).toLocaleDateString('he-IL');
+          const date = new Date(value);
+          return date.toLocaleDateString('he-IL');
         } catch {
           return 'תאריך לא תקין';
         }
@@ -286,7 +331,8 @@ export default function BudgetAuthorizationsPage() {
           'welfare': 'רווחה',
           'non-formal': 'תרבות'
         };
-        return deptMap[value] || value || '-';
+        console.log('🔍 Department value:', value);
+        return deptMap[value] || value || 'כספים';
       }
     },
     {
@@ -311,7 +357,7 @@ export default function BudgetAuthorizationsPage() {
       cell: ({ getValue }: any) => {
         const value = getValue();
         console.log('🔍 Notes value:', value);
-        return value && value.trim() ? value : 'אין הערות';
+        return value && value.trim() ? value : '';
       }
     },
     {
