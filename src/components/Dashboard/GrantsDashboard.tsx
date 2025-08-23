@@ -20,6 +20,8 @@ export default function GrantsDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('🚀 Starting grants fetch...');
+    
     const fetchGrantsStats = async () => {
       try {
         // Fetch all grants data
@@ -27,26 +29,35 @@ export default function GrantsDashboard() {
           .from('grants')
           .select('*');
 
+        console.log('📊 Raw grants response:', { error, dataLength: grants?.length });
+
         if (error) {
-          console.error('Error fetching grants:', error);
+          console.error('❌ Error fetching grants:', error);
           return;
         }
 
         if (grants) {
-          console.log('All grants fetched:', grants.length);
-          console.log('Grant statuses:', grants.map(g => ({ name: g.name, status: g.status })));
+          console.log('✅ All grants fetched:', grants.length);
+          console.log('📝 All grant statuses:', grants.map(g => ({ name: g.name, status: g.status })));
           
           const total = grants.length;
-          const submitted = grants.filter(grant => grant.status === 'הוגש').length;
-          const approved = grants.filter(grant => grant.status === 'אושר').length;
+          
+          // Debug each status filtering
+          const submittedGrants = grants.filter(grant => grant.status === 'הוגש');
+          const approvedGrants = grants.filter(grant => grant.status === 'אושר');
+          
+          console.log('🔍 Submitted grants found:', submittedGrants.length, submittedGrants.map(g => g.name));
+          console.log('✅ Approved grants found:', approvedGrants.length, approvedGrants.map(g => g.name));
+          
+          const submitted = submittedGrants.length;
+          const approved = approvedGrants.length;
 
-          console.log('Final calculated stats:', { total, submitted, approved });
-          console.log('Approved grants:', grants.filter(grant => grant.status === 'אושר').map(g => ({ name: g.name, status: g.status })));
+          console.log('🎯 Final calculated stats:', { total, submitted, approved });
 
           setStats({ total, submitted, approved });
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error('💥 Error:', error);
       } finally {
         setLoading(false);
       }
