@@ -532,7 +532,8 @@ export default function GrantsApp() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      outerRadius={activeMinistryIndex !== null ? 110 : 100}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      outerRadius={80}
                       innerRadius={20}
                       fill="#8884d8"
                       dataKey="count"
@@ -551,8 +552,10 @@ export default function GrantsApp() {
                           strokeWidth={2}
                           style={{
                             filter: activeMinistryIndex === index 
-                              ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.3)) brightness(1.1)' 
-                              : 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
+                              ? 'drop-shadow(0 12px 24px rgba(0,0,0,0.4)) brightness(1.2)' 
+                              : 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
+                            transform: activeMinistryIndex === index ? 'scale(1.15)' : 'scale(1)',
+                            transformOrigin: 'center'
                           }}
                         />
                       ))}
@@ -561,26 +564,31 @@ export default function GrantsApp() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-48">
-                <h4 className="text-sm font-semibold text-foreground mb-3">משרדים</h4>
+              <div className="w-56 border-r border-border pr-4">
+                <h4 className="text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">משרדים מממנים</h4>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
                   {ministryData.map((entry, index) => (
                     <div 
                       key={index} 
-                      className="flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors cursor-pointer text-xs"
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 cursor-pointer border ${
+                        activeMinistryIndex === index 
+                          ? 'bg-primary/10 border-primary/30 shadow-md scale-105' 
+                          : 'hover:bg-muted/50 border-transparent'
+                      }`}
                       onMouseEnter={() => setActiveMinistryIndex(index)}
                       onMouseLeave={() => setActiveMinistryIndex(null)}
                     >
                       <div 
-                        className="w-3 h-3 rounded-full shadow-sm border border-background/50" 
+                        className="w-4 h-4 rounded-full shadow-sm border-2 border-background/50 flex-shrink-0" 
                         style={{ 
                           background: `linear-gradient(135deg, ${CHART_COLORS[index % CHART_COLORS.length]}, ${CHART_COLORS[index % CHART_COLORS.length]}cc)` 
                         }}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-foreground font-medium truncate">{entry.name}</div>
-                        <div className="text-muted-foreground text-xs">
-                          {entry.count} קולות | ₪{entry.amount.toLocaleString('he-IL')}
+                        <div className="text-foreground font-medium truncate text-sm">{entry.name}</div>
+                        <div className="text-muted-foreground text-xs mt-1">
+                          <div>{entry.count} קולות קוראים</div>
+                          <div className="font-medium">₪{entry.amount.toLocaleString('he-IL')}</div>
                         </div>
                       </div>
                     </div>
@@ -613,7 +621,8 @@ export default function GrantsApp() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      outerRadius={activeDepartmentIndex !== null ? 110 : 100}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      outerRadius={80}
                       innerRadius={20}
                       fill="#8884d8"
                       dataKey="count"
@@ -632,8 +641,10 @@ export default function GrantsApp() {
                           strokeWidth={2}
                           style={{
                             filter: activeDepartmentIndex === index 
-                              ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.3)) brightness(1.1)' 
-                              : 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
+                              ? 'drop-shadow(0 12px 24px rgba(0,0,0,0.4)) brightness(1.2)' 
+                              : 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
+                            transform: activeDepartmentIndex === index ? 'scale(1.15)' : 'scale(1)',
+                            transformOrigin: 'center'
                           }}
                         />
                       ))}
@@ -642,26 +653,31 @@ export default function GrantsApp() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-48">
-                <h4 className="text-sm font-semibold text-foreground mb-3">מחלקות</h4>
+              <div className="w-56 border-r border-border pr-4">
+                <h4 className="text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">מחלקות</h4>
                 <div className="space-y-2 max-h-80 overflow-y-auto">
                   {departmentData.map((entry, index) => (
                     <div 
                       key={index} 
-                      className="flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors cursor-pointer text-xs"
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 cursor-pointer border ${
+                        activeDepartmentIndex === index 
+                          ? 'bg-primary/10 border-primary/30 shadow-md scale-105' 
+                          : 'hover:bg-muted/50 border-transparent'
+                      }`}
                       onMouseEnter={() => setActiveDepartmentIndex(index)}
                       onMouseLeave={() => setActiveDepartmentIndex(null)}
                     >
                       <div 
-                        className="w-3 h-3 rounded-full shadow-sm border border-background/50" 
+                        className="w-4 h-4 rounded-full shadow-sm border-2 border-background/50 flex-shrink-0" 
                         style={{ 
                           background: `linear-gradient(135deg, ${CHART_COLORS[(index + 5) % CHART_COLORS.length]}, ${CHART_COLORS[(index + 5) % CHART_COLORS.length]}cc)` 
                         }}
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="text-foreground font-medium truncate">{entry.name}</div>
-                        <div className="text-muted-foreground text-xs">
-                          {entry.count} קולות | ₪{entry.amount.toLocaleString('he-IL')}
+                        <div className="text-foreground font-medium truncate text-sm">{entry.name}</div>
+                        <div className="text-muted-foreground text-xs mt-1">
+                          <div>{entry.count} קולות קוראים</div>
+                          <div className="font-medium">₪{entry.amount.toLocaleString('he-IL')}</div>
                         </div>
                       </div>
                     </div>
