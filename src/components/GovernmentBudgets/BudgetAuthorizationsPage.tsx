@@ -134,8 +134,8 @@ export default function BudgetAuthorizationsPage() {
             amount: item.amount || 0,
             // ministry - map from the authorization_number field or extract from program
             ministry: mapSequenceToMinistry(item.authorization_number, item.program),
-            // valid_until - parse directly from valid_until field if it exists, otherwise calculate
-            valid_until: item.valid_until ? calculateValidityDate(item.valid_until) : calculateValidityDate(approvalDate),
+            // valid_until - calculate validity period (typically 1 year from approval)
+            valid_until: calculateValidityDate(approvalDate),
             // department_slug - map based on program content
             department_slug: mapProgramToDepartment(item.program),
             // approved_at - priority to approved_at field, then notes
@@ -219,74 +219,21 @@ export default function BudgetAuthorizationsPage() {
     return 'finance'; // Default
   };
 
-  // Parse and calculate validity date from various formats
-  const calculateValidityDate = (inputDate: string | null): string | null => {
-    if (!inputDate) {
-      // If no input date, set validity to end of current year
+  // Calculate validity date (typically 1 year from approval date)
+  const calculateValidityDate = (approvalDate: string | null): string | null => {
+    if (!approvalDate) {
+      // If no approval date, set validity to end of current year
       return `${new Date().getFullYear()}-12-31`;
     }
     
-    console.log('🔍 calculateValidityDate input:', inputDate);
-    
-    // Check if it's just a year (24, 25, 26 etc.) - convert to 20XX format
-    const yearOnlyMatch = inputDate.match(/^(\d{2})$/);
-    if (yearOnlyMatch) {
-      const year = 2000 + parseInt(yearOnlyMatch[1]);
-      console.log('🔍 Year only detected:', yearOnlyMatch[1], 'converted to:', year);
-      // Return as MM/yyyy format (default to December)
-      return `12/${year}`;
-    }
-    
-    // Check if it's a month/year format (e.g., "Dec 25", "נוב' 29")
-    const monthYearMatch = inputDate.match(/^([א-ת\']+|[A-Za-z]+)\s*(\d{2,4})$/);
-    if (monthYearMatch) {
-      const [, monthStr, yearStr] = monthYearMatch;
-      const year = yearStr.length === 2 ? 2000 + parseInt(yearStr) : parseInt(yearStr);
-      
-      // Map Hebrew and English months
-      const monthMap: Record<string, number> = {
-        'jan': 1, 'january': 1, 'ינו\'': 1, 'ינואר': 1,
-        'feb': 2, 'february': 2, 'פבר\'': 2, 'פברואר': 2,
-        'mar': 3, 'march': 3, 'מרץ': 3,
-        'apr': 4, 'april': 4, 'אפר\'': 4, 'אפריל': 4,
-        'may': 5, 'מאי': 5,
-        'jun': 6, 'june': 6, 'יונ\'': 6, 'יוני': 6,
-        'jul': 7, 'july': 7, 'יול\'': 7, 'יולי': 7,
-        'aug': 8, 'august': 8, 'אוג\'': 8, 'אוגוסט': 8,
-        'sep': 9, 'september': 9, 'ספט\'': 9, 'ספטמבר': 9,
-        'oct': 10, 'october': 10, 'אוק\'': 10, 'אוקטובר': 10,
-        'nov': 11, 'november': 11, 'נוב\'': 11, 'נובמבר': 11,
-        'dec': 12, 'december': 12, 'דצמ\'': 12, 'דצמבר': 12
-      };
-      
-      const monthKey = monthStr.toLowerCase().trim();
-      const month = monthMap[monthKey];
-      
-      if (month !== undefined) {
-        console.log('🔍 Month/Year format detected:', monthStr, year, 'month:', month);
-        // Return in MM/yyyy format
-        return `${month.toString().padStart(2, '0')}/${year}`;
-      }
-    }
-    
-    // Check if it's already in a date format - convert to MM/yyyy
     try {
-      if (inputDate.includes('/') || inputDate.includes('-')) {
-        const date = new Date(inputDate);
-        if (!isNaN(date.getTime())) {
-          const month = (date.getMonth() + 1).toString().padStart(2, '0');
-          const year = date.getFullYear();
-          console.log('🔍 Date format detected, converted to MM/yyyy:', `${month}/${year}`);
-          return `${month}/${year}`;
-        }
-      }
-    } catch (error) {
-      console.log('🔍 Error parsing date:', error);
+      const approval = new Date(approvalDate);
+      // Add 1 year to approval date
+      approval.setFullYear(approval.getFullYear() + 1);
+      return approval.toISOString().split('T')[0];
+    } catch {
+      return `${new Date().getFullYear()}-12-31`;
     }
-    
-    // If none of the above work, return the original value
-    console.log('🔍 Returning original value:', inputDate);
-    return inputDate;
   };
 
   // Extract date from notes (format: dd.mm.yyyy)
@@ -534,26 +481,12 @@ export default function BudgetAuthorizationsPage() {
       cell: ({ getValue }: any) => {
         const value = getValue();
         console.log('🔍 Valid until value:', value);
-        if (!value) return 'לא צוין';
-        
+        if (!value) return 'לא הוגדר תוקף';
         try {
-          // If it's already in month/year format (Hebrew or English like "Dec 25", "נוב' 29"), return as-is
-          if (value.match(/^([א-ת\']+|[A-Za-z]+)\s*(\d{2,4})$/)) {
-            return value;
-          }
-          
-          // If it's a date, format to MM/yyyy
-          if (value.includes('/') || value.includes('-')) {
-            const date = new Date(value);
-            if (!isNaN(date.getTime())) {
-              return format(date, 'MM/yyyy');
-            }
-          }
-          
-          // Return as-is for other formats (like month/year from Excel)
-          return value;
+          const date = new Date(value);
+          return date.toLocaleDateString('he-IL');
         } catch {
-          return value;
+          return 'תאריך לא תקין';
         }
       }
     },

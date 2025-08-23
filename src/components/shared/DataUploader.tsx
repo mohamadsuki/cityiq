@@ -179,17 +179,9 @@ const isValidDate = (value: any): boolean => {
 };
 
 // Helper function to check if a row contains header/descriptive text
-const isHeaderRow = (row: any, table?: string): boolean => {
+const isHeaderRow = (row: any): boolean => {
   const values = Object.values(row).filter(v => v && typeof v === 'string');
-  
-  // Define keywords based on table type
-  let headerKeywords: string[] = [];
-  
-  if (table === 'budget_authorizations') {
-    headerKeywords = ['מספר הרשאה', 'משרד מממן', 'תוכנית', 'תוקף ההרשאה', 'מחלקה מטפלת', 'תאריך אישור', 'הערות'];
-  } else {
-    headerKeywords = ['מספר עסקים', 'שם העסק', 'בעל הרישיון', 'כתובת', 'סוג', 'רישיון', 'תאריך', 'סטטוס'];
-  }
+  const headerKeywords = ['מספר עסקים', 'שם העסק', 'בעל הרישיון', 'כתובת', 'סוג', 'רישיון', 'תאריך', 'סטטוס'];
   
   // If more than half the values contain header keywords, it's likely a header row
   const headerCount = values.filter(v => 
@@ -288,18 +280,9 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
   console.log('🐛 DEBUG - Row has project name key:', !!row['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיל לפי פרקי התקציב']);
   
   // Skip header rows or rows with descriptive text
-  if (isHeaderRow(row, table)) {
+  if (isHeaderRow(row)) {
     console.log('⏭️ Skipping header row:', row);
     return null;
-  }
-  
-  // For budget_authorizations, also skip empty rows where authorization number is missing
-  if (table === 'budget_authorizations') {
-    const authNumber = row[Object.keys(row)[0]]; // First column should have authorization number
-    if (!authNumber || String(authNumber).trim() === '' || String(authNumber).includes('מספר הרשאה')) {
-      console.log('⏭️ Skipping empty or header row for budget_authorizations:', row);
-      return null;
-    }
   }
   
   const mapped: Record<string, any> = {};
@@ -652,7 +635,10 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
           authNumber.toString().includes('הרשאות') ||
           authNumber.toString() === 'הרשאות' ||
           authNumber.toString().trim() === '' ||
-          authNumber.toString().length < 1) {
+          authNumber.toString().length < 1 ||
+          // Check if this looks like a header row by examining multiple fields
+          (row[Object.keys(row)[1]] && row[Object.keys(row)[1]].toString().includes('מס\' ההרשאה')) ||
+          (row[Object.keys(row)[2]] && row[Object.keys(row)[2]].toString().includes('תיאור ההרשאה'))) {
         console.log('🚫 Skipping budget authorization header/empty row:', authNumber);
         return null;
       }
@@ -663,43 +649,39 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       const allKeys = Object.keys(row);
       console.log('🐛 All available keys for mapping:', allKeys);
       
-      // Ministry from second column
-      const ministryRaw = row[allKeys[1]] || '';
-      mapped.ministry = ministryRaw ? ministryRaw.toString().trim() : '';
+      // Ministry from second column (but validate it's not empty or a header)
+      const ministryRaw = row[allKeys[1]] || row['__EMPTY_1'] || '';
+      mapped.ministry = ministryRaw && !ministryRaw.toString().includes('מס\' ההרשאה') ? ministryRaw.toString().trim() : '';
       
-      // Program from third column
-      const programRaw = row[allKeys[2]] || '';
-      mapped.program = programRaw ? programRaw.toString().trim() : '';
+      // Program from third column (but validate it's not empty or a header)
+      const programRaw = row[allKeys[2]] || row['__EMPTY_2'] || '';
+      mapped.program = programRaw && !programRaw.toString().includes('תיאור ההרשאה') ? programRaw.toString().trim() : '';
       
       // Purpose/Tabar from fourth column
-      const purposeRaw = row[allKeys[3]] || '';
-      mapped.purpose = purposeRaw ? purposeRaw.toString().trim() : '';
+      const purposeRaw = row[allKeys[3]] || row['__EMPTY_3'] || '';
+      mapped.purpose = purposeRaw && !purposeRaw.toString().includes('מס\' תב"ר') ? purposeRaw.toString().trim() : '';
       
       // Amount from fifth column
-      const amountRaw = row[allKeys[4]] || '0';
-      const amountStr = String(amountRaw).replace(/,/g, '').trim();
-      mapped.amount = amountStr && !isNaN(parseFloat(amountStr)) ? parseFloat(amountStr) : null;
+      const amountRaw = row[allKeys[4]] || row['__EMPTY_4'] || '0';
+      mapped.amount = parseFloat(String(amountRaw).replace(/,/g, '').trim()) || 0;
       
-      // Valid until date from SEVENTH column (G = index 6)
-      const validUntilRaw = row[allKeys[6]] || '';
-      console.log('🐛 VALID UNTIL DATE DEBUG (Column G):', { 
-        column: 'index 6 (column G)', 
-        keyAtIndex6: allKeys[6],
-        raw: validUntilRaw, 
-        type: typeof validUntilRaw
-      });
-      
-      // Process the valid_until date
-      if (validUntilRaw && validUntilRaw.toString().trim()) {
-        mapped.valid_until = validUntilRaw.toString().trim();
-        console.log('🐛 Set valid_until from column G (raw):', validUntilRaw.toString().trim());
+      // Valid until date from sixth column - but validate it's actually a date
+      const validUntilRaw = row[allKeys[5]] || row['__EMPTY_5'] || '';
+      if (validUntilRaw && 
+          typeof validUntilRaw === 'string' && 
+          validUntilRaw.length > 0 && 
+          !validUntilRaw.includes('תוקף ההרשאה') &&
+          !validUntilRaw.includes('מחלקה') && 
+          !validUntilRaw.includes('האנרגיה') &&
+          (validUntilRaw.includes('.') || validUntilRaw.includes('/') || validUntilRaw.includes('-') || validUntilRaw.includes('20'))) {
+        mapped.valid_until = validUntilRaw;
       }
       
-      // Department from eighth column (H = index 7)
-      const deptRaw = row[allKeys[7]] || '';
-      console.log('🐛 Department value (Column H):', deptRaw);
+      // Department from seventh column - map to appropriate slug
+      const deptRaw = row[allKeys[6]] || row['__EMPTY_6'] || '';
+      console.log('🐛 Department value:', deptRaw);
       
-      if (deptRaw && !deptRaw.toString().includes('מחלקה מטפלת') && !deptRaw.toString().includes('תאריך אישור')) {
+      if (deptRaw && !deptRaw.toString().includes('מחלקה מטפלת')) {
         const deptStr = deptRaw.toString().toLowerCase();
         if (deptStr.includes('הנדסה')) {
           mapped.department_slug = 'engineering';
@@ -716,34 +698,77 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         mapped.department_slug = 'finance';
       }
       
-      // Approved date from ninth column (I = index 8)
-      const approvedAtRaw = row[allKeys[8]] || '';
+      // Debug: Log all keys and their values to understand the structure
+      console.log('🐛 DETAILED ROW DEBUG:');
+      allKeys.forEach((key, index) => {
+        console.log(`🐛 Column ${index} (${key}):`, row[key]);
+      });
+      
+      // Approved date from eighth column (H = index 7) - validate it's actually a date
+      const approvedAtRaw = row[allKeys[7]] || row['__EMPTY_7'] || '';
       console.log('🐛 APPROVAL DATE DEBUG:', { 
-        column: 'index 8 (column I)', 
-        keyAtIndex8: allKeys[8],
+        column: 'index 7 (column H)', 
+        allKeysLength: allKeys.length,
+        keyAtIndex7: allKeys[7],
         raw: approvedAtRaw, 
         type: typeof approvedAtRaw 
       });
       
-      // Process approval date
-      if (approvedAtRaw && approvedAtRaw.toString().trim()) {
-        const dateStr = approvedAtRaw.toString().trim();
-        console.log('🐛 Processing approval date string:', dateStr);
+      // Try multiple approaches to find the approval date
+      let foundApprovalDate = null;
+      
+      // Approach 1: Check column H (index 7)
+      if (approvedAtRaw && 
+          approvedAtRaw.toString().trim().length > 0 && 
+          !approvedAtRaw.toString().includes('תאריך אישור מליאה') &&
+          !approvedAtRaw.toString().includes('תאריך אישור') &&
+          !approvedAtRaw.toString().includes('מחלקה')) {
         
-        // Try to convert date format
+        const dateStr = approvedAtRaw.toString().trim();
+        console.log('🐛 Processing date string from column H:', dateStr);
+        foundApprovalDate = processDateString(dateStr);
+      }
+      
+      // Approach 2: If not found, search all columns for a date pattern
+      if (!foundApprovalDate) {
+        console.log('🐛 Date not found in column H, searching all columns...');
+        for (let i = 0; i < allKeys.length; i++) {
+          const colValue = row[allKeys[i]];
+          if (colValue && typeof colValue === 'string') {
+            const trimmed = colValue.trim();
+            // Look for date patterns
+            if (trimmed.match(/^\d{1,2}\.\d{1,2}\.(\d{2}|\d{4})$/) || 
+                trimmed.match(/^\d{1,2}\/\d{1,2}\/(\d{2}|\d{4})$/)) {
+              console.log(`🐛 Found potential date in column ${i} (${allKeys[i]}):`, trimmed);
+              foundApprovalDate = processDateString(trimmed);
+              if (foundApprovalDate) break;
+            }
+          }
+        }
+      }
+      
+      if (foundApprovalDate) {
+        mapped.approved_at = foundApprovalDate;
+        console.log('🐛 Final approved date set:', foundApprovalDate);
+      }
+      
+      // Helper function to process date strings
+      function processDateString(dateStr) {
         try {
           if (dateStr.includes('.')) {
+            // DD.MM.YYYY format
             const parts = dateStr.split('.');
             if (parts.length === 3) {
               let [day, month, year] = parts;
               if (year.length === 2) {
-                year = '20' + year;
+                year = '20' + year; // Convert 24 to 2024
               }
               const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-              mapped.approved_at = formattedDate;
-              console.log('🐛 Converted approval date:', formattedDate);
+              console.log('🐛 Converted date:', formattedDate);
+              return formattedDate;
             }
           } else if (dateStr.includes('/')) {
+            // DD/MM/YYYY format
             const parts = dateStr.split('/');
             if (parts.length === 3) {
               let [day, month, year] = parts;
@@ -751,17 +776,22 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
                 year = '20' + year;
               }
               const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-              mapped.approved_at = formattedDate;
-              console.log('🐛 Converted approval date:', formattedDate);
+              console.log('🐛 Converted date:', formattedDate);
+              return formattedDate;
             }
+          } else if (dateStr.includes('-') && dateStr.includes('20')) {
+            // Already in YYYY-MM-DD format
+            console.log('🐛 Date already formatted:', dateStr);
+            return dateStr;
           }
         } catch (error) {
-          console.log('🐛 Error processing approval date:', error);
+          console.log('🐛 Error processing date:', error);
         }
+        return null;
       }
       
       // Notes from tenth column (J = index 9)
-      const notesRaw = row[allKeys[9]] || '';
+      const notesRaw = row[allKeys[9]] || row['__EMPTY_9'] || '';
       mapped.notes = notesRaw && !notesRaw.toString().includes('הערות') ? notesRaw.toString().trim() : '';
       
       // Default status
@@ -769,6 +799,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
       console.log('🐛 Final budget authorization mapping:', mapped);
       
+      break;
       
     default:
       // For unrecognized tables, return the normalized row as-is
@@ -998,8 +1029,6 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
           console.log('🐛 DEBUG: Attempting to insert mapped row:', mappedRow);
 
           try {
-            console.log(`🐛 DEBUG: Attempting to insert row ${i + 1}:`, JSON.stringify(mappedRow, null, 2));
-            
             const { data, error } = await supabase
               .from(detected.table as any)
               .insert(mappedRow)
@@ -1007,14 +1036,7 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
 
             if (error) {
               console.error(`❌ Insert error for row ${i + 1}:`, error);
-              console.error(`❌ Error details:`, {
-                message: error.message,
-                details: error.details,
-                hint: error.hint,
-                code: error.code
-              });
               addLog('error', `שגיאה בהכנסת שורה ${i + 1}: ${error.message}`, { row: mappedRow, error });
-              skippedCount++;
             } else {
               console.log(`✅ Successfully inserted row ${i + 1}:`, data);
               insertedCount++;
@@ -1022,7 +1044,6 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
           } catch (insertErr) {
             console.error(`❌ Insert exception for row ${i + 1}:`, insertErr);
             addLog('error', `חריגה בהכנסת שורה ${i + 1}: ${insertErr}`, { row: mappedRow });
-            skippedCount++;
           }
         }
 
