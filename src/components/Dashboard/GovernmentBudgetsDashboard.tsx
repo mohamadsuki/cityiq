@@ -132,23 +132,24 @@ export default function GovernmentBudgetsDashboard() {
     return acc;
   }, []);
 
-  // Ministry data for authorizations (like the budget authorizations page)
-  const authMinistryData = authorizations.reduce((acc: any[], auth) => {
-    const ministry = auth.ministry || 'לא צוין';
-    const existing = acc.find(item => item.ministry === ministry);
+  // Ministry data for authorizations (exact copy from budget authorizations page)
+  const ministryData = authorizations.reduce((acc: any[], auth) => {
+    const existing = acc.find(item => item.ministry === auth.ministry);
     if (existing) {
-      existing.count++;
-      existing.amount += (auth.amount || 0);
+      existing.count += 1;
+      existing.amount += auth.amount || 0;
     } else {
       acc.push({
-        ministry: ministry,
+        ministry: auth.ministry || 'לא צוין',
         count: 1,
-        amount: auth.amount || 0,
-        color: CHART_COLORS[acc.length % CHART_COLORS.length]
+        amount: auth.amount || 0
       });
     }
     return acc;
-  }, []);
+  }, []).map((item, index) => ({
+    ...item,
+    color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3'][index % 6]
+  }));
 
   const authsMinistryData = Object.values(authsByMinistry);
 
@@ -464,20 +465,20 @@ export default function GovernmentBudgetsDashboard() {
 
         <Card className="border-0 shadow-elevated bg-card overflow-hidden">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">הרשאות תקציביות לפי משרד מממן</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי משרד ממשלתי מממן</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="flex justify-center items-center h-64">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : authMinistryData.length > 0 ? (
+            ) : ministryData.length > 0 ? (
               <div className="flex gap-4 h-64">
                 <div className="flex-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={authMinistryData}
+                        data={ministryData}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
@@ -489,7 +490,7 @@ export default function GovernmentBudgetsDashboard() {
                         stroke="#fff"
                         strokeWidth={2}
                       >
-                        {authMinistryData.map((entry, index) => (
+                        {ministryData.map((entry, index) => (
                           <Cell 
                             key={`cell-${index}`} 
                             fill={entry.color}
@@ -530,7 +531,7 @@ export default function GovernmentBudgetsDashboard() {
                 <div className="w-40 border-r border-border pr-2">
                   <h4 className="text-xs font-semibold text-foreground mb-2 pb-1 border-b border-border">משרדים</h4>
                   <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                    {authMinistryData.map((item, index) => (
+                    {ministryData.map((item, index) => (
                       <div key={index} className="flex items-center gap-1 p-1.5 rounded-md hover:bg-gray-50 transition-colors">
                         <div 
                           className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
