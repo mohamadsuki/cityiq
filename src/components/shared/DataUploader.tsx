@@ -808,6 +808,11 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
     }
 
     console.log('🔄 Starting upload and ingestion process');
+    
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    const currentUserId = user?.id || '33333333-3333-3333-3333-333333333333'; // Fallback to demo user
+    
     setIsUploading(true);
     const logs: DebugLog[] = [...debugLogs];
     
@@ -851,7 +856,7 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
             context: detected.table,
             detected_table: detected.table,
             status: 'processing',
-            user_id: '33333333-3333-3333-3333-333333333333' // Demo user
+            user_id: currentUserId
           });
 
         if (logError) {
@@ -894,7 +899,7 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
           }
 
           // Add user_id and other metadata
-          mappedRow.user_id = '33333333-3333-3333-3333-333333333333'; // Demo user
+          mappedRow.user_id = currentUserId;
 
           console.log('🐛 DEBUG: Attempting to insert mapped row:', mappedRow);
 
