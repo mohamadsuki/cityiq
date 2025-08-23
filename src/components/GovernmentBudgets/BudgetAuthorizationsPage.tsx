@@ -424,8 +424,10 @@ export default function BudgetAuthorizationsPage() {
   // נתוני גרפים
   const statusData = [
     { name: 'מאושרות', value: stats.approved, color: '#10B981', icon: '✓' },
-    { name: 'ממתינות', value: stats.pending, color: '#F59E0B', icon: '⏳' }
-  ].filter(item => item.value > 0);
+    { name: 'ממתינות', value: stats.pending, color: '#F59E0B', icon: '⏳' },
+    { name: 'בבדיקה', value: authorizations.filter(a => a.status === 'in_review').length, color: '#3B82F6', icon: '👁️' },
+    { name: 'נדחו', value: authorizations.filter(a => a.status === 'rejected').length, color: '#EF4444', icon: '✗' }
+  ]; // Show all statuses, even if value is 0
 
   const ministryData = authorizations.reduce((acc: any[], auth) => {
     const existing = acc.find(item => item.ministry === auth.ministry);
@@ -602,7 +604,7 @@ export default function BudgetAuthorizationsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-24 flex flex-col justify-center space-y-1 text-xs">
+              <div className="w-24 flex flex-col justify-center space-y-1 text-xs max-h-48 overflow-y-auto">
                 {statusData.map((item, index) => (
                   <div key={index} className="flex items-center gap-1 p-1 rounded-md hover:bg-gray-50 transition-colors">
                     <div 
@@ -630,11 +632,11 @@ export default function BudgetAuthorizationsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={ministryData.slice(0, 4)}
+                      data={ministryData}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      label={({ percent }) => percent > 5 ? `${(percent * 100).toFixed(0)}%` : ''}
                       outerRadius={50}
                       innerRadius={20}
                       fill="#8884d8"
@@ -642,7 +644,7 @@ export default function BudgetAuthorizationsPage() {
                       stroke="#fff"
                       strokeWidth={2}
                     >
-                      {ministryData.slice(0, 4).map((entry, index) => (
+                      {ministryData.map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
                           fill={entry.color}
@@ -680,8 +682,8 @@ export default function BudgetAuthorizationsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-24 flex flex-col justify-center space-y-1 text-xs">
-                {ministryData.slice(0, 4).map((item, index) => (
+              <div className="w-24 flex flex-col justify-center space-y-1 text-xs max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                {ministryData.map((item, index) => (
                   <div key={index} className="flex items-center gap-1 p-1 rounded-md hover:bg-gray-50 transition-colors">
                     <div 
                       className="w-2 h-2 rounded-full flex-shrink-0"
@@ -708,11 +710,11 @@ export default function BudgetAuthorizationsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={departmentData.slice(0, 4)}
+                      data={departmentData}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      label={({ percent }) => percent > 5 ? `${(percent * 100).toFixed(0)}%` : ''}
                       outerRadius={50}
                       innerRadius={20}
                       fill="#8884d8"
@@ -720,7 +722,7 @@ export default function BudgetAuthorizationsPage() {
                       stroke="#fff"
                       strokeWidth={2}
                     >
-                      {departmentData.slice(0, 4).map((entry, index) => (
+                      {departmentData.map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
                           fill={entry.color}
@@ -758,8 +760,8 @@ export default function BudgetAuthorizationsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-24 flex flex-col justify-center space-y-1 text-xs">
-                {departmentData.slice(0, 4).map((item, index) => (
+              <div className="w-24 flex flex-col justify-center space-y-1 text-xs max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                {departmentData.map((item, index) => (
                   <div key={index} className="flex items-center gap-1 p-1 rounded-md hover:bg-gray-50 transition-colors">
                     <div 
                       className="w-2 h-2 rounded-full flex-shrink-0"
