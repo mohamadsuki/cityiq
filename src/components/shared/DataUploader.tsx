@@ -179,9 +179,17 @@ const isValidDate = (value: any): boolean => {
 };
 
 // Helper function to check if a row contains header/descriptive text
-const isHeaderRow = (row: any): boolean => {
+const isHeaderRow = (row: any, table?: string): boolean => {
   const values = Object.values(row).filter(v => v && typeof v === 'string');
-  const headerKeywords = ['מספר עסקים', 'שם העסק', 'בעל הרישיון', 'כתובת', 'סוג', 'רישיון', 'תאריך', 'סטטוס'];
+  
+  // Define keywords based on table type
+  let headerKeywords: string[] = [];
+  
+  if (table === 'budget_authorizations') {
+    headerKeywords = ['מספר הרשאה', 'משרד מממן', 'תוכנית', 'תוקף ההרשאה', 'מחלקה מטפלת', 'תאריך אישור', 'הערות'];
+  } else {
+    headerKeywords = ['מספר עסקים', 'שם העסק', 'בעל הרישיון', 'כתובת', 'סוג', 'רישיון', 'תאריך', 'סטטוס'];
+  }
   
   // If more than half the values contain header keywords, it's likely a header row
   const headerCount = values.filter(v => 
@@ -280,9 +288,18 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
   console.log('🐛 DEBUG - Row has project name key:', !!row['ריכוז התקבולים והתשלומים של התקציב הבלתי רגיל לפי פרקי התקציב']);
   
   // Skip header rows or rows with descriptive text
-  if (isHeaderRow(row)) {
+  if (isHeaderRow(row, table)) {
     console.log('⏭️ Skipping header row:', row);
     return null;
+  }
+  
+  // For budget_authorizations, also skip empty rows where authorization number is missing
+  if (table === 'budget_authorizations') {
+    const authNumber = row[Object.keys(row)[0]]; // First column should have authorization number
+    if (!authNumber || String(authNumber).trim() === '' || String(authNumber).includes('מספר הרשאה')) {
+      console.log('⏭️ Skipping empty or header row for budget_authorizations:', row);
+      return null;
+    }
   }
   
   const mapped: Record<string, any> = {};
