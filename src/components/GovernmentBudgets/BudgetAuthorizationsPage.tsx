@@ -685,18 +685,24 @@ export default function BudgetAuthorizationsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-32 border-r border-border pr-3">
+              <div className="w-40 border-r border-border pr-2">
                 <h4 className="text-xs font-semibold text-foreground mb-2 pb-1 border-b border-border">משרדים</h4>
-                <div className="space-y-1 max-h-48 overflow-y-auto">
+                <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   {ministryData.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors">
+                    <div key={index} className="flex items-center gap-1 p-1.5 rounded-md hover:bg-gray-50 transition-colors">
                       <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm"
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
                         style={{ backgroundColor: item.color }}
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-gray-900 truncate text-xs">{item.ministry}</div>
-                        <div className="text-gray-500 text-xs">{item.count}</div>
+                        <div 
+                          className="font-medium text-gray-900 text-xs leading-tight" 
+                          style={{ wordBreak: 'break-word', lineHeight: '1.2' }}
+                          title={item.ministry}
+                        >
+                          {item.ministry}
+                        </div>
+                        <div className="text-gray-500 text-xs">{item.count} הרשאות</div>
                       </div>
                     </div>
                   ))}
