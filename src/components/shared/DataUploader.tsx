@@ -285,6 +285,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
       mapped.status = normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
       mapped.reason_no_license = normalizedRow.reason_no_license || normalizedRow['סיבה ללא רישוי'] || '';
+      // user_id יוגדר למטה בשורה 897
       break;
       
     case 'business_licenses':
