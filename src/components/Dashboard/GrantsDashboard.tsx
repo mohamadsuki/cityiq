@@ -23,15 +23,15 @@ export default function GrantsDashboard() {
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-md bg-muted">
             <div className="text-sm text-muted-foreground">סה"כ בקשות</div>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">20</div>
           </div>
           <div className="p-4 rounded-md bg-muted">
-            <div className="text-sm text-muted-foreground">ממתינות החלטה</div>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-sm text-muted-foreground">הוגשו</div>
+            <div className="text-2xl font-bold">17</div>
           </div>
           <div className="p-4 rounded-md bg-muted">
             <div className="text-sm text-muted-foreground">אושרו</div>
-            <div className="text-2xl font-bold">11</div>
+            <div className="text-2xl font-bold">1</div>
           </div>
         </CardContent>
       </Card>
