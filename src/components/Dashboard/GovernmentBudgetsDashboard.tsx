@@ -211,14 +211,21 @@ export default function GovernmentBudgetsDashboard() {
   const authsMinistryData = Object.values(authsByMinistry);
 
   // נתונים לגרף השוואה לפי משרדים - השוואת המספר הכולל לא רק מאושרים
+  console.log('Grants data:', grants.length, grants.slice(0, 3));
+  console.log('Authorizations data:', authorizations.length, authorizations.slice(0, 3));
+  
   const allMinistries = new Set([
     ...grants.map(g => g.ministry || 'לא מוגדר'),
     ...authorizations.map(a => a.ministry || 'לא מוגדר')
   ]);
   
+  console.log('All ministries:', Array.from(allMinistries));
+  
   const ministryComparisonData = Array.from(allMinistries).map(ministry => {
     const grantsCount = grants.filter(g => (g.ministry || 'לא מוגדר') === ministry).length;
     const authsCount = authorizations.filter(a => (a.ministry || 'לא מוגדר') === ministry).length;
+    
+    console.log(`Ministry ${ministry}: grants=${grantsCount}, auths=${authsCount}`);
     
     return {
       ministry,
@@ -227,6 +234,8 @@ export default function GovernmentBudgetsDashboard() {
     };
   }).filter(item => item['קולות קוראים'] > 0 || item['הרשאות תקציביות'] > 0)
     .sort((a, b) => (b['קולות קוראים'] + b['הרשאות תקציביות']) - (a['קולות קוראים'] + a['הרשאות תקציביות']));
+
+  console.log('Ministry comparison data:', ministryComparisonData);
 
   // נתוני גרפים
   const grantsStatusData = [
@@ -376,74 +385,104 @@ export default function GovernmentBudgetsDashboard() {
                       <div className="text-sm font-medium text-foreground mb-2 truncate" title={item.ministry}>
                         {item.ministry}
                       </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-2">
                         <span>קולות קוראים: <span className="text-blue-600 font-medium">{item['קולות קוראים']}</span></span>
                         <span>הרשאות: <span className="text-green-600 font-medium">{item['הרשאות תקציביות']}</span></span>
                       </div>
-                      <div className="mt-2 text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         סה"כ: <span className="font-medium">{item['קולות קוראים'] + item['הרשאות תקציביות']}</span>
+                      </div>
+                      
+                      {/* הצגה ויזואלית פשוטה */}
+                      <div className="mt-3 space-y-1">
+                        {item['קולות קוראים'] > 0 && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500" />
+                            <div className="flex-1 bg-blue-100 rounded-full h-2">
+                              <div 
+                                className="bg-blue-500 h-full rounded-full"
+                                style={{ 
+                                  width: `${(item['קולות קוראים'] / Math.max(...ministryComparisonData.map(d => d['קולות קוראים']))) * 100}%` 
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs text-blue-600">{item['קולות קוראים']}</span>
+                          </div>
+                        )}
+                        {item['הרשאות תקציביות'] > 0 && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500" />
+                            <div className="flex-1 bg-green-100 rounded-full h-2">
+                              <div 
+                                className="bg-green-500 h-full rounded-full"
+                                style={{ 
+                                  width: `${(item['הרשאות תקציביות'] / Math.max(...ministryComparisonData.map(d => d['הרשאות תקציביות']))) * 100}%` 
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs text-green-600">{item['הרשאות תקציביות']}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* גרף אופקי משופר */}
-              <div className="h-96">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
-                    data={ministryComparisonData}
-                    layout="horizontal"
-                    margin={{ top: 20, right: 40, left: 200, bottom: 20 }}
-                    barCategoryGap="15%"
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis 
-                      type="number"
-                      tick={{ fontSize: 11, fill: '#6b7280' }}
-                      domain={[0, 'dataMax + 2']}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      type="category"
-                      dataKey="ministry" 
-                      tick={{ fontSize: 10, fill: '#374151' }}
-                      width={190}
-                      textAnchor="end"
-                      interval={0}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip 
-                      formatter={(value, name) => [`${value}`, name]}
-                      labelStyle={{ color: '#374151', fontWeight: 'bold', fontSize: '12px' }}
-                      contentStyle={{ 
-                        backgroundColor: '#fff', 
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                        fontSize: '12px'
-                      }}
-                    />
-                    <Legend 
-                      wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}
-                    />
-                    <Bar 
-                      dataKey="קולות קוראים" 
-                      fill="#3b82f6"
-                      radius={[0, 3, 3, 0]}
-                      maxBarSize={20}
-                    />
-                    <Bar 
-                      dataKey="הרשאות תקציביות" 
-                      fill="#10b981"
-                      radius={[0, 3, 3, 0]}
-                      maxBarSize={20}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              {/* גרף אופקי - פשוט יותר */}
+              {ministryComparisonData.some(item => item['קולות קוראים'] > 0 || item['הרשאות תקציביות'] > 0) && (
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-foreground">השוואה ויזואלית:</h4>
+                  {ministryComparisonData.slice(0, 8).map((item, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-foreground truncate" title={item.ministry}>
+                          {item.ministry}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          סה"כ: {item['קולות קוראים'] + item['הרשאות תקציביות']}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-blue-600 w-20">קולות קוראים</span>
+                          <div className="flex-1 bg-blue-100 rounded-full h-3 overflow-hidden">
+                            <div 
+                              className="bg-blue-500 h-full transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-1"
+                              style={{ 
+                                width: item['קולות קוראים'] > 0 
+                                  ? `${Math.max(10, (item['קולות קוראים'] / Math.max(...ministryComparisonData.map(d => d['קולות קוראים']))) * 100)}%`
+                                  : '0%'
+                              }}
+                            >
+                              {item['קולות קוראים'] > 0 && (
+                                <span className="text-xs text-white font-medium">{item['קולות קוראים']}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-green-600 w-20">הרשאות</span>
+                          <div className="flex-1 bg-green-100 rounded-full h-3 overflow-hidden">
+                            <div 
+                              className="bg-green-500 h-full transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-1"
+                              style={{ 
+                                width: item['הרשאות תקציביות'] > 0 
+                                  ? `${Math.max(10, (item['הרשאות תקציביות'] / Math.max(...ministryComparisonData.map(d => d['הרשאות תקציביות']))) * 100)}%`
+                                  : '0%'
+                              }}
+                            >
+                              {item['הרשאות תקציביות'] > 0 && (
+                                <span className="text-xs text-white font-medium">{item['הרשאות תקציביות']}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col justify-center items-center h-80 text-muted-foreground">
