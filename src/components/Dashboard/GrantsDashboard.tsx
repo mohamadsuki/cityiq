@@ -2,8 +2,52 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Megaphone, FileSpreadsheet } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface GrantsStats {
+  total: number;
+  submitted: number;
+  approved: number;
+}
 
 export default function GrantsDashboard() {
+  const [stats, setStats] = useState<GrantsStats>({
+    total: 0,
+    submitted: 0,
+    approved: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchGrantsStats = async () => {
+      try {
+        const { data: grants, error } = await supabase
+          .from('grants')
+          .select('status');
+
+        if (error) {
+          console.error('Error fetching grants:', error);
+          return;
+        }
+
+        if (grants) {
+          const total = grants.length;
+          const submitted = grants.filter(grant => grant.status === 'submitted' || grant.status === 'pending').length;
+          const approved = grants.filter(grant => grant.status === 'approved').length;
+
+          setStats({ total, submitted, approved });
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGrantsStats();
+  }, []);
+
   return (
     <div className="space-y-6">
       <header className="flex items-center justify-between">
@@ -23,15 +67,15 @@ export default function GrantsDashboard() {
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-md bg-muted">
             <div className="text-sm text-muted-foreground">סה"כ בקשות</div>
-            <div className="text-2xl font-bold">24</div>
+            <div className="text-2xl font-bold">{loading ? '...' : stats.total}</div>
           </div>
           <div className="p-4 rounded-md bg-muted">
-            <div className="text-sm text-muted-foreground">ממתינות החלטה</div>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-sm text-muted-foreground">הוגשו</div>
+            <div className="text-2xl font-bold">{loading ? '...' : stats.submitted}</div>
           </div>
           <div className="p-4 rounded-md bg-muted">
-            <div className="text-sm text-muted-foreground">אושרו</div>
-            <div className="text-2xl font-bold">11</div>
+            <div className="text-sm text-muted-foreground">מאושרים</div>
+            <div className="text-2xl font-bold">{loading ? '...' : stats.approved}</div>
           </div>
         </CardContent>
       </Card>
