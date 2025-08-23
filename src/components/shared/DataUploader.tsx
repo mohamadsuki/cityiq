@@ -665,23 +665,30 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       const amountRaw = row[allKeys[4]] || row['__EMPTY_4'] || '0';
       mapped.amount = parseFloat(String(amountRaw).replace(/,/g, '').trim()) || 0;
       
-      // Valid until date from sixth column - but validate it's actually a date
-      const validUntilRaw = row[allKeys[5]] || row['__EMPTY_5'] || '';
+      // Valid until date from SEVENTH column (G = index 6) - corrected as per user request
+      const validUntilRaw = row[allKeys[6]] || row['__EMPTY_6'] || '';
+      console.log('🐛 VALID UNTIL DATE DEBUG (Column G):', { 
+        column: 'index 6 (column G)', 
+        keyAtIndex6: allKeys[6],
+        raw: validUntilRaw, 
+        type: typeof validUntilRaw 
+      });
+      
       if (validUntilRaw && 
           typeof validUntilRaw === 'string' && 
           validUntilRaw.length > 0 && 
           !validUntilRaw.includes('תוקף ההרשאה') &&
           !validUntilRaw.includes('מחלקה') && 
-          !validUntilRaw.includes('האנרגיה') &&
-          (validUntilRaw.includes('.') || validUntilRaw.includes('/') || validUntilRaw.includes('-') || validUntilRaw.includes('20'))) {
+          !validUntilRaw.includes('האנרגיה')) {
         mapped.valid_until = validUntilRaw;
+        console.log('🐛 Set valid_until from column G:', validUntilRaw);
       }
       
-      // Department from seventh column - map to appropriate slug
-      const deptRaw = row[allKeys[6]] || row['__EMPTY_6'] || '';
-      console.log('🐛 Department value:', deptRaw);
+      // Department from EIGHTH column (H = index 7) - corrected after moving valid_until to column G
+      const deptRaw = row[allKeys[7]] || row['__EMPTY_7'] || '';
+      console.log('🐛 Department value (Column H):', deptRaw);
       
-      if (deptRaw && !deptRaw.toString().includes('מחלקה מטפלת')) {
+      if (deptRaw && !deptRaw.toString().includes('מחלקה מטפלת') && !deptRaw.toString().includes('תאריך אישור')) {
         const deptStr = deptRaw.toString().toLowerCase();
         if (deptStr.includes('הנדסה')) {
           mapped.department_slug = 'engineering';
@@ -704,12 +711,12 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         console.log(`🐛 Column ${index} (${key}):`, row[key]);
       });
       
-      // Approved date from eighth column (H = index 7) - validate it's actually a date
-      const approvedAtRaw = row[allKeys[7]] || row['__EMPTY_7'] || '';
+      // Approved date from NINTH column (I = index 8) - corrected after moving other columns
+      const approvedAtRaw = row[allKeys[8]] || row['__EMPTY_8'] || '';
       console.log('🐛 APPROVAL DATE DEBUG:', { 
-        column: 'index 7 (column H)', 
+        column: 'index 8 (column I)', 
         allKeysLength: allKeys.length,
-        keyAtIndex7: allKeys[7],
+        keyAtIndex8: allKeys[8],
         raw: approvedAtRaw, 
         type: typeof approvedAtRaw 
       });

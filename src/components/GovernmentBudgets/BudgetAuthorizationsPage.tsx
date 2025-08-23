@@ -513,12 +513,26 @@ export default function BudgetAuthorizationsPage() {
       cell: ({ getValue }: any) => {
         const value = getValue();
         console.log('🔍 Valid until value:', value);
-        if (!value) return 'לא הוגדר תוקף';
+        if (!value) return 'לא צוין';
+        
         try {
-          const date = new Date(value);
-          return date.toLocaleDateString('he-IL');
+          // If it's already in month/year format (Hebrew or English like "Dec 25", "נוב' 29"), return as-is
+          if (value.match(/^([א-ת\']+|[A-Za-z]+)\s*(\d{2,4})$/)) {
+            return value;
+          }
+          
+          // If it's a date, format to MM/yyyy
+          if (value.includes('/') || value.includes('-')) {
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              return format(date, 'MM/yyyy');
+            }
+          }
+          
+          // Return as-is for other formats (like month/year from Excel)
+          return value;
         } catch {
-          return 'תאריך לא תקין';
+          return value;
         }
       }
     },
