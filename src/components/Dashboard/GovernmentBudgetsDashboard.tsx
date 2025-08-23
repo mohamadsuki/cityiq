@@ -210,11 +210,11 @@ export default function GovernmentBudgetsDashboard() {
 
   const authsMinistryData = Object.values(authsByMinistry);
 
-  // נתונים לגרף השוואה לפי משרדים
+  // נתונים לגרף השוואה לפי משרדים - השוואת המספר הכולל לא רק מאושרים
   const ministryComparisonData = Object.keys({ ...grantsByMinistry, ...authsByMinistry }).map(ministry => ({
     ministry,
-    'קולות קוראים': grantsByMinistry[ministry]?.approved || 0,
-    'הרשאות תקציביות': authsByMinistry[ministry]?.approved || 0
+    'קולות קוראים': grantsByMinistry[ministry]?.total || 0,
+    'הרשאות תקציביות': authsByMinistry[ministry]?.total || 0
   }));
 
   // נתוני גרפים
@@ -405,7 +405,7 @@ export default function GovernmentBudgetsDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-0 shadow-elevated bg-card overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי משרד מממן</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground">קולות קוראים - התפלגות לפי משרד מממן</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -521,8 +521,8 @@ export default function GovernmentBudgetsDashboard() {
         </Card>
 
         <Card className="border-0 shadow-elevated bg-card overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי משרד ממשלתי מממן</CardTitle>
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-foreground">הרשאות תקציביות - התפלגות לפי משרד מממן</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -530,7 +530,7 @@ export default function GovernmentBudgetsDashboard() {
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             ) : ministryData.length > 0 ? (
-              <div className="flex gap-4 h-64">
+              <div className="flex gap-6 h-96">
                 <div className="flex-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -540,8 +540,8 @@ export default function GovernmentBudgetsDashboard() {
                         cy="50%"
                         labelLine={false}
                         label={({ percent }) => percent > 5 ? `${(percent * 100).toFixed(0)}%` : ''}
-                        outerRadius={60}
-                        innerRadius={25}
+                        outerRadius={80}
+                        innerRadius={20}
                         fill="#8884d8"
                         dataKey="count"
                         stroke="#fff"
@@ -585,24 +585,28 @@ export default function GovernmentBudgetsDashboard() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="w-40 border-r border-border pr-2">
-                  <h4 className="text-xs font-semibold text-foreground mb-2 pb-1 border-b border-border">משרדים</h4>
-                  <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="w-56 border-r border-border pr-4">
+                  <h4 className="text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">משרדים מממנים</h4>
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
                     {ministryData.map((item, index) => (
-                      <div key={index} className="flex items-center gap-1 p-1.5 rounded-md hover:bg-gray-50 transition-colors">
+                      <div key={index} className="flex items-center gap-3 p-3 rounded-lg transition-all duration-300 hover:bg-muted/50 border border-transparent">
                         <div 
-                          className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
-                          style={{ backgroundColor: item.color }}
+                          className="w-4 h-4 rounded-full shadow-sm border-2 border-background/50 flex-shrink-0" 
+                          style={{ 
+                            background: `linear-gradient(135deg, ${item.color}, ${item.color}cc)` 
+                          }}
                         />
-                        <div className="min-w-0 flex-1">
+                        <div className="flex-1 min-w-0">
                           <div 
-                            className="font-medium text-gray-900 text-xs leading-tight" 
-                            style={{ wordBreak: 'break-word', lineHeight: '1.2' }}
+                            className="text-foreground font-medium truncate text-sm" 
                             title={item.ministry}
                           >
                             {item.ministry}
+                            <div className="font-medium">₪{new Intl.NumberFormat('he-IL').format(item.amount)}</div>
+                          <div className="text-muted-foreground text-xs mt-1">
+                            <div>{item.count} הרשאות</div>
+                        </div>
                           </div>
-                          <div className="text-gray-500 text-xs">{item.count} הרשאות</div>
                         </div>
                       </div>
                     ))}
@@ -610,7 +614,7 @@ export default function GovernmentBudgetsDashboard() {
                 </div>
               </div>
             ) : (
-              <div className="flex justify-center items-center h-64 text-muted-foreground">
+              <div className="flex justify-center items-center h-96 text-muted-foreground">
                 אין נתונים להצגה
               </div>
             )}
