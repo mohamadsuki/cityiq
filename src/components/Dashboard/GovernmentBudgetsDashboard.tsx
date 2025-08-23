@@ -211,11 +211,22 @@ export default function GovernmentBudgetsDashboard() {
   const authsMinistryData = Object.values(authsByMinistry);
 
   // נתונים לגרף השוואה לפי משרדים - השוואת המספר הכולל לא רק מאושרים
-  const ministryComparisonData = Object.keys({ ...grantsByMinistry, ...authsByMinistry }).map(ministry => ({
-    ministry,
-    'קולות קוראים': grantsByMinistry[ministry]?.total || 0,
-    'הרשאות תקציביות': authsByMinistry[ministry]?.total || 0
-  }));
+  const allMinistries = new Set([
+    ...grants.map(g => g.ministry || 'לא מוגדר'),
+    ...authorizations.map(a => a.ministry || 'לא מוגדר')
+  ]);
+  
+  const ministryComparisonData = Array.from(allMinistries).map(ministry => {
+    const grantsCount = grants.filter(g => (g.ministry || 'לא מוגדר') === ministry).length;
+    const authsCount = authorizations.filter(a => (a.ministry || 'לא מוגדר') === ministry).length;
+    
+    return {
+      ministry,
+      'קולות קוראים': grantsCount,
+      'הרשאות תקציביות': authsCount
+    };
+  }).filter(item => item['קולות קוראים'] > 0 || item['הרשאות תקציביות'] > 0)
+    .sort((a, b) => (b['קולות קוראים'] + b['הרשאות תקציביות']) - (a['קולות קוראים'] + a['הרשאות תקציביות']));
 
   // נתוני גרפים
   const grantsStatusData = [
@@ -347,6 +358,7 @@ export default function GovernmentBudgetsDashboard() {
       <Card className="border-0 shadow-elevated bg-card">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-foreground">השוואה בין קולות קוראים והרשאות תקציביות לפי משרד ממשלתי</CardTitle>
+          <p className="text-sm text-muted-foreground">מציג את המספר הכולל של קולות קוראים והרשאות תקציביות לכל משרד</p>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -354,59 +366,91 @@ export default function GovernmentBudgetsDashboard() {
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : ministryComparisonData.length > 0 ? (
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={ministryComparisonData}
-                  layout="horizontal"
-                  margin={{ top: 20, right: 30, left: 180, bottom: 20 }}
-                  barCategoryGap="20%"
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis 
-                    type="number"
-                    tick={{ fontSize: 12 }}
-                    domain={[0, 'dataMax + 5']}
-                  />
-                  <YAxis 
-                    type="category"
-                    dataKey="ministry" 
-                    tick={{ fontSize: 10, fill: '#374151' }}
-                    width={170}
-                    textAnchor="end"
-                    interval={0}
-                  />
-                  <Tooltip 
-                    formatter={(value, name) => [`${value}`, name]}
-                    labelStyle={{ color: '#374151', fontWeight: 'bold' }}
-                    contentStyle={{ 
-                      backgroundColor: '#fff', 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }}
-                  />
-                  <Legend 
-                    wrapperStyle={{ paddingTop: '20px' }}
-                  />
-                  <Bar 
-                    dataKey="קולות קוראים" 
-                    fill="#3b82f6"
-                    radius={[0, 4, 4, 0]}
-                    maxBarSize={25}
-                  />
-                  <Bar 
-                    dataKey="הרשאות תקציביות" 
-                    fill="#10b981"
-                    radius={[0, 4, 4, 0]}
-                    maxBarSize={25}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="space-y-6">
+              {/* הצגת טבלה נוספת לפירוט */}
+              <div className="bg-muted/30 rounded-lg p-4">
+                <h4 className="text-sm font-semibold text-foreground mb-3">פירוט נתונים לפי משרדים:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {ministryComparisonData.slice(0, 6).map((item, index) => (
+                    <div key={index} className="bg-background/50 rounded-lg p-3 border border-border/50">
+                      <div className="text-sm font-medium text-foreground mb-2 truncate" title={item.ministry}>
+                        {item.ministry}
+                      </div>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>קולות קוראים: <span className="text-blue-600 font-medium">{item['קולות קוראים']}</span></span>
+                        <span>הרשאות: <span className="text-green-600 font-medium">{item['הרשאות תקציביות']}</span></span>
+                      </div>
+                      <div className="mt-2 text-xs text-muted-foreground">
+                        סה"כ: <span className="font-medium">{item['קולות קוראים'] + item['הרשאות תקציביות']}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* גרף אופקי משופר */}
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={ministryComparisonData}
+                    layout="horizontal"
+                    margin={{ top: 20, right: 40, left: 200, bottom: 20 }}
+                    barCategoryGap="15%"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis 
+                      type="number"
+                      tick={{ fontSize: 11, fill: '#6b7280' }}
+                      domain={[0, 'dataMax + 2']}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      type="category"
+                      dataKey="ministry" 
+                      tick={{ fontSize: 10, fill: '#374151' }}
+                      width={190}
+                      textAnchor="end"
+                      interval={0}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip 
+                      formatter={(value, name) => [`${value}`, name]}
+                      labelStyle={{ color: '#374151', fontWeight: 'bold', fontSize: '12px' }}
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <Legend 
+                      wrapperStyle={{ paddingTop: '20px', fontSize: '12px' }}
+                    />
+                    <Bar 
+                      dataKey="קולות קוראים" 
+                      fill="#3b82f6"
+                      radius={[0, 3, 3, 0]}
+                      maxBarSize={20}
+                    />
+                    <Bar 
+                      dataKey="הרשאות תקציביות" 
+                      fill="#10b981"
+                      radius={[0, 3, 3, 0]}
+                      maxBarSize={20}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           ) : (
-            <div className="flex justify-center items-center h-80 text-muted-foreground">
-              אין נתונים להצגה
+            <div className="flex flex-col justify-center items-center h-80 text-muted-foreground">
+              <div className="text-center">
+                <p className="text-lg mb-2">אין נתונים להצגה</p>
+                <p className="text-sm">לא נמצאו נתונים של קולות קוראים או הרשאות תקציביות</p>
+              </div>
             </div>
           )}
         </CardContent>
