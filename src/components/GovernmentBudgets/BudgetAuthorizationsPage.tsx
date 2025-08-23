@@ -110,8 +110,8 @@ export default function BudgetAuthorizationsPage() {
             amount: item.amount || 0,
             // ministry - map from the authorization_number field or extract from program
             ministry: mapSequenceToMinistry(item.authorization_number, item.program),
-            // valid_until - try to extract from notes if it contains date
-            valid_until: extractDateFromNotes(item.notes) || null,
+            // valid_until - calculate validity period (typically 1 year from approval)
+            valid_until: calculateValidityDate(extractDateFromNotes(item.notes)),
             // department_slug - map based on program content
             department_slug: mapProgramToDepartment(item.program),
             // approved_at - if we have date in notes, it means it's approved
@@ -191,6 +191,23 @@ export default function BudgetAuthorizationsPage() {
     }
     
     return 'finance'; // Default
+  };
+
+  // Calculate validity date (typically 1 year from approval date)
+  const calculateValidityDate = (approvalDate: string | null): string | null => {
+    if (!approvalDate) {
+      // If no approval date, set validity to end of current year
+      return `${new Date().getFullYear()}-12-31`;
+    }
+    
+    try {
+      const approval = new Date(approvalDate);
+      // Add 1 year to approval date
+      approval.setFullYear(approval.getFullYear() + 1);
+      return approval.toISOString().split('T')[0];
+    } catch {
+      return `${new Date().getFullYear()}-12-31`;
+    }
   };
 
   // Extract date from notes (format: dd.mm.yyyy)
@@ -398,17 +415,16 @@ export default function BudgetAuthorizationsPage() {
   // סטטיסטיקות מהירות
   const stats = {
     total: authorizations.length,
-    approved: authorizations.filter(a => a.status === 'approved').length,
-    pending: authorizations.filter(a => a.status === 'pending').length,
-    totalAmount: authorizations.filter(a => a.status === 'approved').reduce((sum, a) => sum + a.amount, 0)
+    approved: authorizations.filter(a => a.approved_at).length,
+    pending: authorizations.filter(a => !a.approved_at).length,
+    totalAmount: authorizations.reduce((sum, a) => sum + (a.amount || 0), 0),
+    approvedAmount: authorizations.filter(a => a.approved_at).reduce((sum, a) => sum + (a.amount || 0), 0)
   };
 
   // נתוני גרפים
   const statusData = [
     { name: 'מאושרות', value: stats.approved, color: '#10B981', icon: '✓' },
-    { name: 'ממתינות', value: stats.pending, color: '#F59E0B', icon: '⏳' },
-    { name: 'בבדיקה', value: authorizations.filter(a => a.status === 'in_review').length, color: '#3B82F6', icon: '👁️' },
-    { name: 'נדחו', value: authorizations.filter(a => a.status === 'rejected').length, color: '#EF4444', icon: '✗' }
+    { name: 'ממתינות', value: stats.pending, color: '#F59E0B', icon: '⏳' }
   ].filter(item => item.value > 0);
 
   const ministryData = authorizations.reduce((acc: any[], auth) => {
@@ -511,25 +527,28 @@ export default function BudgetAuthorizationsPage() {
 
         <Card className="border-0 bg-gradient-to-br from-purple-50 to-purple-100/50 dark:from-purple-950/30 dark:to-purple-900/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">סכום מאושר</CardTitle>
+            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">סה"כ סכום הרשאות</CardTitle>
             <DollarSign className="h-4 w-4 text-purple-600 dark:text-purple-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
               ₪{new Intl.NumberFormat('he-IL').format(stats.totalAmount)}
             </div>
+            <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+              מאושר: ₪{new Intl.NumberFormat('he-IL').format(stats.approvedAmount)}
+            </p>
           </CardContent>
         </Card>
       </div>
 
       {/* גרפים */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="border-0 shadow-elevated bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי סטטוס</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי סטטוס</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80 flex">
+            <div className="h-48 flex">
               <div className="flex-1">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -538,13 +557,13 @@ export default function BudgetAuthorizationsPage() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name}\n${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      innerRadius={30}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      outerRadius={50}
+                      innerRadius={20}
                       fill="#8884d8"
                       dataKey="value"
                       stroke="#fff"
-                      strokeWidth={3}
+                      strokeWidth={2}
                     >
                       {statusData.map((entry, index) => (
                         <Cell 
@@ -552,7 +571,7 @@ export default function BudgetAuthorizationsPage() {
                           fill={entry.color}
                           className="hover:opacity-80 transition-all duration-300 hover:drop-shadow-lg"
                           style={{
-                            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
                             cursor: 'pointer'
                           }}
                         />
@@ -563,17 +582,16 @@ export default function BudgetAuthorizationsPage() {
                         if (active && payload && payload[0]) {
                           const data = payload[0].payload;
                           return (
-                            <div className="bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-gray-200 animate-fade-in">
+                            <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-xl border border-gray-200 animate-fade-in">
                               <div className="flex items-center gap-2 mb-1">
                                 <div 
-                                  className="w-3 h-3 rounded-full"
+                                  className="w-2 h-2 rounded-full"
                                   style={{ backgroundColor: data.color }}
                                 />
-                                <span className="font-medium text-gray-900">{data.name}</span>
+                                <span className="font-medium text-gray-900 text-sm">{data.name}</span>
                               </div>
-                              <div className="text-sm text-gray-600">
+                              <div className="text-xs text-gray-600">
                                 <div>{data.value} הרשאות</div>
-                                <div>{((data.value / statusData.reduce((sum, item) => sum + item.value, 0)) * 100).toFixed(1)}% מהכלל</div>
                               </div>
                             </div>
                           );
@@ -584,16 +602,16 @@ export default function BudgetAuthorizationsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-32 flex flex-col justify-center space-y-2 text-sm">
+              <div className="w-24 flex flex-col justify-center space-y-1 text-xs">
                 {statusData.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors">
+                  <div key={index} className="flex items-center gap-1 p-1 rounded-md hover:bg-gray-50 transition-colors">
                     <div 
-                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: item.color }}
                     />
                     <div className="min-w-0">
-                      <div className="font-medium text-gray-900 truncate">{item.name}</div>
-                      <div className="text-gray-500">{item.value}</div>
+                      <div className="font-medium text-gray-900 truncate text-xs">{item.name}</div>
+                      <div className="text-gray-500 text-xs">{item.value}</div>
                     </div>
                   </div>
                 ))}
@@ -603,34 +621,34 @@ export default function BudgetAuthorizationsPage() {
         </Card>
 
         <Card className="border-0 shadow-elevated bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי משרד ממשלתי מממן</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי משרד ממשלתי מממן</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80 flex">
+            <div className="h-48 flex">
               <div className="flex-1">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={ministryData}
+                      data={ministryData.slice(0, 4)}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ ministry, percent }) => `${ministry}\n${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      innerRadius={30}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      outerRadius={50}
+                      innerRadius={20}
                       fill="#8884d8"
                       dataKey="count"
                       stroke="#fff"
-                      strokeWidth={3}
+                      strokeWidth={2}
                     >
-                      {ministryData.map((entry, index) => (
+                      {ministryData.slice(0, 4).map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
                           fill={entry.color}
-                          className="hover:opacity-80 transition-all duration-300 hover:drop-shadow-lg"
+                          className="hover:opacity-80 transition-all duration-300"
                           style={{
-                            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
                             cursor: 'pointer'
                           }}
                         />
@@ -641,15 +659,15 @@ export default function BudgetAuthorizationsPage() {
                         if (active && payload && payload[0]) {
                           const data = payload[0].payload;
                           return (
-                            <div className="bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-gray-200 animate-fade-in">
+                            <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-xl border border-gray-200 animate-fade-in">
                               <div className="flex items-center gap-2 mb-1">
                                 <div 
-                                  className="w-3 h-3 rounded-full"
+                                  className="w-2 h-2 rounded-full"
                                   style={{ backgroundColor: data.color }}
                                 />
-                                <span className="font-medium text-gray-900">{data.ministry}</span>
+                                <span className="font-medium text-gray-900 text-sm">{data.ministry}</span>
                               </div>
-                              <div className="text-sm text-gray-600">
+                              <div className="text-xs text-gray-600">
                                 <div>{data.count} הרשאות</div>
                                 <div>₪{new Intl.NumberFormat('he-IL').format(data.amount)}</div>
                               </div>
@@ -662,16 +680,16 @@ export default function BudgetAuthorizationsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-32 flex flex-col justify-center space-y-2 text-sm">
-                {ministryData.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors">
+              <div className="w-24 flex flex-col justify-center space-y-1 text-xs">
+                {ministryData.slice(0, 4).map((item, index) => (
+                  <div key={index} className="flex items-center gap-1 p-1 rounded-md hover:bg-gray-50 transition-colors">
                     <div 
-                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: item.color }}
                     />
                     <div className="min-w-0">
-                      <div className="font-medium text-gray-900 truncate">{item.ministry}</div>
-                      <div className="text-gray-500">{item.count}</div>
+                      <div className="font-medium text-gray-900 truncate text-xs">{item.ministry}</div>
+                      <div className="text-gray-500 text-xs">{item.count}</div>
                     </div>
                   </div>
                 ))}
@@ -681,34 +699,34 @@ export default function BudgetAuthorizationsPage() {
         </Card>
 
         <Card className="border-0 shadow-elevated bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי מחלקה</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי מחלקה</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80 flex">
+            <div className="h-48 flex">
               <div className="flex-1">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={departmentData}
+                      data={departmentData.slice(0, 4)}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ department, percent }) => `${department}\n${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      innerRadius={30}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      outerRadius={50}
+                      innerRadius={20}
                       fill="#8884d8"
                       dataKey="count"
                       stroke="#fff"
-                      strokeWidth={3}
+                      strokeWidth={2}
                     >
-                      {departmentData.map((entry, index) => (
+                      {departmentData.slice(0, 4).map((entry, index) => (
                         <Cell 
                           key={`cell-${index}`} 
                           fill={entry.color}
-                          className="hover:opacity-80 transition-all duration-300 hover:drop-shadow-lg"
+                          className="hover:opacity-80 transition-all duration-300"
                           style={{
-                            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
                             cursor: 'pointer'
                           }}
                         />
@@ -719,15 +737,15 @@ export default function BudgetAuthorizationsPage() {
                         if (active && payload && payload[0]) {
                           const data = payload[0].payload;
                           return (
-                            <div className="bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-gray-200 animate-fade-in">
+                            <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-xl border border-gray-200 animate-fade-in">
                               <div className="flex items-center gap-2 mb-1">
                                 <div 
-                                  className="w-3 h-3 rounded-full"
+                                  className="w-2 h-2 rounded-full"
                                   style={{ backgroundColor: data.color }}
                                 />
-                                <span className="font-medium text-gray-900">{data.department}</span>
+                                <span className="font-medium text-gray-900 text-sm">{data.department}</span>
                               </div>
-                              <div className="text-sm text-gray-600">
+                              <div className="text-xs text-gray-600">
                                 <div>{data.count} הרשאות</div>
                                 <div>₪{new Intl.NumberFormat('he-IL').format(data.amount)}</div>
                               </div>
@@ -740,16 +758,16 @@ export default function BudgetAuthorizationsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="w-32 flex flex-col justify-center space-y-2 text-sm">
-                {departmentData.map((item, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors">
+              <div className="w-24 flex flex-col justify-center space-y-1 text-xs">
+                {departmentData.slice(0, 4).map((item, index) => (
+                  <div key={index} className="flex items-center gap-1 p-1 rounded-md hover:bg-gray-50 transition-colors">
                     <div 
-                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: item.color }}
                     />
                     <div className="min-w-0">
-                      <div className="font-medium text-gray-900 truncate">{item.department}</div>
-                      <div className="text-gray-500">{item.count}</div>
+                      <div className="font-medium text-gray-900 truncate text-xs">{item.department}</div>
+                      <div className="text-gray-500 text-xs">{item.count}</div>
                     </div>
                   </div>
                 ))}
