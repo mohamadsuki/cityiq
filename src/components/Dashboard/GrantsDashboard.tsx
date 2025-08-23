@@ -22,7 +22,7 @@ export default function GrantsDashboard() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="p-4 rounded-md bg-muted">
-            <div className="text-sm text-muted-foreground">סה"כ בקשות</div>
+            <div className="text-sm text-muted-foreground">סה"כ קולות קוראים</div>
             <div className="text-2xl font-bold">20</div>
           </div>
           <div className="p-4 rounded-md bg-muted">
@@ -30,7 +30,7 @@ export default function GrantsDashboard() {
             <div className="text-2xl font-bold">17</div>
           </div>
           <div className="p-4 rounded-md bg-muted">
-            <div className="text-sm text-muted-foreground">אושרו</div>
+            <div className="text-sm text-muted-foreground">מאושרים</div>
             <div className="text-2xl font-bold">1</div>
           </div>
         </CardContent>
