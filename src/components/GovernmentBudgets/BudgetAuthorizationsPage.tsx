@@ -532,35 +532,6 @@ export default function BudgetAuthorizationsPage() {
         return value && value.trim() ? value : '';
       }
     },
-    {
-      accessorKey: "status",
-      header: "סטטוס",
-      cell: ({ getValue, row }: any) => {
-        const status = getValue();
-        const statusInfo = statusLabels[status as keyof typeof statusLabels] || statusLabels.pending;
-        const Icon = statusInfo?.icon || AlertCircle;
-        
-        return (
-          <Select
-            value={status || 'pending'}
-            onValueChange={(newStatus) => updateAuthorizationStatus(row.original.id, newStatus)}
-          >
-            <SelectTrigger className="w-auto min-w-[120px] h-8">
-              <div className="flex items-center gap-1">
-                <Icon className="h-3 w-3" />
-                <span className="text-xs">{statusInfo?.label || status}</span>
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="pending">ממתין לאישור</SelectItem>
-              <SelectItem value="in_review">בבדיקה</SelectItem>
-              <SelectItem value="approved">אושר</SelectItem>
-              <SelectItem value="rejected">נדחה</SelectItem>
-            </SelectContent>
-          </Select>
-        );
-      }
-    }
   ];
 
   const handleExport = () => {
@@ -741,85 +712,6 @@ export default function BudgetAuthorizationsPage() {
 
       {/* גרפים */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-        <Card className="border-0 shadow-elevated bg-card overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי סטטוס</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-4 h-64">
-              <div className="flex-1">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                      outerRadius={60}
-                      innerRadius={25}
-                      fill="#8884d8"
-                      dataKey="value"
-                      stroke="#fff"
-                      strokeWidth={2}
-                    >
-                      {statusData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.color}
-                          className="hover:opacity-80 transition-all duration-300 hover:drop-shadow-lg"
-                          style={{
-                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
-                            cursor: 'pointer'
-                          }}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      content={({ active, payload }) => {
-                        if (active && payload && payload[0]) {
-                          const data = payload[0].payload;
-                          return (
-                            <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-xl border border-gray-200 animate-fade-in">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div 
-                                  className="w-2 h-2 rounded-full"
-                                  style={{ backgroundColor: data.color }}
-                                />
-                                <span className="font-medium text-gray-900 text-sm">{data.name}</span>
-                              </div>
-                              <div className="text-xs text-gray-600">
-                                <div>{data.value} הרשאות</div>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="w-32 border-r border-border pr-3">
-                <h4 className="text-xs font-semibold text-foreground mb-2 pb-1 border-b border-border">סטטוסים</h4>
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {statusData.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors">
-                      <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm"
-                        style={{ backgroundColor: item.color }}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-gray-900 truncate text-xs">{item.name}</div>
-                        <div className="text-gray-500 text-xs">{item.value}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         <Card className="border-0 shadow-elevated bg-card overflow-hidden">
           <CardHeader className="pb-2">
