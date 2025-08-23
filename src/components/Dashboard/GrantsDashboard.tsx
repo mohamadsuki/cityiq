@@ -24,7 +24,7 @@ export default function GrantsDashboard() {
       try {
         const { data: grants, error } = await supabase
           .from('grants')
-          .select('status');
+          .select('name, status');
 
         if (error) {
           console.error('Error fetching grants:', error);
@@ -32,9 +32,15 @@ export default function GrantsDashboard() {
         }
 
         if (grants) {
+          console.log('Fetched grants:', grants.length, grants.map(g => ({ name: g.name, status: g.status })));
+          
           const total = grants.length;
           const submitted = grants.filter(grant => grant.status === 'הוגש').length;
           const approved = grants.filter(grant => grant.status === 'אושר').length;
+
+          console.log('Stats calculated:', { total, submitted, approved });
+          console.log('Submitted grants:', grants.filter(grant => grant.status === 'הוגש').map(g => g.name));
+          console.log('Approved grants:', grants.filter(grant => grant.status === 'אושר').map(g => g.name));
 
           setStats({ total, submitted, approved });
         }
