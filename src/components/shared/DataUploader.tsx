@@ -700,18 +700,54 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
       // Approved date from eighth column (H = index 7) - validate it's actually a date
       const approvedAtRaw = row[allKeys[7]] || row['__EMPTY_7'] || '';
+      console.log('🐛 APPROVAL DATE DEBUG:', { 
+        column: 'index 7 (column H)', 
+        raw: approvedAtRaw, 
+        type: typeof approvedAtRaw 
+      });
+      
       if (approvedAtRaw && 
-          typeof approvedAtRaw === 'string' && 
-          approvedAtRaw.length > 0 && 
-          !approvedAtRaw.includes('תאריך אישור מליאה') &&
-          !approvedAtRaw.includes('מחלקה') && 
-          (approvedAtRaw.includes('.') || approvedAtRaw.includes('/') || approvedAtRaw.includes('-') || approvedAtRaw.includes('20'))) {
-        // Convert DD.MM.YYYY format to YYYY-MM-DD
-        if (approvedAtRaw.includes('.')) {
-          const [day, month, year] = approvedAtRaw.split('.');
-          mapped.approved_at = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-        } else {
-          mapped.approved_at = approvedAtRaw;
+          approvedAtRaw.toString().trim().length > 0 && 
+          !approvedAtRaw.toString().includes('תאריך אישור מליאה') &&
+          !approvedAtRaw.toString().includes('תאריך אישור') &&
+          !approvedAtRaw.toString().includes('מחלקה')) {
+        
+        const dateStr = approvedAtRaw.toString().trim();
+        console.log('🐛 Processing date string:', dateStr);
+        
+        // Handle different date formats
+        if (dateStr.includes('.')) {
+          // DD.MM.YYYY format
+          const parts = dateStr.split('.');
+          if (parts.length === 3) {
+            const [day, month, year] = parts;
+            const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            mapped.approved_at = formattedDate;
+            console.log('🐛 Converted date:', formattedDate);
+          }
+        } else if (dateStr.includes('/')) {
+          // DD/MM/YYYY format
+          const parts = dateStr.split('/');
+          if (parts.length === 3) {
+            const [day, month, year] = parts;
+            const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            mapped.approved_at = formattedDate;
+            console.log('🐛 Converted date:', formattedDate);
+          }
+        } else if (dateStr.includes('-') && dateStr.includes('20')) {
+          // Already in YYYY-MM-DD format
+          mapped.approved_at = dateStr;
+          console.log('🐛 Date already formatted:', dateStr);
+        } else if (dateStr.match(/^\d{1,2}\.\d{1,2}\.\d{2,4}$/)) {
+          // Handle incomplete year (e.g., 10.9.24)
+          const parts = dateStr.split('.');
+          let [day, month, year] = parts;
+          if (year.length === 2) {
+            year = '20' + year; // Convert 24 to 2024
+          }
+          const formattedDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+          mapped.approved_at = formattedDate;
+          console.log('🐛 Converted short year date:', formattedDate);
         }
       }
       
