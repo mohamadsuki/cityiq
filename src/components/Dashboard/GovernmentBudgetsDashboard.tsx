@@ -6,6 +6,25 @@ import { Megaphone, FileCheck, DollarSign, TrendingUp, Users, Clock } from "luci
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { supabase } from "@/integrations/supabase/client";
 
+// Enhanced 3D color palette for charts - vibrant colors
+const CHART_COLORS = [
+  'hsl(220, 91%, 55%)', // bright blue
+  'hsl(142, 76%, 36%)', // emerald green
+  'hsl(271, 81%, 56%)', // vibrant purple
+  'hsl(47, 96%, 53%)', // golden yellow
+  'hsl(346, 87%, 43%)', // rose red
+  'hsl(199, 89%, 48%)', // sky blue
+  'hsl(32, 95%, 44%)', // orange
+  'hsl(302, 84%, 61%)', // pink
+  'hsl(168, 76%, 42%)', // teal
+  'hsl(262, 83%, 58%)', // indigo
+  'hsl(120, 60%, 50%)', // lime green
+  'hsl(14, 100%, 57%)', // coral
+  'hsl(280, 100%, 70%)', // magenta
+  'hsl(39, 100%, 50%)', // amber
+  'hsl(210, 100%, 60%)', // light blue
+];
+
 export default function GovernmentBudgetsDashboard() {
   const navigate = useNavigate();
   const [grants, setGrants] = useState<any[]>([]);
