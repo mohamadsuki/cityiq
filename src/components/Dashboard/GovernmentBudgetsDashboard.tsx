@@ -53,7 +53,26 @@ export default function GovernmentBudgetsDashboard() {
       if (authError) throw authError;
       
       setGrants(grantsData || []);
-      setAuthorizations(authData || []);
+      
+      // עיבוד נתוני הרשאות - אותה לוגיקה כמו בעמוד המקורי
+      if (authData && authData.length > 0) {
+        // סינון נתונים - הסרת השורה עם סיכום הכולל
+        const filteredData = authData.filter(item => 
+          item.program && 
+          item.program.trim() && 
+          item.amount !== 33413631 // הסרת שורת הסיכום הכללי
+        );
+
+        // מיפוי הנתונים לפי המבנה המקורי
+        const cleanedData = filteredData.map(item => ({
+          ...item,
+          ministry: mapSequenceToMinistry(item.authorization_number, item.program),
+        }));
+        
+        setAuthorizations(cleanedData);
+      } else {
+        setAuthorizations([]);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
       setGrants([]);
@@ -61,6 +80,44 @@ export default function GovernmentBudgetsDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // פונקציית מיפוי משרדים - העתקה מהעמוד המקורי
+  const mapSequenceToMinistry = (seqNumber: any, program: string): string => {
+    const seq = seqNumber?.toString() || '';
+    const prog = program || '';
+    
+    // מוסדות חינוך
+    if (prog.includes('חט"ע') || prog.includes('כיתות לימוד') || prog.includes('בית ספר') || prog.includes('גן')) {
+      return 'משרד החינוך';
+    }
+    
+    // ספורט ותרבות
+    if (prog.includes('ספורט') || prog.includes('אולם') || prog.includes('אצטדיון')) {
+      return 'משרד התרבות והספורט';
+    }
+    
+    // בריאות
+    if (prog.includes('טיפת חלב') || prog.includes('בריאות')) {
+      return 'משרד הבריאות';
+    }
+    
+    // ביטחון ואכיפה
+    if (prog.includes('אכיפה') || prog.includes('חירום') || prog.includes('בטחון')) {
+      return 'משרד הבטחון הפנימי';
+    }
+    
+    // תשתיות ובנייה
+    if (prog.includes('בניה') || prog.includes('שיפוץ') || prog.includes('תשתית') || prog.includes('תכנון')) {
+      return 'משרד הפנים';
+    }
+    
+    // סביבה ואנרגיה
+    if (prog.includes('אנרגיה') || prog.includes('סביבה')) {
+      return 'משרד האנרגיה';
+    }
+    
+    return 'משרד הפנים'; // ברירת מחדל
   };
 
   useEffect(() => {
