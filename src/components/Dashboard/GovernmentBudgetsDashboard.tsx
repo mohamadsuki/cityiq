@@ -354,45 +354,52 @@ export default function GovernmentBudgetsDashboard() {
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : ministryComparisonData.length > 0 ? (
-            <div className="h-80">
+            <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart 
                   data={ministryComparisonData}
                   layout="horizontal"
-                  margin={{ top: 20, right: 30, left: 120, bottom: 20 }}
+                  margin={{ top: 20, right: 30, left: 180, bottom: 20 }}
+                  barCategoryGap="20%"
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                   <XAxis 
                     type="number"
                     tick={{ fontSize: 12 }}
+                    domain={[0, 'dataMax + 5']}
                   />
                   <YAxis 
                     type="category"
                     dataKey="ministry" 
-                    tick={{ fontSize: 11 }}
-                    width={110}
+                    tick={{ fontSize: 10, fill: '#374151' }}
+                    width={170}
                     textAnchor="end"
+                    interval={0}
                   />
                   <Tooltip 
                     formatter={(value, name) => [`${value}`, name]}
-                    labelStyle={{ color: '#374151' }}
+                    labelStyle={{ color: '#374151', fontWeight: 'bold' }}
                     contentStyle={{ 
                       backgroundColor: '#fff', 
                       border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
+                      borderRadius: '8px',
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                     }}
                   />
-                  <Legend />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '20px' }}
+                  />
                   <Bar 
                     dataKey="קולות קוראים" 
                     fill="#3b82f6"
                     radius={[0, 4, 4, 0]}
+                    maxBarSize={25}
                   />
                   <Bar 
                     dataKey="הרשאות תקציביות" 
                     fill="#10b981"
                     radius={[0, 4, 4, 0]}
+                    maxBarSize={25}
                   />
                 </BarChart>
               </ResponsiveContainer>
