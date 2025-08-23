@@ -325,16 +325,16 @@ export default function GrantsApp() {
   // Statistics calculations
   const stats = useMemo(() => {
     const total = grants.length;
-    const approved = grants.filter(g => g.status?.toLowerCase() === 'approved').length;
-    const pending = grants.filter(g => g.status?.toLowerCase() === 'pending').length;
-    const rejected = grants.filter(g => g.status?.toLowerCase() === 'rejected').length;
+    const approved = grants.filter(g => g.status === 'אושר').length;
+    const submitted = grants.filter(g => g.status === 'הוגש').length;
+    const rejected = grants.filter(g => g.status === 'נדחה').length;
     const totalAmount = grants.reduce((sum, g) => sum + (g.amount || 0), 0);
-    const approvedAmount = grants.filter(g => g.status?.toLowerCase() === 'approved').reduce((sum, g) => sum + (g.amount || 0), 0);
+    const approvedAmount = grants.filter(g => g.status === 'אושר').reduce((sum, g) => sum + (g.amount || 0), 0);
     
     return {
       total,
       approved,
-      pending,
+      submitted,
       rejected,
       totalAmount,
       approvedAmount,
@@ -345,9 +345,9 @@ export default function GrantsApp() {
   // Data for charts
   const statusChartData = [
     { name: 'מאושרים', value: stats.approved, color: '#22c55e' },
-    { name: 'ממתינים', value: stats.pending, color: '#f59e0b' },
+    { name: 'הוגשו', value: stats.submitted, color: '#f59e0b' },
     { name: 'נדחים', value: stats.rejected, color: '#ef4444' },
-    { name: 'אחרים', value: stats.total - stats.approved - stats.pending - stats.rejected, color: '#6b7280' }
+    { name: 'אחרים', value: stats.total - stats.approved - stats.submitted - stats.rejected, color: '#6b7280' }
   ].filter(item => item.value > 0);
 
   // Ministry data for pie chart
@@ -484,11 +484,11 @@ export default function GrantsApp() {
 
         <Card className="border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 dark:from-yellow-950/30 dark:to-yellow-900/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-900 dark:text-yellow-100">ממתינים</CardTitle>
+            <CardTitle className="text-sm font-medium text-yellow-900 dark:text-yellow-100">הוגשו</CardTitle>
             <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats.pending}</div>
+            <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">{stats.submitted}</div>
           </CardContent>
         </Card>
 
