@@ -998,17 +998,32 @@ export default function BudgetAuthorizationsPage() {
             <div className="flex gap-4 h-64">
               <div className="flex-1">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={validityData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis 
-                      dataKey="category" 
-                      tick={{ fontSize: 10 }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                      interval={0}
-                    />
-                    <YAxis tick={{ fontSize: 10 }} />
+                  <PieChart>
+                    <Pie
+                      data={validityData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      outerRadius={60}
+                      innerRadius={25}
+                      fill="#8884d8"
+                      dataKey="count"
+                      stroke="#fff"
+                      strokeWidth={2}
+                    >
+                      {validityData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.color}
+                          className="hover:opacity-80 transition-all duration-300 hover:drop-shadow-lg"
+                          style={{
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      ))}
+                    </Pie>
                     <Tooltip 
                       content={({ active, payload }) => {
                         if (active && payload && payload[0]) {
@@ -1032,17 +1047,25 @@ export default function BudgetAuthorizationsPage() {
                         return null;
                       }}
                     />
-                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                      {validityData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.color}
-                          className="hover:opacity-80 transition-all duration-300"
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
+                  </PieChart>
                 </ResponsiveContainer>
+              </div>
+              <div className="w-32 border-r border-border pr-3">
+                <h4 className="text-xs font-semibold text-foreground mb-2 pb-1 border-b border-border">תוקף</h4>
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {validityData.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-gray-900 truncate text-xs">{item.category}</div>
+                        <div className="text-gray-500 text-xs">{item.count} הרשאות</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </CardContent>
