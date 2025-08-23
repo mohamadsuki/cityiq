@@ -628,6 +628,44 @@ export default function BudgetAuthorizationsPage() {
     color: ['#8B5CF6', '#06B6D4', '#F59E0B', '#EF4444', '#10B981', '#3B82F6'][index % 6]
   }));
 
+  // נתונים לתרשים תוקף ההרשאות
+  const validityData = authorizations.reduce((acc: any[], auth) => {
+    if (!auth.valid_until) return acc;
+    
+    const today = new Date();
+    const validUntil = new Date(auth.valid_until);
+    const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
+    
+    let category = '';
+    if (monthsDiff < 0) {
+      category = 'פג תוקף';
+    } else if (monthsDiff <= 3) {
+      category = 'פג תוקף עד 3 חודשים';
+    } else if (monthsDiff <= 6) {
+      category = 'פג תוקף עד 6 חודשים';
+    } else if (monthsDiff <= 12) {
+      category = 'פג תוקף עד שנה';
+    } else {
+      category = 'תקף למעלה משנה';
+    }
+    
+    const existing = acc.find(item => item.category === category);
+    if (existing) {
+      existing.count += 1;
+      existing.amount += auth.amount || 0;
+    } else {
+      acc.push({
+        category,
+        count: 1,
+        amount: auth.amount || 0
+      });
+    }
+    return acc;
+  }, []).map((item, index) => ({
+    ...item,
+    color: ['#EF4444', '#F59E0B', '#FBBF24', '#10B981', '#3B82F6'][index % 5]
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -702,7 +740,7 @@ export default function BudgetAuthorizationsPage() {
       </div>
 
       {/* גרפים */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         <Card className="border-0 shadow-elevated bg-card overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי סטטוס</CardTitle>
@@ -946,6 +984,65 @@ export default function BudgetAuthorizationsPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* תרשים תוקף ההרשאות */}
+        <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2 xl:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי תוקף ההרשאה</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 h-64">
+              <div className="flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={validityData} margin={{ top: 10, right: 30, left: 0, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis 
+                      dataKey="category" 
+                      tick={{ fontSize: 10 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                      interval={0}
+                    />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload[0]) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-xl border border-gray-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div 
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: data.color }}
+                                />
+                                <span className="font-medium text-gray-900 text-sm">{data.category}</span>
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                <div>{data.count} הרשאות</div>
+                                <div>₪{new Intl.NumberFormat('he-IL').format(data.amount)}</div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                      {validityData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.color}
+                          className="hover:opacity-80 transition-all duration-300"
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             </div>
           </CardContent>
