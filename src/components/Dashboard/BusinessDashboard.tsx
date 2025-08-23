@@ -168,7 +168,7 @@ const licenseColumns: ColumnDef<LicenseRow>[] = [
               <DialogHeader>
                 <DialogTitle>ייבוא נתונים לרישוי עסקים</DialogTitle>
               </DialogHeader>
-              <DataUploader context="business" />
+              <DataUploader context="business" onUploadSuccess={reloadLicenses} />
             </DialogContent>
           </Dialog>
         </div>

@@ -50,6 +50,8 @@ const detectDataType = (headers: string[], rows: any[], context?: string) => {
         return { table: 'grants', reason: 'זוהה על בסיס הקשר הדף (קולות קוראים)' };
       case 'budget_authorizations':
         return { table: 'budget_authorizations', reason: 'זוהה על בסיס הקשר הדף (הרשאות תקציביות)' };
+      case 'business':
+        return { table: 'licenses', reason: 'זוהה על בסיס הקשר הדף (רישוי עסקים)' };
     }
   }
   
@@ -266,6 +268,23 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.address = normalizedRow.address || normalizedRow['כתובת'] || '';
       mapped.phone = normalizedRow.phone || normalizedRow['טלפון'] || '';
       mapped.institution_type = normalizedRow.institution_type || normalizedRow['סוג המוסד'] || 'אחר';
+      break;
+      
+    case 'licenses':
+      mapped.business_name = normalizedRow.business_name || normalizedRow['שם העסק'] || '';
+      mapped.owner = normalizedRow.owner || normalizedRow['בעל הרישיון'] || normalizedRow['בעל'] || '';
+      mapped.license_number = normalizedRow.license_number || normalizedRow['מספר רישיון'] || '';
+      mapped.type = normalizedRow.type || normalizedRow['סוג הרישיון'] || normalizedRow['סוג'] || 'כללי';
+      mapped.address = normalizedRow.address || normalizedRow['כתובת'] || '';
+      
+      // Handle dates  
+      if (normalizedRow.expires_at || normalizedRow['תאריך תפוגה'] || normalizedRow['תוקף עד']) {
+        const dateValue = normalizedRow.expires_at || normalizedRow['תאריך תפוגה'] || normalizedRow['תוקף עד'];
+        mapped.expires_at = dateValue;
+      }
+      
+      mapped.status = normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
+      mapped.reason_no_license = normalizedRow.reason_no_license || normalizedRow['סיבה ללא רישוי'] || '';
       break;
       
     case 'business_licenses':
