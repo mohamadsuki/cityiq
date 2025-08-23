@@ -30,6 +30,13 @@ type Grant = {
   status: string | null; // free text in DB, we use labels above
   submitted_at: string | null; // date
   decision_at: string | null; // date
+  project_description?: string | null;
+  responsible_person?: string | null;
+  submission_amount?: number | null;
+  approved_amount?: number | null;
+  support_amount?: number | null;
+  municipality_participation?: number | null;
+  notes?: string | null;
 };
 
 const STATUS_LABELS: Record<GrantStatus, string> = {
@@ -68,6 +75,7 @@ export default function GrantsApp() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<'all' | GrantStatus>('all');
   const [department, setDepartment] = useState<'all' | DepartmentSlug>('all');
+  const [ministry, setMinistry] = useState<'all' | string>('all');
 
   // Handle filtering from "What's New" section
   const filter = searchParams.get("filter");
@@ -82,6 +90,7 @@ export default function GrantsApp() {
       if (status !== 'all' && (g.status || '').toLowerCase() !== status) return false;
       if (role === 'manager' && departments && !departments.includes((g.department_slug as DepartmentSlug))) return false;
       if (department !== 'all' && g.department_slug !== department) return false;
+      if (ministry !== 'all' && g.ministry !== ministry) return false;
       
       // Apply filter from "What's New" section
       if (filter === 'new' && period) {
@@ -116,7 +125,7 @@ export default function GrantsApp() {
       
       return true;
     });
-  }, [grants, q, status, department, role, departments, filter, period, fromParam, toParam]);
+  }, [grants, q, status, department, ministry, role, departments, filter, period, fromParam, toParam]);
 
   type SortKey = 'name' | 'ministry' | 'amount' | 'status' | 'submitted_at' | 'decision_at';
   const [sortBy, setSortBy] = useState<SortKey>('decision_at');
@@ -318,6 +327,25 @@ export default function GrantsApp() {
     { name: 'אחרים', value: stats.total - stats.approved - stats.pending - stats.rejected, color: '#6b7280' }
   ].filter(item => item.value > 0);
 
+  // Ministry data for pie chart
+  const ministryData = useMemo(() => {
+    const ministryCounts: Record<string, number> = {};
+    const ministryAmounts: Record<string, number> = {};
+    
+    grants.forEach(g => {
+      const ministry = g.ministry || 'לא צוין';
+      ministryCounts[ministry] = (ministryCounts[ministry] || 0) + 1;
+      ministryAmounts[ministry] = (ministryAmounts[ministry] || 0) + (g.approved_amount || g.amount || 0);
+    });
+
+    return Object.keys(ministryCounts).map(ministry => ({
+      name: ministry,
+      count: ministryCounts[ministry],
+      amount: ministryAmounts[ministry]
+    }));
+  }, [grants]);
+
+  // Department data for pie chart  
   const departmentData = useMemo(() => {
     const deptCounts: Record<string, number> = {};
     const deptAmounts: Record<string, number> = {};
@@ -325,7 +353,7 @@ export default function GrantsApp() {
     grants.forEach(g => {
       const dept = g.department_slug || 'אחר';
       deptCounts[dept] = (deptCounts[dept] || 0) + 1;
-      deptAmounts[dept] = (deptAmounts[dept] || 0) + (g.amount || 0);
+      deptAmounts[dept] = (deptAmounts[dept] || 0) + (g.approved_amount || g.amount || 0);
     });
 
     return Object.keys(deptCounts).map(dept => ({
@@ -333,6 +361,17 @@ export default function GrantsApp() {
       count: deptCounts[dept],
       amount: deptAmounts[dept]
     }));
+  }, [grants]);
+
+  // Get unique ministries for filter
+  const availableMinistries = useMemo(() => {
+    const ministries = new Set<string>();
+    grants.forEach(g => {
+      if (g.ministry && g.ministry.trim()) {
+        ministries.add(g.ministry);
+      }
+    });
+    return Array.from(ministries).sort();
   }, [grants]);
 
   return (
@@ -411,27 +450,35 @@ export default function GrantsApp() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-0 shadow-elevated bg-card">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי סטטוס</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי משרד מממן</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
+            <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={statusChartData}
+                    data={ministryData}
                     cx="50%"
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    outerRadius={120}
                     fill="#8884d8"
-                    dataKey="value"
+                    dataKey="count"
                   >
-                    {statusChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {ministryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={`hsl(${(index * 137.5) % 360}, 70%, 50%)`} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip 
+                    formatter={(value, name) => {
+                      const entry = ministryData.find(d => d.count === value);
+                      return [
+                        `${value} קולות קוראים`,
+                        `תקציב: ₪${(entry?.amount || 0).toLocaleString('he-IL')}`
+                      ];
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -440,18 +487,36 @@ export default function GrantsApp() {
 
         <Card className="border-0 shadow-elevated bg-card">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי מחלקות</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי מחלקה</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64">
+            <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={departmentData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#3b82f6" />
-                </BarChart>
+                <PieChart>
+                  <Pie
+                    data={departmentData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={120}
+                    fill="#8884d8"
+                    dataKey="count"
+                  >
+                    {departmentData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={`hsl(${(index * 51.4) % 360}, 60%, 45%)`} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value, name) => {
+                      const entry = departmentData.find(d => d.count === value);
+                      return [
+                        `${value} קולות קוראים`,
+                        `תקציב: ₪${(entry?.amount || 0).toLocaleString('he-IL')}`
+                      ];
+                    }}
+                  />
+                </PieChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
@@ -460,8 +525,8 @@ export default function GrantsApp() {
 
 
       <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="lg:col-span-2">
             <Label htmlFor="q">חיפוש</Label>
             <Input id="q" placeholder="שם/משרד" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
@@ -476,6 +541,18 @@ export default function GrantsApp() {
                 <SelectItem value="pending">ממתין</SelectItem>
                 <SelectItem value="approved">אושר</SelectItem>
                 <SelectItem value="rejected">נדחה</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>משרד מממן</Label>
+            <Select value={ministry} onValueChange={(v) => setMinistry(v as any)}>
+              <SelectTrigger><SelectValue placeholder="משרד" /></SelectTrigger>
+              <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+                <SelectItem value="all">הכל</SelectItem>
+                {availableMinistries.map((m) => (
+                  <SelectItem key={m} value={m}>{m}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -505,6 +582,9 @@ export default function GrantsApp() {
                 משרד {sortBy === 'ministry' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
               </th>
               <th className="py-2 cursor-pointer select-none">
+                מחלקה
+              </th>
+              <th className="py-2 cursor-pointer select-none">
                 פרויקט/נושא
               </th>
               <th className="py-2 cursor-pointer select-none">
@@ -526,12 +606,13 @@ export default function GrantsApp() {
             </tr>
           </thead>
           <tbody>
-            {loading && (<tr><td className="py-6" colSpan={9}>טוען…</td></tr>)}
-            {!loading && sorted.length === 0 && (<tr><td className="py-6" colSpan={9}>אין נתונים</td></tr>)}
+            {loading && (<tr><td className="py-6" colSpan={10}>טוען…</td></tr>)}
+            {!loading && sorted.length === 0 && (<tr><td className="py-6" colSpan={10}>אין נתונים</td></tr>)}
             {!loading && sorted.map((g: any) => (
               <tr key={g.id} className="border-b border-border">
                 <td className="py-3 font-medium">{g.name}</td>
                 <td className="py-3">{g.ministry || '—'}</td>
+                <td className="py-3">{deptLabel(g.department_slug as DepartmentSlug) || '—'}</td>
                 <td className="py-3">{g.project_description || '—'}</td>
                 <td className="py-3">{g.responsible_person || '—'}</td>
                 <td className="py-3">{g.amount ? g.amount.toLocaleString('he-IL') : '—'}</td>
