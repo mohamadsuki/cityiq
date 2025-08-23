@@ -709,9 +709,9 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         mapped.approved_at = approvedAtRaw;
       }
       
-      // Notes from ninth column
-      const notesRaw = row[allKeys[8]] || row['__EMPTY_8'] || '';
-      mapped.notes = notesRaw && !notesRaw.toString().includes('תאריך אישור מליאה') ? notesRaw.toString().trim() : '';
+      // Notes from tenth column (J = index 9)
+      const notesRaw = row[allKeys[9]] || row['__EMPTY_9'] || '';
+      mapped.notes = notesRaw && !notesRaw.toString().includes('הערות') ? notesRaw.toString().trim() : '';
       
       // Default status
       mapped.status = 'pending';
