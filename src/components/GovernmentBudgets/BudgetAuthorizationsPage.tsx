@@ -87,30 +87,37 @@ export default function BudgetAuthorizationsPage() {
         console.log('No data found, using mock data');
         setAuthorizations(mockAuthorizations);
       } else {
-        // The data has been imported incorrectly from Excel, let's map it correctly
-        const cleanedData = data.map(item => {
+        // Filter out the total sum row (33,413,631) - it has no program description
+        const filteredData = data.filter(item => 
+          item.program && 
+          item.program.trim() && 
+          item.amount !== 33413631 // Remove the total sum row
+        );
+
+        // Map the data correctly based on the actual Excel structure
+        const cleanedData = filteredData.map(item => {
           console.log('🔍 Processing item:', item);
-          
-          // Based on the actual data structure, it seems like:
-          // - ministry contains reference numbers that should be authorization_number
-          // - authorization_number contains small numbers  
-          // - program contains the actual description
-          // - purpose might contain ministry or tabar info
           
           const cleanedItem = {
             ...item,
-            // Use the ministry field as authorization number since it has the proper format
-            authorization_number: item.ministry || `הר-${new Date().getFullYear()}-${(item.authorization_number || '').toString().padStart(3, '0')}`,
-            // Try to extract ministry from program or set based on common patterns
-            ministry: extractMinistryFromData(item),
-            // Program is the actual description
+            // authorization_number is correct - these are the row numbers from Excel
+            authorization_number: item.authorization_number?.toString() || 'לא צוין',
+            // program contains the actual authorization description
             program: item.program || 'לא צוין',
-            // Purpose as tabar number
+            // purpose contains the tabar number
             purpose: item.purpose || 'לא צוין',
-            // Notes - if empty, try to use any available description
-            notes: item.notes || extractNotesFromData(item),
-            // Ensure department exists
-            department_slug: item.department_slug || 'finance'
+            // amount is correct
+            amount: item.amount || 0,
+            // ministry contains reference numbers - we need to map these to actual ministry names
+            ministry: mapReferenceToMinistry(item.ministry),
+            // valid_until is empty - we'll use a default or extract from somewhere else
+            valid_until: item.valid_until || null,
+            // department_slug is correct
+            department_slug: item.department_slug || 'finance',
+            // approved_at is empty
+            approved_at: item.approved_at || null,
+            // notes is empty - generate from available data
+            notes: item.notes || generateNotes(item)
           };
           
           console.log('🔍 Cleaned item:', cleanedItem);
@@ -128,45 +135,42 @@ export default function BudgetAuthorizationsPage() {
     }
   };
 
-  // Helper function to extract ministry from available data
-  const extractMinistryFromData = (item: any): string => {
-    const program = item.program || '';
+  // Map reference numbers to actual ministry names
+  const mapReferenceToMinistry = (reference: string): string => {
+    if (!reference) return 'לא צוין';
     
-    // Common ministry patterns in Hebrew
-    if (program.includes('חינוך') || program.includes('בית ספר') || program.includes('גן ילדים')) {
-      return 'משרד החינוך';
+    // Common patterns in the reference numbers
+    if (reference.includes('1893155') || reference.includes('1891837')) {
+      return 'משרד הפנים'; // Interior Ministry
     }
-    if (program.includes('רווחה') || program.includes('קשישים') || program.includes('משפחה')) {
-      return 'משרד הרווחה';
+    if (reference.includes('1001835') || reference.includes('1001839') || reference.includes('1001817') || reference.includes('1001823') || reference.includes('1001841')) {
+      return 'משרד הבטחון הפנימי'; // Internal Security Ministry  
     }
-    if (program.includes('תשתית') || program.includes('בניה') || program.includes('שיפוץ') || program.includes('הקמת')) {
-      return 'משרד הפנים';
+    if (reference.includes('2025020201')) {
+      return 'משרד החינוך'; // Education Ministry
     }
-    if (program.includes('בטחון') || program.includes('אכיפה')) {
-      return 'משרד הבטחון הפנימי';
-    }
-    if (program.includes('תרבות') || program.includes('ספורט')) {
-      return 'משרד התרבות והספורט';
+    if (reference.includes('ק"ק')) {
+      return 'קרן קיימת לישראל'; // KKL
     }
     
-    return 'משרד הפנים'; // Default
+    // Default based on content patterns
+    return 'משרד הפנים';
   };
 
-  // Helper function to extract notes from available data
-  const extractNotesFromData = (item: any): string => {
-    if (item.notes && item.notes.trim()) {
-      return item.notes;
-    }
-    
-    // Create meaningful notes from available data
+  // Generate meaningful notes from available data
+  const generateNotes = (item: any): string => {
     const parts = [];
+    
     if (item.status === 'approved') parts.push('הרשאה מאושרת');
-    else if (item.status === 'pending') parts.push('ממתין לאישור');
+    else if (item.status === 'pending') parts.push('ממתין לאישור מליאה');
     else if (item.status === 'in_review') parts.push('בבדיקה');
     
-    if (item.purpose) parts.push(`תב״ר: ${item.purpose}`);
+    if (item.purpose) parts.push(`תב״ר מספר: ${item.purpose}`);
     
-    return parts.length > 0 ? parts.join(' • ') : 'אין הערות נוספות';
+    // Add ministry reference for tracking
+    if (item.ministry) parts.push(`מספר פניה: ${item.ministry}`);
+    
+    return parts.length > 0 ? parts.join(' • ') : 'ממתין למילוי פרטים נוספים';
   };
 
   const updateAuthorizationStatus = async (id: string, newStatus: string) => {
@@ -236,7 +240,12 @@ export default function BudgetAuthorizationsPage() {
     {
       accessorKey: "program",
       header: "תיאור ההרשאה",
-      enableSorting: true
+      enableSorting: true,
+      cell: ({ getValue }: any) => {
+        const value = getValue();
+        console.log('🔍 Program value:', value);
+        return value || 'לא צוין';
+      }
     },
     {
       accessorKey: "purpose",
@@ -255,7 +264,13 @@ export default function BudgetAuthorizationsPage() {
       enableSorting: true,
       cell: ({ getValue }: any) => {
         const value = getValue();
-        return value ? new Date(value).toLocaleDateString('he-IL') : '-';
+        console.log('🔍 Valid until value:', value);
+        if (!value) return 'לא הוגדר תוקף';
+        try {
+          return new Date(value).toLocaleDateString('he-IL');
+        } catch {
+          return 'תאריך לא תקין';
+        }
       }
     },
     {
@@ -280,7 +295,13 @@ export default function BudgetAuthorizationsPage() {
       enableSorting: true,
       cell: ({ getValue }: any) => {
         const value = getValue();
-        return value ? new Date(value).toLocaleDateString('he-IL') : '-';
+        console.log('🔍 Approved at value:', value);
+        if (!value) return 'ממתין לאישור';
+        try {
+          return new Date(value).toLocaleDateString('he-IL');
+        } catch {
+          return 'תאריך לא תקין';
+        }
       }
     },
     {
