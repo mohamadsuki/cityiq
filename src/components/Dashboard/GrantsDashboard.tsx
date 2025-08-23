@@ -24,54 +24,27 @@ export default function GrantsDashboard() {
   console.log('📊 Current stats state:', stats);
 
   useEffect(() => {
-    console.log('🚀 Starting grants fetch...');
-    
     const fetchGrantsStats = async () => {
       try {
-        // Fetch all grants data
         const { data: grants, error } = await supabase
           .from('grants')
-          .select('*');
-
-        console.log('📊 Raw grants response:', { error, dataLength: grants?.length });
+          .select('status');
 
         if (error) {
-          console.error('❌ Error fetching grants:', error);
+          console.error('Error fetching grants:', error);
           setLoading(false);
           return;
         }
 
-        if (grants && grants.length > 0) {
-          console.log('✅ All grants fetched:', grants.length);
-          
-          // Print all unique statuses to see what we have
-          const uniqueStatuses = [...new Set(grants.map(g => g.status))];
-          console.log('🏷️ Unique statuses found:', uniqueStatuses);
-          
+        if (grants) {
           const total = grants.length;
-          let submitted = 0;
-          let approved = 0;
-          
-          // Count manually with detailed logging
-          grants.forEach(grant => {
-            console.log(`Grant "${grant.name}" has status: "${grant.status}"`);
-            if (grant.status === 'הוגש') {
-              submitted++;
-            } else if (grant.status === 'אושר') {
-              approved++;
-            }
-          });
-
-          console.log('🎯 Manual count results:', { total, submitted, approved });
+          const submitted = grants.filter(grant => grant.status === 'הוגש').length;
+          const approved = grants.filter(grant => grant.status === 'אושר').length;
 
           setStats({ total, submitted, approved });
-        } else {
-          console.log('⚠️ No grants found or empty array');
-          setStats({ total: 0, submitted: 0, approved: 0 });
         }
       } catch (error) {
-        console.error('💥 Error:', error);
-        setStats({ total: 0, submitted: 0, approved: 0 });
+        console.error('Error:', error);
       } finally {
         setLoading(false);
       }
