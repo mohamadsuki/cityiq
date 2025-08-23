@@ -134,8 +134,8 @@ export default function BudgetAuthorizationsPage() {
             amount: item.amount || 0,
             // ministry - map from the authorization_number field or extract from program
             ministry: mapSequenceToMinistry(item.authorization_number, item.program),
-            // valid_until - calculate validity period (typically 1 year from approval)
-            valid_until: calculateValidityDate(approvalDate),
+            // valid_until - use actual valid_until from Excel, don't calculate if empty
+            valid_until: item.valid_until || calculateValidityDate(approvalDate),
             // department_slug - map based on program content
             department_slug: mapProgramToDepartment(item.program),
             // approved_at - priority to approved_at field, then notes
@@ -222,8 +222,8 @@ export default function BudgetAuthorizationsPage() {
   // Calculate validity date (typically 1 year from approval date)
   const calculateValidityDate = (approvalDate: string | null): string | null => {
     if (!approvalDate) {
-      // If no approval date, set validity to end of current year
-      return `${new Date().getFullYear()}-12-31`;
+      // If no approval date, don't create fake validity date
+      return null;
     }
     
     try {
@@ -232,7 +232,7 @@ export default function BudgetAuthorizationsPage() {
       approval.setFullYear(approval.getFullYear() + 1);
       return approval.toISOString().split('T')[0];
     } catch {
-      return `${new Date().getFullYear()}-12-31`;
+      return null;
     }
   };
 
