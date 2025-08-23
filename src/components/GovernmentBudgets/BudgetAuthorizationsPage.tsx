@@ -220,52 +220,73 @@ export default function BudgetAuthorizationsPage() {
   };
 
   // Parse and calculate validity date from various formats
-  const calculateValidityDate = (approvalDate: string | null): string | null => {
-    if (!approvalDate) {
-      // If no approval date, set validity to end of current year
+  const calculateValidityDate = (inputDate: string | null): string | null => {
+    if (!inputDate) {
+      // If no input date, set validity to end of current year
       return `${new Date().getFullYear()}-12-31`;
     }
     
+    console.log('🔍 calculateValidityDate input:', inputDate);
+    
+    // Check if it's just a year (24, 25, 26 etc.) - convert to 20XX format
+    const yearOnlyMatch = inputDate.match(/^(\d{2})$/);
+    if (yearOnlyMatch) {
+      const year = 2000 + parseInt(yearOnlyMatch[1]);
+      console.log('🔍 Year only detected:', yearOnlyMatch[1], 'converted to:', year);
+      // Return as MM/yyyy format (default to December)
+      return `12/${year}`;
+    }
+    
     // Check if it's a month/year format (e.g., "Dec 25", "נוב' 29")
-    const monthYearMatch = approvalDate.match(/^([א-ת\']+|[A-Za-z]+)\s*(\d{2,4})$/);
+    const monthYearMatch = inputDate.match(/^([א-ת\']+|[A-Za-z]+)\s*(\d{2,4})$/);
     if (monthYearMatch) {
       const [, monthStr, yearStr] = monthYearMatch;
       const year = yearStr.length === 2 ? 2000 + parseInt(yearStr) : parseInt(yearStr);
       
       // Map Hebrew and English months
       const monthMap: Record<string, number> = {
-        'jan': 0, 'january': 0, 'ינו\'': 0, 'ינואר': 0,
-        'feb': 1, 'february': 1, 'פבר\'': 1, 'פברואר': 1,
-        'mar': 2, 'march': 2, 'מרץ': 2,
-        'apr': 3, 'april': 3, 'אפר\'': 3, 'אפריל': 3,
-        'may': 4, 'מאי': 4,
-        'jun': 5, 'june': 5, 'יונ\'': 5, 'יוני': 5,
-        'jul': 6, 'july': 6, 'יול\'': 6, 'יולי': 6,
-        'aug': 7, 'august': 7, 'אוג\'': 7, 'אוגוסט': 7,
-        'sep': 8, 'september': 8, 'ספט\'': 8, 'ספטמבר': 8,
-        'oct': 9, 'october': 9, 'אוק\'': 9, 'אוקטובר': 9,
-        'nov': 10, 'november': 10, 'נוב\'': 10, 'נובמבר': 10,
-        'dec': 11, 'december': 11, 'דצמ\'': 11, 'דצמבר': 11
+        'jan': 1, 'january': 1, 'ינו\'': 1, 'ינואר': 1,
+        'feb': 2, 'february': 2, 'פבר\'': 2, 'פברואר': 2,
+        'mar': 3, 'march': 3, 'מרץ': 3,
+        'apr': 4, 'april': 4, 'אפר\'': 4, 'אפריל': 4,
+        'may': 5, 'מאי': 5,
+        'jun': 6, 'june': 6, 'יונ\'': 6, 'יוני': 6,
+        'jul': 7, 'july': 7, 'יול\'': 7, 'יולי': 7,
+        'aug': 8, 'august': 8, 'אוג\'': 8, 'אוגוסט': 8,
+        'sep': 9, 'september': 9, 'ספט\'': 9, 'ספטמבר': 9,
+        'oct': 10, 'october': 10, 'אוק\'': 10, 'אוקטובר': 10,
+        'nov': 11, 'november': 11, 'נוב\'': 11, 'נובמבר': 11,
+        'dec': 12, 'december': 12, 'דצמ\'': 12, 'דצמבר': 12
       };
       
       const monthKey = monthStr.toLowerCase().trim();
       const month = monthMap[monthKey];
       
       if (month !== undefined) {
-        // Create date at the end of the specified month
-        const date = new Date(year, month + 1, 0); // Last day of the month
-        return date.toISOString().split('T')[0];
+        console.log('🔍 Month/Year format detected:', monthStr, year, 'month:', month);
+        // Return in MM/yyyy format
+        return `${month.toString().padStart(2, '0')}/${year}`;
       }
     }
     
+    // Check if it's already in a date format - convert to MM/yyyy
     try {
-      const approval = new Date(approvalDate);
-      // Add 1 year to approval date
-      approval.setFullYear(approval.getFullYear() + 1);
-      return approval.toISOString().split('T')[0];
-    } catch {
-      return `${new Date().getFullYear()}-12-31`;
+      if (inputDate.includes('/') || inputDate.includes('-')) {
+        const date = new Date(inputDate);
+        if (!isNaN(date.getTime())) {
+          const month = (date.getMonth() + 1).toString().padStart(2, '0');
+          const year = date.getFullYear();
+          console.log('🔍 Date format detected, converted to MM/yyyy:', `${month}/${year}`);
+          return `${month}/${year}`;
+        }
+      }
+    } catch (error) {
+      console.log('🔍 Error parsing date:', error);
     }
+    
+    // If none of the above work, return the original value
+    console.log('🔍 Returning original value:', inputDate);
+    return inputDate;
   };
 
   // Extract date from notes (format: dd.mm.yyyy)

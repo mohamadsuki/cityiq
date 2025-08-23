@@ -671,17 +671,37 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         column: 'index 6 (column G)', 
         keyAtIndex6: allKeys[6],
         raw: validUntilRaw, 
-        type: typeof validUntilRaw 
+        type: typeof validUntilRaw,
+        allKeysFirstTen: allKeys.slice(0, 10) // Show first 10 columns for context
       });
       
+      // Extract year and month data from the Excel cell
       if (validUntilRaw && 
           typeof validUntilRaw === 'string' && 
           validUntilRaw.length > 0 && 
           !validUntilRaw.includes('תוקף ההרשאה') &&
-          !validUntilRaw.includes('מחלקה') && 
-          !validUntilRaw.includes('האנרגיה')) {
-        mapped.valid_until = validUntilRaw;
-        console.log('🐛 Set valid_until from column G:', validUntilRaw);
+          !validUntilRaw.includes('מחלקה')) {
+        
+        // Store the raw month/year data as-is for now
+        mapped.valid_until = validUntilRaw.trim();
+        console.log('🐛 Set valid_until from column G (raw):', validUntilRaw.trim());
+      } else {
+        console.log('🐛 Column G does not contain valid month/year data:', validUntilRaw);
+        // Try to find month/year data in other columns as fallback
+        for (let i = 0; i < Math.min(allKeys.length, 12); i++) {
+          const cellValue = row[allKeys[i]];
+          if (cellValue && typeof cellValue === 'string') {
+            const trimmed = cellValue.trim();
+            // Look for patterns like "Dec 25", "נוב' 29", or just numbers like "25", "26"
+            if (trimmed.match(/^([א-ת\']+|[A-Za-z]+)\s*(\d{2,4})$/) || 
+                trimmed.match(/^\d{2}$/) || 
+                trimmed.match(/^2[0-9]$/)) {
+              console.log(`🐛 Found potential month/year data in column ${i} (${allKeys[i]}):`, trimmed);
+              mapped.valid_until = trimmed;
+              break;
+            }
+          }
+        }
       }
       
       // Department from EIGHTH column (H = index 7) - corrected after moving valid_until to column G
