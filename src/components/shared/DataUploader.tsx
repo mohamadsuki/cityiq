@@ -698,7 +698,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         mapped.department_slug = 'finance';
       }
       
-      // Approved date from eighth column - validate it's actually a date
+      // Approved date from eighth column (H = index 7) - validate it's actually a date
       const approvedAtRaw = row[allKeys[7]] || row['__EMPTY_7'] || '';
       if (approvedAtRaw && 
           typeof approvedAtRaw === 'string' && 
@@ -706,7 +706,13 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
           !approvedAtRaw.includes('תאריך אישור מליאה') &&
           !approvedAtRaw.includes('מחלקה') && 
           (approvedAtRaw.includes('.') || approvedAtRaw.includes('/') || approvedAtRaw.includes('-') || approvedAtRaw.includes('20'))) {
-        mapped.approved_at = approvedAtRaw;
+        // Convert DD.MM.YYYY format to YYYY-MM-DD
+        if (approvedAtRaw.includes('.')) {
+          const [day, month, year] = approvedAtRaw.split('.');
+          mapped.approved_at = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        } else {
+          mapped.approved_at = approvedAtRaw;
+        }
       }
       
       // Notes from tenth column (J = index 9)

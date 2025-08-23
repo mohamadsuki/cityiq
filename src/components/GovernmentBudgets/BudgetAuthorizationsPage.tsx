@@ -7,10 +7,14 @@ import { ExportButtons } from "@/components/shared/ExportButtons";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, FileCheck, AlertCircle, Clock, CheckCircle, DollarSign, Upload } from "lucide-react";
+import { Plus, FileCheck, AlertCircle, Clock, CheckCircle, DollarSign, Upload, CalendarIcon } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 // נתונים לדוגמה - בעתיד יבואו מהדאטאבייס
 const mockAuthorizations = [
@@ -69,6 +73,9 @@ export default function BudgetAuthorizationsPage() {
   const [authorizations, setAuthorizations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUploader, setShowUploader] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date>();
+  const [statusUpdateId, setStatusUpdateId] = useState<string>('');
   const { toast } = useToast();
 
   const fetchAuthorizations = async () => {
@@ -98,7 +105,9 @@ export default function BudgetAuthorizationsPage() {
         const cleanedData = filteredData.map(item => {
           console.log('🔍 Processing item:', item);
           
-          const approvalDate = extractDateFromNotes(item.notes) || item.approved_at;
+          // Extract approval date first from both sources
+          const dateFromNotes = extractDateFromNotes(item.notes);
+          const approvalDate = item.approved_at || dateFromNotes;
           
           const cleanedItem = {
             ...item,
@@ -116,7 +125,7 @@ export default function BudgetAuthorizationsPage() {
             valid_until: calculateValidityDate(approvalDate),
             // department_slug - map based on program content
             department_slug: mapProgramToDepartment(item.program),
-            // approved_at - if we have date in notes, it means it's approved
+            // approved_at - priority to approved_at field, then notes
             approved_at: approvalDate,
             // status - automatically set to approved if we have approval date
             status: approvalDate ? 'approved' : (item.status || 'pending'),
@@ -244,50 +253,11 @@ export default function BudgetAuthorizationsPage() {
 
   const updateAuthorizationStatus = async (id: string, newStatus: string) => {
     try {
-      // If changing to approved, ask for approval date
+      // If changing to approved, show date picker
       if (newStatus === 'approved') {
-        const dateInput = prompt('אנא הכנס תאריך אישור מליאה (בפורמט DD.MM.YYYY):');
-        if (!dateInput) {
-          toast({
-            title: "בוטל",
-            description: "לא ניתן לשנות סטטוס ל'אושר' ללא תאריך אישור",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Validate date format
-        const datePattern = /^\d{1,2}\.\d{1,2}\.\d{4}$/;
-        if (!datePattern.test(dateInput)) {
-          toast({
-            title: "שגיאה",
-            description: "פורמט תאריך לא תקין. השתמש בפורמט DD.MM.YYYY",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Convert to ISO format
-        const [day, month, year] = dateInput.split('.');
-        const approvalDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-
-        // Update both status and approval date
-        const { error } = await supabase
-          .from('budget_authorizations')
-          .update({ 
-            status: newStatus,
-            approved_at: approvalDate
-          })
-          .eq('id', id);
-
-        if (error) throw error;
-
-        // Update local state
-        setAuthorizations(prev => 
-          prev.map(auth => 
-            auth.id === id ? { ...auth, status: newStatus, approved_at: approvalDate } : auth
-          )
-        );
+        setStatusUpdateId(id);
+        setShowDatePicker(true);
+        return;
       } else {
         // For other status changes, clear approval date if changing from approved
         const currentAuth = authorizations.find(a => a.id === id);
@@ -310,7 +280,56 @@ export default function BudgetAuthorizationsPage() {
             auth.id === id ? { ...auth, ...updateData } : auth
           )
         );
+
+        toast({
+          title: "הצלחה",
+          description: "הסטטוס עודכן בהצלחה",
+        });
       }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לעדכן את הסטטוס",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDateConfirm = async () => {
+    if (!selectedDate || !statusUpdateId) {
+      toast({
+        title: "שגיאה",
+        description: "נא לבחור תאריך",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const approvalDate = format(selectedDate, 'yyyy-MM-dd');
+
+      // Update both status and approval date
+      const { error } = await supabase
+        .from('budget_authorizations')
+        .update({ 
+          status: 'approved',
+          approved_at: approvalDate
+        })
+        .eq('id', statusUpdateId);
+
+      if (error) throw error;
+
+      // Update local state
+      setAuthorizations(prev => 
+        prev.map(auth => 
+          auth.id === statusUpdateId ? { ...auth, status: 'approved', approved_at: approvalDate } : auth
+        )
+      );
+
+      setShowDatePicker(false);
+      setSelectedDate(undefined);
+      setStatusUpdateId('');
 
       toast({
         title: "הצלחה",
@@ -909,6 +928,57 @@ export default function BudgetAuthorizationsPage() {
               />
               <div className="mt-4 text-sm text-muted-foreground">
                 העלה קובץ אקסל עם הרשאות תקציביות. הקובץ צריך להכיל עמודות: מספר הרשאה, משרד מממן, תיאור ההרשאה, סכום ההרשאה, תוקף ההרשאה.
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Date Picker Dialog */}
+      {showDatePicker && (
+        <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+          <DialogContent dir="rtl" className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>בחר תאריך אישור מליאה</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-right font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="ml-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "dd/MM/yyyy") : <span>בחר תאריך</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowDatePicker(false);
+                    setSelectedDate(undefined);
+                    setStatusUpdateId('');
+                  }}
+                >
+                  ביטול
+                </Button>
+                <Button onClick={handleDateConfirm}>
+                  אישור
+                </Button>
               </div>
             </div>
           </DialogContent>
