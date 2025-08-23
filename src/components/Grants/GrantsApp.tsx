@@ -330,6 +330,7 @@ export default function GrantsApp() {
     const rejected = grants.filter(g => g.status === 'נדחה').length;
     const totalAmount = grants.reduce((sum, g) => sum + (g.amount || 0), 0);
     const approvedAmount = grants.filter(g => g.status === 'אושר').reduce((sum, g) => sum + (g.amount || 0), 0);
+    const submittedAmount = grants.filter(g => g.status === 'הוגש').reduce((sum, g) => sum + (g.amount || 0), 0);
     
     return {
       total,
@@ -338,6 +339,7 @@ export default function GrantsApp() {
       rejected,
       totalAmount,
       approvedAmount,
+      submittedAmount,
       successRate: total > 0 ? Math.round((approved / total) * 100) : 0
     };
   }, [grants]);
@@ -503,6 +505,9 @@ export default function GrantsApp() {
             </div>
             <p className="text-xs text-purple-700 dark:text-purple-300">
               מאושר: ₪{stats.approvedAmount.toLocaleString('he-IL')}
+            </p>
+            <p className="text-xs text-purple-700 dark:text-purple-300">
+              הוגש: ₪{stats.submittedAmount.toLocaleString('he-IL')}
             </p>
           </CardContent>
         </Card>
