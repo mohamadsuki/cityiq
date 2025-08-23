@@ -33,8 +33,8 @@ export default function GrantsDashboard() {
 
         if (grants) {
           const total = grants.length;
-          const submitted = grants.filter(grant => grant.status === 'submitted' || grant.status === 'pending').length;
-          const approved = grants.filter(grant => grant.status === 'approved').length;
+          const submitted = grants.filter(grant => grant.status === 'הוגש').length;
+          const approved = grants.filter(grant => grant.status === 'אושר').length;
 
           setStats({ total, submitted, approved });
         }
