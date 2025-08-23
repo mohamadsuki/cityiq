@@ -15,23 +15,23 @@ import { DataUploader } from "@/components/shared/DataUploader";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Sector } from 'recharts';
 import { FileText, TrendingUp, CheckCircle, Clock, AlertCircle, DollarSign, Upload } from "lucide-react";
 
-// Enhanced color palette for charts
+// Enhanced 3D color palette for charts - vibrant, non-black colors
 const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  '#8B5CF6', // purple
-  '#06B6D4', // cyan
-  '#84CC16', // lime
-  '#F59E0B', // amber
-  '#EF4444', // red
-  '#10B981', // emerald
-  '#6366F1', // indigo
-  '#F97316', // orange
-  '#EC4899', // pink
-  '#14B8A6', // teal
+  'hsl(220, 91%, 55%)', // bright blue
+  'hsl(142, 76%, 36%)', // emerald green
+  'hsl(271, 81%, 56%)', // vibrant purple
+  'hsl(47, 96%, 53%)', // golden yellow
+  'hsl(346, 87%, 43%)', // rose red
+  'hsl(199, 89%, 48%)', // sky blue
+  'hsl(32, 95%, 44%)', // orange
+  'hsl(302, 84%, 61%)', // pink
+  'hsl(168, 76%, 42%)', // teal
+  'hsl(262, 83%, 58%)', // indigo
+  'hsl(120, 60%, 50%)', // lime green
+  'hsl(14, 100%, 57%)', // coral
+  'hsl(280, 100%, 70%)', // magenta
+  'hsl(39, 100%, 50%)', // amber
+  'hsl(210, 100%, 60%)', // light blue
 ];
 
 // Grant types aligned with DB
@@ -397,54 +397,42 @@ export default function GrantsApp() {
     return Array.from(ministries).sort();
   }, [grants]);
 
-  // Custom active shape for exploded pie chart
-  const renderActiveShape = (props: any) => {
-    const RADIAN = Math.PI / 180;
-    const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
-    const sin = Math.sin(-RADIAN * midAngle);
-    const cos = Math.cos(-RADIAN * midAngle);
-    const sx = cx + (outerRadius + 10) * cos;
-    const sy = cy + (outerRadius + 10) * sin;
-    const mx = cx + (outerRadius + 30) * cos;
-    const my = cy + (outerRadius + 30) * sin;
-    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-    const ey = my;
-    const textAnchor = cos >= 0 ? 'start' : 'end';
+  // Custom tooltip for 3D effect
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-3 animate-fade-in">
+          <p className="font-semibold text-foreground">{data.name}</p>
+          <p className="text-sm text-muted-foreground">
+            מספר: <span className="text-foreground font-medium">{data.count}</span>
+          </p>
+          <p className="text-sm text-muted-foreground">
+            סכום: <span className="text-foreground font-medium">₪{data.amount.toLocaleString('he-IL')}</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
+  // Custom legend component
+  const CustomLegend = ({ payload }: any) => {
     return (
-      <g>
-        <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="text-sm font-medium">
-          {payload.name}
-        </text>
-        <Sector
-          cx={cx}
-          cy={cy}
-          innerRadius={innerRadius}
-          outerRadius={outerRadius + 10}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          fill={fill}
-          className="drop-shadow-lg"
-        />
-        <Sector
-          cx={cx}
-          cy={cy}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          innerRadius={outerRadius + 12}
-          outerRadius={outerRadius + 16}
-          fill={fill}
-          opacity={0.3}
-        />
-        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
-        <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="hsl(var(--foreground))" className="text-xs font-medium">
-          {`${value} (${(percent * 100).toFixed(0)}%)`}
-        </text>
-        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={16} textAnchor={textAnchor} fill="hsl(var(--muted-foreground))" className="text-xs">
-          {`₪${payload.amount.toLocaleString('he-IL')}`}
-        </text>
-      </g>
+      <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+        {payload.map((entry: any, index: number) => (
+          <div key={index} className="flex items-center gap-2 text-sm">
+            <div 
+              className="w-3 h-3 rounded-full shadow-sm" 
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-foreground">{entry.value}</span>
+            <span className="text-muted-foreground text-xs">
+              ({entry.payload.count})
+            </span>
+          </div>
+        ))}
+      </div>
     );
   };
 
@@ -520,57 +508,85 @@ export default function GrantsApp() {
         </Card>
       </div>
 
-      {/* Charts */}
+      {/* Charts with side legends */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-0 shadow-elevated bg-card overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי משרד מממן</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-96 relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={ministryData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={activeMinistryIndex !== null ? 110 : 100}
-                    fill="#8884d8"
-                    dataKey="count"
-                    onMouseEnter={(_, index) => setActiveMinistryIndex(index)}
-                    onMouseLeave={() => setActiveMinistryIndex(null)}
-                    animationBegin={0}
-                    animationDuration={800}
-                    className="animate-fade-in"
-                  >
-                    {ministryData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={CHART_COLORS[index % CHART_COLORS.length]}
-                        className="hover:brightness-110 transition-all duration-300 cursor-pointer"
-                        stroke={activeMinistryIndex === index ? "#ffffff" : "none"}
-                        strokeWidth={activeMinistryIndex === index ? 3 : 0}
+            <div className="flex gap-6 h-96">
+              <div className="flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <defs>
+                      {CHART_COLORS.map((color, index) => (
+                        <linearGradient key={index} id={`gradient-ministry-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor={color} stopOpacity={1} />
+                          <stop offset="100%" stopColor={color} stopOpacity={0.7} />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <Pie
+                      data={ministryData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={activeMinistryIndex !== null ? 110 : 100}
+                      innerRadius={20}
+                      fill="#8884d8"
+                      dataKey="count"
+                      onMouseEnter={(_, index) => setActiveMinistryIndex(index)}
+                      onMouseLeave={() => setActiveMinistryIndex(null)}
+                      animationBegin={0}
+                      animationDuration={800}
+                      className="animate-fade-in drop-shadow-lg"
+                    >
+                      {ministryData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={`url(#gradient-ministry-${index % CHART_COLORS.length})`}
+                          className="hover:brightness-110 transition-all duration-300 cursor-pointer filter drop-shadow-md"
+                          stroke="hsl(var(--background))"
+                          strokeWidth={2}
+                          style={{
+                            filter: activeMinistryIndex === index 
+                              ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.3)) brightness(1.1)' 
+                              : 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
+                          }}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-48">
+                <h4 className="text-sm font-semibold text-foreground mb-3">משרדים</h4>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {ministryData.map((entry, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors cursor-pointer text-xs"
+                      onMouseEnter={() => setActiveMinistryIndex(index)}
+                      onMouseLeave={() => setActiveMinistryIndex(null)}
+                    >
+                      <div 
+                        className="w-3 h-3 rounded-full shadow-sm border border-background/50" 
+                        style={{ 
+                          background: `linear-gradient(135deg, ${CHART_COLORS[index % CHART_COLORS.length]}, ${CHART_COLORS[index % CHART_COLORS.length]}cc)` 
+                        }}
                       />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-card border border-border rounded-lg p-3 shadow-lg animate-scale-in">
-                            <p className="font-medium text-foreground">{data.name}</p>
-                            <p className="text-sm text-muted-foreground">קולות קוראים: {data.count}</p>
-                            <p className="text-sm text-muted-foreground">תקציב: ₪{data.amount.toLocaleString('he-IL')}</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-foreground font-medium truncate">{entry.name}</div>
+                        <div className="text-muted-foreground text-xs">
+                          {entry.count} קולות | ₪{entry.amount.toLocaleString('he-IL')}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -580,50 +596,78 @@ export default function GrantsApp() {
             <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי מחלקה</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-96 relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={departmentData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={activeDepartmentIndex !== null ? 110 : 100}
-                    fill="#8884d8"
-                    dataKey="count"
-                    onMouseEnter={(_, index) => setActiveDepartmentIndex(index)}
-                    onMouseLeave={() => setActiveDepartmentIndex(null)}
-                    animationBegin={200}
-                    animationDuration={800}
-                    className="animate-fade-in"
-                  >
-                    {departmentData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={CHART_COLORS[(index + 5) % CHART_COLORS.length]}
-                        className="hover:brightness-110 transition-all duration-300 cursor-pointer"
-                        stroke={activeDepartmentIndex === index ? "#ffffff" : "none"}
-                        strokeWidth={activeDepartmentIndex === index ? 3 : 0}
+            <div className="flex gap-6 h-96">
+              <div className="flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <defs>
+                      {CHART_COLORS.map((color, index) => (
+                        <linearGradient key={index} id={`gradient-dept-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor={color} stopOpacity={1} />
+                          <stop offset="100%" stopColor={color} stopOpacity={0.7} />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <Pie
+                      data={departmentData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      outerRadius={activeDepartmentIndex !== null ? 110 : 100}
+                      innerRadius={20}
+                      fill="#8884d8"
+                      dataKey="count"
+                      onMouseEnter={(_, index) => setActiveDepartmentIndex(index)}
+                      onMouseLeave={() => setActiveDepartmentIndex(null)}
+                      animationBegin={200}
+                      animationDuration={800}
+                      className="animate-fade-in drop-shadow-lg"
+                    >
+                      {departmentData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={`url(#gradient-dept-${(index + 5) % CHART_COLORS.length})`}
+                          className="hover:brightness-110 transition-all duration-300 cursor-pointer filter drop-shadow-md"
+                          stroke="hsl(var(--background))"
+                          strokeWidth={2}
+                          style={{
+                            filter: activeDepartmentIndex === index 
+                              ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.3)) brightness(1.1)' 
+                              : 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))'
+                          }}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-48">
+                <h4 className="text-sm font-semibold text-foreground mb-3">מחלקות</h4>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {departmentData.map((entry, index) => (
+                    <div 
+                      key={index} 
+                      className="flex items-center gap-2 p-2 rounded hover:bg-muted/50 transition-colors cursor-pointer text-xs"
+                      onMouseEnter={() => setActiveDepartmentIndex(index)}
+                      onMouseLeave={() => setActiveDepartmentIndex(null)}
+                    >
+                      <div 
+                        className="w-3 h-3 rounded-full shadow-sm border border-background/50" 
+                        style={{ 
+                          background: `linear-gradient(135deg, ${CHART_COLORS[(index + 5) % CHART_COLORS.length]}, ${CHART_COLORS[(index + 5) % CHART_COLORS.length]}cc)` 
+                        }}
                       />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-card border border-border rounded-lg p-3 shadow-lg animate-scale-in">
-                            <p className="font-medium text-foreground">{data.name}</p>
-                            <p className="text-sm text-muted-foreground">קולות קוראים: {data.count}</p>
-                            <p className="text-sm text-muted-foreground">תקציב: ₪{data.amount.toLocaleString('he-IL')}</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-foreground font-medium truncate">{entry.name}</div>
+                        <div className="text-muted-foreground text-xs">
+                          {entry.count} קולות | ₪{entry.amount.toLocaleString('he-IL')}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
