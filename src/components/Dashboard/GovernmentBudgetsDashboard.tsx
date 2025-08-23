@@ -30,6 +30,7 @@ export default function GovernmentBudgetsDashboard() {
   const [grants, setGrants] = useState<any[]>([]);
   const [authorizations, setAuthorizations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeMinistryIndex, setActiveMinistryIndex] = useState<number | null>(null);
 
   const fetchData = async () => {
     try {
@@ -114,7 +115,41 @@ export default function GovernmentBudgetsDashboard() {
     return acc;
   }, {} as Record<string, any>);
 
-  const grantsMinistryData = Object.values(grantsByMinistry);
+  // Ministry data for grants pie chart (like the grants page)
+  const grantsMinistryData = grants.reduce((acc: any[], grant) => {
+    const ministry = grant.ministry || 'לא צוין';
+    const existing = acc.find(item => item.name === ministry);
+    if (existing) {
+      existing.count++;
+      existing.amount += (grant.approved_amount || grant.amount || 0);
+    } else {
+      acc.push({
+        name: ministry,
+        count: 1,
+        amount: grant.approved_amount || grant.amount || 0
+      });
+    }
+    return acc;
+  }, []);
+
+  // Ministry data for authorizations (like the budget authorizations page)
+  const authMinistryData = authorizations.reduce((acc: any[], auth) => {
+    const ministry = auth.ministry || 'לא צוין';
+    const existing = acc.find(item => item.ministry === ministry);
+    if (existing) {
+      existing.count++;
+      existing.amount += (auth.amount || 0);
+    } else {
+      acc.push({
+        ministry: ministry,
+        count: 1,
+        amount: auth.amount || 0,
+        color: CHART_COLORS[acc.length % CHART_COLORS.length]
+      });
+    }
+    return acc;
+  }, []);
+
   const authsMinistryData = Object.values(authsByMinistry);
 
   // נתונים לגרף השוואה לפי משרדים
@@ -310,120 +345,214 @@ export default function GovernmentBudgetsDashboard() {
 
       {/* גרפים לפי משרדים */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-0 shadow-elevated bg-card">
+        <Card className="border-0 shadow-elevated bg-card overflow-hidden">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">קולות קוראים לפי משרדים ממשלתיים</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי משרד מממן</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex justify-center items-center h-80">
+              <div className="flex justify-center items-center h-96">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
             ) : grantsMinistryData.length > 0 ? (
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={grantsMinistryData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ ministry, total, percent }) => `${ministry}: ${total} (${(percent * 100).toFixed(0)}%)`}
-                      outerRadius={100}
-                      innerRadius={40}
-                      fill="#8884d8"
-                      dataKey="total"
-                      stroke="#fff"
-                      strokeWidth={2}
-                    >
-                      {grantsMinistryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={`hsl(${(index * 45) % 360}, 70%, 50%)`} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: any, name: any, props: any) => [
-                        `${value} קולות קוראים`,
-                        props.payload.ministry
-                      ]}
-                      labelStyle={{ color: '#374151' }}
-                      contentStyle={{ 
-                        backgroundColor: '#fff', 
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                      }}
-                    />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      height={36}
-                      iconType="circle"
-                      wrapperStyle={{ paddingTop: '10px' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+              <div className="flex gap-6 h-96">
+                <div className="flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <defs>
+                        {CHART_COLORS.map((color, index) => (
+                          <linearGradient key={index} id={`gradient-ministry-${index}`} x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor={color} stopOpacity={1} />
+                            <stop offset="100%" stopColor={color} stopOpacity={0.7} />
+                          </linearGradient>
+                        ))}
+                      </defs>
+                      <Pie
+                        data={grantsMinistryData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        outerRadius={80}
+                        innerRadius={20}
+                        fill="#8884d8"
+                        dataKey="count"
+                        onMouseEnter={(_, index) => setActiveMinistryIndex(index)}
+                        onMouseLeave={() => setActiveMinistryIndex(null)}
+                        animationBegin={0}
+                        animationDuration={800}
+                        className="animate-fade-in drop-shadow-lg"
+                      >
+                        {grantsMinistryData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={`url(#gradient-ministry-${index % CHART_COLORS.length})`}
+                            className="hover:brightness-110 transition-all duration-300 cursor-pointer filter drop-shadow-md"
+                            stroke="hsl(var(--background))"
+                            strokeWidth={2}
+                            style={{
+                              filter: activeMinistryIndex === index 
+                                ? 'drop-shadow(0 12px 24px rgba(0,0,0,0.4)) brightness(1.2)' 
+                                : 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))',
+                              transform: activeMinistryIndex === index ? 'scale(1.15)' : 'scale(1)',
+                              transformOrigin: 'center'
+                            }}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-background/95 backdrop-blur-sm border border-border rounded-lg shadow-lg p-3 animate-fade-in">
+                                <p className="font-semibold text-foreground">{data.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  מספר: <span className="text-foreground font-medium">{data.count}</span>
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  סכום: <span className="text-foreground font-medium">₪{data.amount.toLocaleString('he-IL')}</span>
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="w-56 border-r border-border pr-4">
+                  <h4 className="text-sm font-semibold text-foreground mb-3 pb-2 border-b border-border">משרדים מממנים</h4>
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {grantsMinistryData.map((entry, index) => (
+                      <div 
+                        key={index} 
+                        className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 cursor-pointer border ${
+                          activeMinistryIndex === index 
+                            ? 'bg-primary/10 border-primary/30 shadow-md scale-105' 
+                            : 'hover:bg-muted/50 border-transparent'
+                        }`}
+                        onMouseEnter={() => setActiveMinistryIndex(index)}
+                        onMouseLeave={() => setActiveMinistryIndex(null)}
+                      >
+                        <div 
+                          className="w-4 h-4 rounded-full shadow-sm border-2 border-background/50 flex-shrink-0" 
+                          style={{ 
+                            background: `linear-gradient(135deg, ${CHART_COLORS[index % CHART_COLORS.length]}, ${CHART_COLORS[index % CHART_COLORS.length]}cc)` 
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-foreground font-medium truncate text-sm">{entry.name}</div>
+                          <div className="text-muted-foreground text-xs mt-1">
+                            <div>{entry.count} קולות קוראים</div>
+                            <div className="font-medium">₪{entry.amount.toLocaleString('he-IL')}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="flex justify-center items-center h-80 text-muted-foreground">
+              <div className="flex justify-center items-center h-96 text-muted-foreground">
                 אין נתונים להצגה
               </div>
             )}
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-elevated bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold text-foreground">הרשאות תקציביות לפי משרדים ממשלתיים</CardTitle>
+        <Card className="border-0 shadow-elevated bg-card overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-foreground">הרשאות תקציביות לפי משרד מממן</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex justify-center items-center h-80">
+              <div className="flex justify-center items-center h-64">
                 <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
               </div>
-            ) : authsMinistryData.length > 0 ? (
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={authsMinistryData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ ministry, total, percent }) => `${ministry}: ${total} (${(percent * 100).toFixed(0)}%)`}
-                      outerRadius={100}
-                      innerRadius={40}
-                      fill="#8884d8"
-                      dataKey="total"
-                      stroke="#fff"
-                      strokeWidth={2}
-                    >
-                      {authsMinistryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={`hsl(${(index * 45 + 180) % 360}, 70%, 50%)`} />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: any, name: any, props: any) => [
-                        `${value} הרשאות`,
-                        props.payload.ministry
-                      ]}
-                      labelStyle={{ color: '#374151' }}
-                      contentStyle={{ 
-                        backgroundColor: '#fff', 
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '6px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                      }}
-                    />
-                    <Legend 
-                      verticalAlign="bottom" 
-                      height={36}
-                      iconType="circle"
-                      wrapperStyle={{ paddingTop: '10px' }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+            ) : authMinistryData.length > 0 ? (
+              <div className="flex gap-4 h-64">
+                <div className="flex-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={authMinistryData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ percent }) => percent > 5 ? `${(percent * 100).toFixed(0)}%` : ''}
+                        outerRadius={60}
+                        innerRadius={25}
+                        fill="#8884d8"
+                        dataKey="count"
+                        stroke="#fff"
+                        strokeWidth={2}
+                      >
+                        {authMinistryData.map((entry, index) => (
+                          <Cell 
+                            key={`cell-${index}`} 
+                            fill={entry.color}
+                            className="hover:opacity-80 transition-all duration-300"
+                            style={{
+                              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                              cursor: 'pointer'
+                            }}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload[0]) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-xl border border-gray-200 animate-fade-in">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <div 
+                                    className="w-2 h-2 rounded-full"
+                                    style={{ backgroundColor: data.color }}
+                                  />
+                                  <span className="font-medium text-gray-900 text-sm">{data.ministry}</span>
+                                </div>
+                                <div className="text-xs text-gray-600">
+                                  <div>{data.count} הרשאות</div>
+                                  <div>₪{new Intl.NumberFormat('he-IL').format(data.amount)}</div>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="w-40 border-r border-border pr-2">
+                  <h4 className="text-xs font-semibold text-foreground mb-2 pb-1 border-b border-border">משרדים</h4>
+                  <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                    {authMinistryData.map((item, index) => (
+                      <div key={index} className="flex items-center gap-1 p-1.5 rounded-md hover:bg-gray-50 transition-colors">
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div 
+                            className="font-medium text-gray-900 text-xs leading-tight" 
+                            style={{ wordBreak: 'break-word', lineHeight: '1.2' }}
+                            title={item.ministry}
+                          >
+                            {item.ministry}
+                          </div>
+                          <div className="text-gray-500 text-xs">{item.count} הרשאות</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : (
-              <div className="flex justify-center items-center h-80 text-muted-foreground">
+              <div className="flex justify-center items-center h-64 text-muted-foreground">
                 אין נתונים להצגה
               </div>
             )}
