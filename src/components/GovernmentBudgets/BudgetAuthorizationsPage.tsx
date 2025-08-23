@@ -104,8 +104,8 @@ export default function BudgetAuthorizationsPage() {
             authorization_number: item.ministry || item.authorization_number?.toString() || 'לא צוין',
             // program contains the actual authorization description
             program: item.program || 'לא צוין',
-            // purpose contains the tabar number
-            purpose: item.purpose || 'לא צוין',
+            // purpose contains the tabar number - leave empty if not specified
+            purpose: item.purpose || '',
             // amount is correct
             amount: item.amount || 0,
             // ministry - map from the authorization_number field or extract from program
@@ -228,10 +228,14 @@ export default function BudgetAuthorizationsPage() {
   const cleanNotes = (notes: string): string => {
     if (!notes || !notes.trim()) return '';
     
-    // Remove date patterns
-    const cleanedNotes = notes.replace(/\d{1,2}\.\d{1,2}\.\d{4}/g, '').trim();
+    // If notes contain only dates, return empty string
+    // Otherwise, keep the full notes content
+    const datePattern = /^\d{1,2}\.\d{1,2}\.\d{4}\s*$/;
+    if (datePattern.test(notes.trim())) {
+      return '';
+    }
     
-    return cleanedNotes || '';
+    return notes.trim();
   };
 
   const updateAuthorizationStatus = async (id: string, newStatus: string) => {
