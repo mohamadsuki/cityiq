@@ -22,9 +22,10 @@ export default function GrantsDashboard() {
   useEffect(() => {
     const fetchGrantsStats = async () => {
       try {
+        // Fetch all grants data
         const { data: grants, error } = await supabase
           .from('grants')
-          .select('name, status');
+          .select('*');
 
         if (error) {
           console.error('Error fetching grants:', error);
@@ -32,15 +33,15 @@ export default function GrantsDashboard() {
         }
 
         if (grants) {
-          console.log('Fetched grants:', grants.length, grants.map(g => ({ name: g.name, status: g.status })));
+          console.log('All grants fetched:', grants.length);
+          console.log('Grant statuses:', grants.map(g => ({ name: g.name, status: g.status })));
           
           const total = grants.length;
           const submitted = grants.filter(grant => grant.status === 'הוגש').length;
           const approved = grants.filter(grant => grant.status === 'אושר').length;
 
-          console.log('Stats calculated:', { total, submitted, approved });
-          console.log('Submitted grants:', grants.filter(grant => grant.status === 'הוגש').map(g => g.name));
-          console.log('Approved grants:', grants.filter(grant => grant.status === 'אושר').map(g => g.name));
+          console.log('Final calculated stats:', { total, submitted, approved });
+          console.log('Approved grants:', grants.filter(grant => grant.status === 'אושר').map(g => ({ name: g.name, status: g.status })));
 
           setStats({ total, submitted, approved });
         }
