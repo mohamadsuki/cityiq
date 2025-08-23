@@ -63,8 +63,47 @@ export default function GovernmentBudgetsDashboard() {
     total: authorizations.length,
     approved: authorizations.filter(a => a.status === 'approved').length,
     pending: authorizations.filter(a => a.status === 'pending').length,
-    totalAmount: authorizations.filter(a => a.status === 'approved').reduce((sum, a) => sum + (a.amount || 0), 0)
+    totalAmount: authorizations.reduce((sum, a) => sum + (a.amount || 0), 0) // כל ההרשאות, לא רק מאושרות
   };
+
+  // נתוני גרפים לפי משרדים
+  const grantsByMinistry = grants.reduce((acc, grant) => {
+    const ministry = grant.ministry || 'לא מוגדר';
+    if (!acc[ministry]) {
+      acc[ministry] = { ministry, total: 0, approved: 0, totalAmount: 0, approvedAmount: 0 };
+    }
+    acc[ministry].total++;
+    if (grant.status === 'approved') {
+      acc[ministry].approved++;
+      acc[ministry].approvedAmount += (grant.approved_amount || grant.amount || 0);
+    }
+    acc[ministry].totalAmount += (grant.amount || 0);
+    return acc;
+  }, {} as Record<string, any>);
+
+  const authsByMinistry = authorizations.reduce((acc, auth) => {
+    const ministry = auth.ministry || 'לא מוגדר';
+    if (!acc[ministry]) {
+      acc[ministry] = { ministry, total: 0, approved: 0, totalAmount: 0, approvedAmount: 0 };
+    }
+    acc[ministry].total++;
+    if (auth.status === 'approved') {
+      acc[ministry].approved++;
+      acc[ministry].approvedAmount += (auth.amount || 0);
+    }
+    acc[ministry].totalAmount += (auth.amount || 0);
+    return acc;
+  }, {} as Record<string, any>);
+
+  const grantsMinistryData = Object.values(grantsByMinistry);
+  const authsMinistryData = Object.values(authsByMinistry);
+
+  // נתונים לגרף השוואה לפי משרדים
+  const ministryComparisonData = Object.keys({ ...grantsByMinistry, ...authsByMinistry }).map(ministry => ({
+    ministry,
+    'קולות קוראים': grantsByMinistry[ministry]?.approved || 0,
+    'הרשאות תקציביות': authsByMinistry[ministry]?.approved || 0
+  }));
 
   // נתוני גרפים
   const grantsStatusData = [
@@ -192,44 +231,30 @@ export default function GovernmentBudgetsDashboard() {
         </Card>
       </div>
 
-      {/* גרף השוואה */}
+      {/* גרף השוואה לפי משרדים */}
       <Card className="border-0 shadow-elevated bg-card">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold text-foreground">השוואה בין קולות קוראים והרשאות תקציביות</CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground">השוואה בין קולות קוראים והרשאות תקציביות לפי משרד ממשלתי</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center items-center h-80">
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : (
+          ) : ministryComparisonData.length > 0 ? (
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart 
-                  data={[
-                    { 
-                      category: 'מאושרים',
-                      'קולות קוראים': grantsStats.approved,
-                      'הרשאות תקציביות': authStats.approved
-                    },
-                    { 
-                      category: 'ממתינים',
-                      'קולות קוראים': grantsStats.pending,
-                      'הרשאות תקציביות': authStats.pending
-                    },
-                    { 
-                      category: 'סה"כ',
-                      'קולות קוראים': grantsStats.total,
-                      'הרשאות תקציביות': authStats.total
-                    }
-                  ]} 
-                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                  data={ministryComparisonData}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                   <XAxis 
-                    dataKey="category" 
-                    tick={{ fontSize: 12 }}
-                    height={60}
+                    dataKey="ministry" 
+                    tick={{ fontSize: 11 }}
+                    height={80}
+                    angle={-45}
+                    textAnchor="end"
                   />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip 
@@ -256,9 +281,136 @@ export default function GovernmentBudgetsDashboard() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
+          ) : (
+            <div className="flex justify-center items-center h-80 text-muted-foreground">
+              אין נתונים להצגה
+            </div>
           )}
         </CardContent>
       </Card>
+
+      {/* גרפים לפי משרדים */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-0 shadow-elevated bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-foreground">קולות קוראים לפי משרדים ממשלתיים</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center items-center h-80">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : grantsMinistryData.length > 0 ? (
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={grantsMinistryData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ ministry, total, percent }) => `${ministry}: ${total} (${(percent * 100).toFixed(0)}%)`}
+                      outerRadius={100}
+                      innerRadius={40}
+                      fill="#8884d8"
+                      dataKey="total"
+                      stroke="#fff"
+                      strokeWidth={2}
+                    >
+                      {grantsMinistryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={`hsl(${(index * 45) % 360}, 70%, 50%)`} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: any, name: any, props: any) => [
+                        `${value} קולות קוראים`,
+                        props.payload.ministry
+                      ]}
+                      labelStyle={{ color: '#374151' }}
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36}
+                      iconType="circle"
+                      wrapperStyle={{ paddingTop: '10px' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex justify-center items-center h-80 text-muted-foreground">
+                אין נתונים להצגה
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-0 shadow-elevated bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold text-foreground">הרשאות תקציביות לפי משרדים ממשלתיים</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center items-center h-80">
+                <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : authsMinistryData.length > 0 ? (
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={authsMinistryData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ ministry, total, percent }) => `${ministry}: ${total} (${(percent * 100).toFixed(0)}%)`}
+                      outerRadius={100}
+                      innerRadius={40}
+                      fill="#8884d8"
+                      dataKey="total"
+                      stroke="#fff"
+                      strokeWidth={2}
+                    >
+                      {authsMinistryData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={`hsl(${(index * 45 + 180) % 360}, 70%, 50%)`} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: any, name: any, props: any) => [
+                        `${value} הרשאות`,
+                        props.payload.ministry
+                      ]}
+                      labelStyle={{ color: '#374151' }}
+                      contentStyle={{ 
+                        backgroundColor: '#fff', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36}
+                      iconType="circle"
+                      wrapperStyle={{ paddingTop: '10px' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="flex justify-center items-center h-80 text-muted-foreground">
+                אין נתונים להצגה
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* גרפי התפלגות סטטוס */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
