@@ -12,8 +12,27 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { DataUploader } from "@/components/shared/DataUploader";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Sector } from 'recharts';
 import { FileText, TrendingUp, CheckCircle, Clock, AlertCircle, DollarSign, Upload } from "lucide-react";
+
+// Enhanced color palette for charts
+const CHART_COLORS = [
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+  '#8B5CF6', // purple
+  '#06B6D4', // cyan
+  '#84CC16', // lime
+  '#F59E0B', // amber
+  '#EF4444', // red
+  '#10B981', // emerald
+  '#6366F1', // indigo
+  '#F97316', // orange
+  '#EC4899', // pink
+  '#14B8A6', // teal
+];
 
 // Grant types aligned with DB
 export type GrantStatus = 'draft' | 'submitted' | 'pending' | 'approved' | 'rejected';
@@ -76,6 +95,10 @@ export default function GrantsApp() {
   const [status, setStatus] = useState<'all' | GrantStatus>('all');
   const [department, setDepartment] = useState<'all' | DepartmentSlug>('all');
   const [ministry, setMinistry] = useState<'all' | string>('all');
+  
+  // Active segment states for exploded pie charts
+  const [activeMinistryIndex, setActiveMinistryIndex] = useState<number | null>(null);
+  const [activeDepartmentIndex, setActiveDepartmentIndex] = useState<number | null>(null);
 
   // Handle filtering from "What's New" section
   const filter = searchParams.get("filter");
@@ -374,6 +397,57 @@ export default function GrantsApp() {
     return Array.from(ministries).sort();
   }, [grants]);
 
+  // Custom active shape for exploded pie chart
+  const renderActiveShape = (props: any) => {
+    const RADIAN = Math.PI / 180;
+    const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + (outerRadius + 10) * cos;
+    const sy = cy + (outerRadius + 10) * sin;
+    const mx = cx + (outerRadius + 30) * cos;
+    const my = cy + (outerRadius + 30) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 22;
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
+
+    return (
+      <g>
+        <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="text-sm font-medium">
+          {payload.name}
+        </text>
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius + 10}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+          className="drop-shadow-lg"
+        />
+        <Sector
+          cx={cx}
+          cy={cy}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          innerRadius={outerRadius + 12}
+          outerRadius={outerRadius + 16}
+          fill={fill}
+          opacity={0.3}
+        />
+        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
+        <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
+        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="hsl(var(--foreground))" className="text-xs font-medium">
+          {`${value} (${(percent * 100).toFixed(0)}%)`}
+        </text>
+        <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={16} textAnchor={textAnchor} fill="hsl(var(--muted-foreground))" className="text-xs">
+          {`₪${payload.amount.toLocaleString('he-IL')}`}
+        </text>
+      </g>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex items-center justify-between">
@@ -448,12 +522,12 @@ export default function GrantsApp() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-0 shadow-elevated bg-card">
+        <Card className="border-0 shadow-elevated bg-card overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי משרד מממן</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
+            <div className="h-96 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -461,22 +535,38 @@ export default function GrantsApp() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={120}
+                    outerRadius={activeMinistryIndex !== null ? 110 : 100}
                     fill="#8884d8"
                     dataKey="count"
+                    onMouseEnter={(_, index) => setActiveMinistryIndex(index)}
+                    onMouseLeave={() => setActiveMinistryIndex(null)}
+                    animationBegin={0}
+                    animationDuration={800}
+                    className="animate-fade-in"
                   >
                     {ministryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={`hsl(${(index * 137.5) % 360}, 70%, 50%)`} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={CHART_COLORS[index % CHART_COLORS.length]}
+                        className="hover:brightness-110 transition-all duration-300 cursor-pointer"
+                        stroke={activeMinistryIndex === index ? "#ffffff" : "none"}
+                        strokeWidth={activeMinistryIndex === index ? 3 : 0}
+                      />
                     ))}
                   </Pie>
                   <Tooltip 
-                    formatter={(value, name) => {
-                      const entry = ministryData.find(d => d.count === value);
-                      return [
-                        `${value} קולות קוראים`,
-                        `תקציב: ₪${(entry?.amount || 0).toLocaleString('he-IL')}`
-                      ];
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-card border border-border rounded-lg p-3 shadow-lg animate-scale-in">
+                            <p className="font-medium text-foreground">{data.name}</p>
+                            <p className="text-sm text-muted-foreground">קולות קוראים: {data.count}</p>
+                            <p className="text-sm text-muted-foreground">תקציב: ₪{data.amount.toLocaleString('he-IL')}</p>
+                          </div>
+                        );
+                      }
+                      return null;
                     }}
                   />
                 </PieChart>
@@ -485,12 +575,12 @@ export default function GrantsApp() {
           </CardContent>
         </Card>
 
-        <Card className="border-0 shadow-elevated bg-card">
+        <Card className="border-0 shadow-elevated bg-card overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg font-semibold text-foreground">התפלגות לפי מחלקה</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
+            <div className="h-96 relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -498,22 +588,38 @@ export default function GrantsApp() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={120}
+                    outerRadius={activeDepartmentIndex !== null ? 110 : 100}
                     fill="#8884d8"
                     dataKey="count"
+                    onMouseEnter={(_, index) => setActiveDepartmentIndex(index)}
+                    onMouseLeave={() => setActiveDepartmentIndex(null)}
+                    animationBegin={200}
+                    animationDuration={800}
+                    className="animate-fade-in"
                   >
                     {departmentData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={`hsl(${(index * 51.4) % 360}, 60%, 45%)`} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={CHART_COLORS[(index + 5) % CHART_COLORS.length]}
+                        className="hover:brightness-110 transition-all duration-300 cursor-pointer"
+                        stroke={activeDepartmentIndex === index ? "#ffffff" : "none"}
+                        strokeWidth={activeDepartmentIndex === index ? 3 : 0}
+                      />
                     ))}
                   </Pie>
                   <Tooltip 
-                    formatter={(value, name) => {
-                      const entry = departmentData.find(d => d.count === value);
-                      return [
-                        `${value} קולות קוראים`,
-                        `תקציב: ₪${(entry?.amount || 0).toLocaleString('he-IL')}`
-                      ];
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-card border border-border rounded-lg p-3 shadow-lg animate-scale-in">
+                            <p className="font-medium text-foreground">{data.name}</p>
+                            <p className="text-sm text-muted-foreground">קולות קוראים: {data.count}</p>
+                            <p className="text-sm text-muted-foreground">תקציב: ₪{data.amount.toLocaleString('he-IL')}</p>
+                          </div>
+                        );
+                      }
+                      return null;
                     }}
                   />
                 </PieChart>
