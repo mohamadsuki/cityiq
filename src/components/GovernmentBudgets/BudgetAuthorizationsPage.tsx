@@ -134,8 +134,8 @@ export default function BudgetAuthorizationsPage() {
             amount: item.amount || 0,
             // ministry - map from the authorization_number field or extract from program
             ministry: mapSequenceToMinistry(item.authorization_number, item.program),
-            // valid_until - calculate validity period (typically 1 year from approval)
-            valid_until: calculateValidityDate(approvalDate),
+            // valid_until - parse directly from valid_until field if it exists, otherwise calculate
+            valid_until: item.valid_until ? calculateValidityDate(item.valid_until) : calculateValidityDate(approvalDate),
             // department_slug - map based on program content
             department_slug: mapProgramToDepartment(item.program),
             // approved_at - priority to approved_at field, then notes
@@ -219,11 +219,43 @@ export default function BudgetAuthorizationsPage() {
     return 'finance'; // Default
   };
 
-  // Calculate validity date (typically 1 year from approval date)
+  // Parse and calculate validity date from various formats
   const calculateValidityDate = (approvalDate: string | null): string | null => {
     if (!approvalDate) {
       // If no approval date, set validity to end of current year
       return `${new Date().getFullYear()}-12-31`;
+    }
+    
+    // Check if it's a month/year format (e.g., "Dec 25", "נוב' 29")
+    const monthYearMatch = approvalDate.match(/^([א-ת\']+|[A-Za-z]+)\s*(\d{2,4})$/);
+    if (monthYearMatch) {
+      const [, monthStr, yearStr] = monthYearMatch;
+      const year = yearStr.length === 2 ? 2000 + parseInt(yearStr) : parseInt(yearStr);
+      
+      // Map Hebrew and English months
+      const monthMap: Record<string, number> = {
+        'jan': 0, 'january': 0, 'ינו\'': 0, 'ינואר': 0,
+        'feb': 1, 'february': 1, 'פבר\'': 1, 'פברואר': 1,
+        'mar': 2, 'march': 2, 'מרץ': 2,
+        'apr': 3, 'april': 3, 'אפר\'': 3, 'אפריל': 3,
+        'may': 4, 'מאי': 4,
+        'jun': 5, 'june': 5, 'יונ\'': 5, 'יוני': 5,
+        'jul': 6, 'july': 6, 'יול\'': 6, 'יולי': 6,
+        'aug': 7, 'august': 7, 'אוג\'': 7, 'אוגוסט': 7,
+        'sep': 8, 'september': 8, 'ספט\'': 8, 'ספטמבר': 8,
+        'oct': 9, 'october': 9, 'אוק\'': 9, 'אוקטובר': 9,
+        'nov': 10, 'november': 10, 'נוב\'': 10, 'נובמבר': 10,
+        'dec': 11, 'december': 11, 'דצמ\'': 11, 'דצמבר': 11
+      };
+      
+      const monthKey = monthStr.toLowerCase().trim();
+      const month = monthMap[monthKey];
+      
+      if (month !== undefined) {
+        // Create date at the end of the specified month
+        const date = new Date(year, month + 1, 0); // Last day of the month
+        return date.toISOString().split('T')[0];
+      }
     }
     
     try {
