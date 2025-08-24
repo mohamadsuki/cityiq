@@ -582,6 +582,9 @@ export default function BudgetAuthorizationsPage() {
   const approvedGrantsAmount = approvedGrants.reduce((sum, g) => {
     return sum + (g.amount || 0);
   }, 0);
+
+  // Calculate total grants amount (like in grants page)
+  const totalGrantsAmount = grants.reduce((sum, g) => sum + (g.amount || 0), 0);
   
   const stats = {
     total: validAuthorizations.length,
@@ -591,7 +594,8 @@ export default function BudgetAuthorizationsPage() {
     approvedAmount: validAuthorizations.filter(a => a.approved_at).reduce((sum, a) => sum + (a.amount || 0), 0),
     grantsTotal: grants.length,
     approvedGrantsCount: approvedGrants.length,
-    approvedGrantsAmount: approvedGrantsAmount
+    approvedGrantsAmount: approvedGrantsAmount,
+    totalGrantsAmount: totalGrantsAmount
   };
 
   // נתוני גרפים
@@ -735,15 +739,18 @@ export default function BudgetAuthorizationsPage() {
 
         <Card className="border-0 bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">סכום קולות קוראים מאושרים</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">סכום קולות קוראים</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              ₪{new Intl.NumberFormat('he-IL').format(stats.approvedGrantsAmount)}
+              ₪{new Intl.NumberFormat('he-IL').format(stats.totalGrantsAmount)}
             </div>
             <p className="text-xs text-green-700 dark:text-green-300">
-              {stats.approvedGrantsCount} קולות קוראים מאושרים
+              מאושר: ₪{new Intl.NumberFormat('he-IL').format(stats.approvedGrantsAmount)}
+            </p>
+            <p className="text-xs text-green-700 dark:text-green-300">
+              {stats.grantsTotal} סה"כ קולות קוראים
             </p>
           </CardContent>
         </Card>
