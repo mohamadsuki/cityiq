@@ -1189,7 +1189,7 @@ export default function BudgetAuthorizationsPage() {
                     ...range,
                     count: expiringAuths.length,
                     totalAmount,
-                    expiringAuths: expiringAuths.slice(0, 3) // מגביל ל-3 הרשאות לתצוגה
+                    expiringAuths: expiringAuths.slice(0, 5) // מגביל ל-5 הרשאות לתצוגה
                   };
                 });
 
@@ -1214,46 +1214,68 @@ export default function BudgetAuthorizationsPage() {
                         return (
                           <div key={index} className="relative flex flex-col items-center group">
                             {/* תיאור עליון/תחתון לחילופין */}
-                            <div className={`absolute w-52 px-3 py-2 text-center transition-all duration-300 group-hover:scale-105 ${
-                              isEven ? '-top-20' : 'top-16'
+                            <div className={`absolute w-80 px-4 py-3 text-center transition-all duration-300 group-hover:scale-105 opacity-0 group-hover:opacity-100 pointer-events-none z-20 ${
+                              isEven ? '-top-24' : 'top-20'
                             }`}>
-                              <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200 p-3">
-                                <div className="font-semibold text-sm text-gray-900 mb-1">
+                              <div className="bg-white/98 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-200 p-4 max-h-96 overflow-y-auto">
+                                <div className="font-semibold text-lg text-gray-900 mb-2 border-b pb-2">
                                   {timePoint.label}
                                 </div>
-                                <div className="text-xs text-gray-600 mb-2">
-                                  {timePoint.count} הרשאות פגות
+                                <div className="text-sm text-gray-600 mb-3 flex justify-between">
+                                  <span>{timePoint.count} הרשאות פגות</span>
+                                  <span className="font-medium">₪{new Intl.NumberFormat('he-IL').format(timePoint.totalAmount)}</span>
                                 </div>
-                                <div className="text-xs font-medium text-gray-700 mb-2">
-                                  ₪{new Intl.NumberFormat('he-IL').format(timePoint.totalAmount)}
-                                </div>
-                                {timePoint.expiringAuths.length > 0 && (
-                                  <div className="text-xs text-gray-500 space-y-1">
+                                
+                                {timePoint.expiringAuths.length > 0 ? (
+                                  <div className="space-y-3 text-right">
                                     {timePoint.expiringAuths.map((auth, i) => (
-                                      <div key={i} className="truncate">
-                                        {auth.program?.substring(0, 30)}...
+                                      <div key={i} className="bg-gray-50 rounded-lg p-3 border-r-4 border-blue-400">
+                                        <div className="font-medium text-gray-900 text-sm mb-1">
+                                          {auth.program}
+                                        </div>
+                                        <div className="text-xs text-gray-600 space-y-1">
+                                          <div>משרד: {auth.ministry}</div>
+                                          <div>סכום: ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}</div>
+                                          <div>פוגה: {new Date(auth.valid_until).toLocaleDateString('he-IL')}</div>
+                                          {auth.authorization_number && (
+                                            <div>מספר הרשאה: {auth.authorization_number}</div>
+                                          )}
+                                          <div className={`inline-block px-2 py-1 rounded text-xs ${
+                                            auth.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                            auth.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                            auth.status === 'in_review' ? 'bg-blue-100 text-blue-800' :
+                                            'bg-red-100 text-red-800'
+                                          }`}>
+                                            {statusLabels[auth.status]?.label || auth.status}
+                                          </div>
+                                        </div>
                                       </div>
                                     ))}
-                                    {timePoint.count > 3 && (
-                                      <div className="font-medium">
-                                        +{timePoint.count - 3} נוספות
+                                    {timePoint.count > timePoint.expiringAuths.length && (
+                                      <div className="text-center text-gray-500 text-sm pt-2 border-t">
+                                        +{timePoint.count - timePoint.expiringAuths.length} הרשאות נוספות
                                       </div>
                                     )}
+                                  </div>
+                                ) : (
+                                  <div className="text-gray-500 text-sm text-center py-4">
+                                    אין הרשאות פגות בתקופה זו
                                   </div>
                                 )}
                               </div>
                               {/* חץ מצביע */}
                               <div className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 ${
                                 isEven 
-                                  ? 'top-full border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-200' 
-                                  : 'bottom-full border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-200'
+                                  ? 'top-full border-l-6 border-r-6 border-t-6 border-transparent border-t-gray-200' 
+                                  : 'bottom-full border-l-6 border-r-6 border-b-6 border-transparent border-b-gray-200'
                               }`}></div>
                             </div>
                             
                             {/* הנקודה המרכזית */}
                             <div 
-                              className="relative w-16 h-16 rounded-full border-4 border-white shadow-xl flex flex-col items-center justify-center transform transition-all duration-300 hover:scale-110 cursor-pointer z-10"
+                              className="relative w-16 h-16 rounded-full border-4 border-white shadow-xl flex flex-col items-center justify-center transform transition-all duration-300 hover:scale-110 cursor-pointer z-10 group-hover:shadow-2xl"
                               style={{ backgroundColor: timePoint.color }}
+                              title={`${timePoint.label}: ${timePoint.count} הרשאות פגות`}
                             >
                               <span className="text-white font-bold text-xs leading-tight">
                                 {timePoint.count}
