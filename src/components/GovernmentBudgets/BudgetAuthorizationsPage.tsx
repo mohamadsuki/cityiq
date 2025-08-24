@@ -1139,15 +1139,15 @@ export default function BudgetAuthorizationsPage() {
           </CardContent>
         </Card>
 
-        {/* תרשים עמודות אופקיות לתוקף הרשאות */}
+        {/* תרשים עמודות לתוקף הרשאות */}
         <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-foreground">ציר זמן של תוקף ההרשאות</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-80">
+            <div className="h-96">
               {(() => {
-                // יצירת נתונים לתרשים עמודות אופקיות - הרשאות שפוגות בזמנים שונים
+                // יצירת נתונים לתרשים עמודות - הרשאות שפוגות בזמנים שונים
                 const currentDate = new Date();
                 const timeRanges = [
                   { label: 'חודש הקרוב', months: 1, color: '#ef4444' },
@@ -1205,69 +1205,70 @@ export default function BudgetAuthorizationsPage() {
                 return (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      layout="horizontal"
                       data={chartData}
                       margin={{
                         top: 20,
                         right: 30,
-                        left: 100,
-                        bottom: 20,
+                        left: 20,
+                        bottom: 80,
                       }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
                       <XAxis 
-                        type="number" 
-                        domain={[0, 'dataMax']}
-                        tick={{ fontSize: 12, fill: '#6b7280' }}
-                        axisLine={{ stroke: '#d1d5db' }}
-                        tickLine={{ stroke: '#d1d5db' }}
-                      />
-                      <YAxis 
-                        type="category" 
                         dataKey="period"
                         tick={{ fontSize: 12, fill: '#374151' }}
                         axisLine={{ stroke: '#d1d5db' }}
                         tickLine={{ stroke: '#d1d5db' }}
-                        width={90}
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        interval={0}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                        axisLine={{ stroke: '#d1d5db' }}
+                        tickLine={{ stroke: '#d1d5db' }}
+                        label={{ value: 'מספר הרשאות', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
                       />
                       <Tooltip 
                         content={({ active, payload, label }) => {
                           if (active && payload && payload[0]) {
                             const data = payload[0].payload;
                             return (
-                              <div className="bg-white/98 backdrop-blur-sm p-4 rounded-lg shadow-xl border border-gray-200 max-w-xs">
-                                <div className="font-semibold text-gray-900 mb-2 border-b pb-2">
+                              <div className="bg-white/98 backdrop-blur-sm p-4 rounded-lg shadow-xl border border-gray-200 max-w-sm">
+                                <div className="font-semibold text-gray-900 mb-3 text-center border-b pb-2">
                                   {data.period}
                                 </div>
                                 <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between">
-                                    <span>מספר הרשאות:</span>
-                                    <span className="font-medium">{data.count}</span>
+                                  <div className="flex justify-between items-center bg-blue-50 px-3 py-2 rounded">
+                                    <span className="font-medium text-blue-800">מספר הרשאות:</span>
+                                    <span className="font-bold text-blue-900 text-lg">{data.count}</span>
                                   </div>
-                                  <div className="flex justify-between">
-                                    <span>סה"כ תקציב:</span>
-                                    <span className="font-medium text-green-600">
+                                  <div className="flex justify-between items-center bg-green-50 px-3 py-2 rounded">
+                                    <span className="font-medium text-green-800">סה"כ תקציב:</span>
+                                    <span className="font-bold text-green-900">
                                       ₪{new Intl.NumberFormat('he-IL').format(data.totalAmount)}
                                     </span>
                                   </div>
                                   {data.authorizations.length > 0 && (
-                                    <>
-                                      <div className="border-t pt-2 mt-2">
-                                        <div className="font-medium text-gray-700 mb-1">הרשאות:</div>
-                                        <div className="space-y-1 max-h-32 overflow-y-auto">
-                                          {data.authorizations.slice(0, 3).map((auth, i) => (
-                                            <div key={i} className="text-xs text-gray-600">
-                                              • {auth.program} - ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}
+                                    <div className="border-t pt-3 mt-3">
+                                      <div className="font-medium text-gray-700 mb-2">דוגמאות הרשאות:</div>
+                                      <div className="space-y-2 max-h-32 overflow-y-auto text-xs">
+                                        {data.authorizations.slice(0, 3).map((auth, i) => (
+                                          <div key={i} className="bg-gray-50 p-2 rounded border-r-2 border-blue-400">
+                                            <div className="font-medium text-gray-800 mb-1">{auth.program}</div>
+                                            <div className="text-gray-600">
+                                              ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}
                                             </div>
-                                          ))}
-                                          {data.authorizations.length > 3 && (
-                                            <div className="text-xs text-gray-500 italic">
-                                              + עוד {data.authorizations.length - 3} הרשאות
-                                            </div>
-                                          )}
-                                        </div>
+                                          </div>
+                                        ))}
+                                        {data.authorizations.length > 3 && (
+                                          <div className="text-center text-gray-500 italic">
+                                            + עוד {data.authorizations.length - 3} הרשאות
+                                          </div>
+                                        )}
                                       </div>
-                                    </>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -1278,10 +1279,9 @@ export default function BudgetAuthorizationsPage() {
                       />
                       <Bar 
                         dataKey="count" 
-                        fill="#8b5cf6"
-                        radius={[0, 4, 4, 0]}
+                        radius={[4, 4, 0, 0]}
                         stroke="#fff"
-                        strokeWidth={1}
+                        strokeWidth={2}
                       >
                         {chartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
