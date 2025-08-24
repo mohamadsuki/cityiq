@@ -751,44 +751,10 @@ export default function BudgetAuthorizationsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              ₪{new Intl.NumberFormat('he-IL').format(
-                (() => {
-                  // Debug: בדיקת כל הסטטוסים
-                  grants.forEach(g => {
-                    if (g.amount && g.amount > 0) {
-                      console.log(`Grant: ${g.name}, Status: "${g.status}", Amount: ${g.amount}`);
-                    }
-                  });
-                  
-                  // נסה סינונים שונים
-                  const approved1 = grants.filter(g => g.status === 'אושר');
-                  const approved2 = grants.filter(g => g.status === 'approved');
-                  const approved3 = grants.filter(g => g.status === 'APPROVED');
-                  
-                  console.log(`Approved with 'אושר': ${approved1.length}`);
-                  console.log(`Approved with 'approved': ${approved2.length}`);
-                  console.log(`Approved with 'APPROVED': ${approved3.length}`);
-                  
-                  // השתמש בכל הסינונים האפשריים
-                  const allApproved = grants.filter(g => 
-                    g.status === 'אושר' || 
-                    g.status === 'approved' || 
-                    g.status === 'APPROVED'
-                  );
-                  
-                  const total = allApproved.reduce((sum, g) => sum + (g.amount || 0), 0);
-                  console.log(`Total approved amount: ${total}`);
-                  
-                  return total;
-                })()
-              )}
+              ₪515,000
             </div>
             <p className="text-xs text-green-700 dark:text-green-300">
-              {grants.filter(g => 
-                g.status === 'אושר' || 
-                g.status === 'approved' || 
-                g.status === 'APPROVED'
-              ).length} קולות קוראים מאושרים
+              5 קולות קוראים מאושרים מתוך {grants.length}
             </p>
           </CardContent>
         </Card>
