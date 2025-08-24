@@ -575,13 +575,20 @@ export default function BudgetAuthorizationsPage() {
 
   const approvedGrants = grants.filter(g => {
     const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
+    console.log(`🔍 Grant Debug - Name: ${g.name}, Status: ${g.status}, HebrewStatus: ${hebrewStatus}, Amount: ${g.amount}`);
     return hebrewStatus === 'אושר';
   });
 
-  // Calculate approved grants amount using the amount field
+  console.log('🔍 All grants:', grants.length);
+  console.log('🔍 Approved grants:', approvedGrants);
+
+  // Calculate approved grants amount using the amount field (like grants page)
   const approvedGrantsAmount = approvedGrants.reduce((sum, g) => {
+    console.log(`🔍 Adding grant amount: ${g.amount}`);
     return sum + (g.amount || 0);
   }, 0);
+
+  console.log('🔍 Final approved grants amount:', approvedGrantsAmount);
 
   // Calculate total grants amount (like in grants page)
   const totalGrantsAmount = grants.reduce((sum, g) => sum + (g.amount || 0), 0);
@@ -739,18 +746,15 @@ export default function BudgetAuthorizationsPage() {
 
         <Card className="border-0 bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">סכום קולות קוראים</CardTitle>
+            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">סכום קולות קוראים מאושרים</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              ₪{new Intl.NumberFormat('he-IL').format(stats.totalGrantsAmount)}
+              ₪{new Intl.NumberFormat('he-IL').format(stats.approvedGrantsAmount)}
             </div>
             <p className="text-xs text-green-700 dark:text-green-300">
-              מאושר: ₪{new Intl.NumberFormat('he-IL').format(stats.approvedGrantsAmount)}
-            </p>
-            <p className="text-xs text-green-700 dark:text-green-300">
-              {stats.grantsTotal} סה"כ קולות קוראים
+              {stats.approvedGrantsCount} קולות קוראים מאושרים
             </p>
           </CardContent>
         </Card>
