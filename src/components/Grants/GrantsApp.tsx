@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Sector } from 'recharts';
-import { FileText, TrendingUp, CheckCircle, Clock, AlertCircle, DollarSign, Upload } from "lucide-react";
+import { FileText, TrendingUp, CheckCircle, Clock, AlertCircle, DollarSign, Upload, Edit, Trash2 } from "lucide-react";
 
 // Enhanced 3D color palette for charts - vibrant, non-black colors
 const CHART_COLORS = [
@@ -836,9 +836,13 @@ export default function GrantsApp() {
                     )}
                   </div>
                 </td>
-                <td className="py-3 space-x-2 space-x-reverse">
-                  <Button size="sm" variant="outline" onClick={() => openEdit(g)}>עריכה</Button>
-                  <Button size="sm" variant="destructive" onClick={() => deleteGrant(g)}>מחיקה</Button>
+                <td className="py-3 space-x-1 space-x-reverse">
+                  <Button size="sm" variant="outline" onClick={() => openEdit(g)} className="h-8 w-8 p-0">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="destructive" onClick={() => deleteGrant(g)} className="h-8 w-8 p-0">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </td>
               </tr>
             ))}
