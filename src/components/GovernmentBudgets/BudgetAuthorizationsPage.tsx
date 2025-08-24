@@ -1184,7 +1184,7 @@ export default function BudgetAuthorizationsPage() {
           <CardContent>
             <div className="h-96">
               {(() => {
-                // יצירת נתונים חדשים לציר זמן חיצים אופקיים (מימין לשמאל)
+                // יצירת נתונים חדשים לציר זמן חיצים אופקיים (מנקודת אפס)
                 const currentDate = new Date();
                 
                 // קיבוץ הרשאות לפי תאריך סיום תוקף
@@ -1212,9 +1212,12 @@ export default function BudgetAuthorizationsPage() {
                     return acc;
                   }, {});
 
-                // המרה למערך וסידור לפי תאריך (מהקרוב לרחוק)
-                const timelineData = Object.values(authsByExpiry)
-                  .sort((a: any, b: any) => a.date.getTime() - b.date.getTime())
+                // המרה למערך וסידור לפי תאריך (מהקרוב לרחוק), הצגת 10 ראשונים בלבד
+                const allTimelineData = Object.values(authsByExpiry)
+                  .sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
+                
+                const timelineData = allTimelineData
+                  .slice(0, 10) // הגבלה ל-10 תקופות בלבד
                   .map((item: any, index) => ({
                     ...item,
                     y: index + 1, // מיקום על ציר Y
@@ -1234,53 +1237,51 @@ export default function BudgetAuthorizationsPage() {
                 }
 
                 return (
-                  <div className="relative w-full h-full bg-gray-50 rounded-lg overflow-hidden">
-                    {/* כותרת ציר X - הפוך (מימין לשמאל) */}
+                    <div className="relative w-full h-full bg-gray-50 rounded-lg overflow-hidden">
+                    {/* כותרת ציר X */}
                     <div className="absolute top-4 right-4 text-xs text-gray-600 font-medium">
                       היום
                     </div>
                     <div className="absolute top-4 left-4 text-xs text-gray-600 font-medium">
-                      עתיד
+                      פג תוקף
                     </div>
                     
-                    {/* ציר זמן מרכזי */}
-                    <div className="absolute top-8 left-8 right-8 h-0.5 bg-gray-300"></div>
+                    {/* ציר זמן מרכזי אנכי בצד ימין */}
+                    <div className="absolute top-12 right-8 bottom-8 w-0.5 bg-gray-300"></div>
                     
                     {/* חיצים אופקיים (מימין לשמאל) */}
-                    <div className="pt-16 pb-4 px-8 overflow-y-auto max-h-full">
+                    <div className="pt-16 pb-4 px-8 space-y-2 overflow-y-auto max-h-full">
                       {timelineData.map((item: any, index) => {
-                        const maxWidth = 300; // רוחב מקסימלי
-                        const arrowWidth = Math.min(maxWidth, Math.max(50, item.width / 5));
+                        const maxWidth = 250; // רוחב מקסימלי
+                        const arrowWidth = Math.min(maxWidth, Math.max(60, Math.abs(item.daysFromNow) / 3));
                         
                         return (
                           <div 
                             key={index}
-                            className="relative mb-4 flex items-center justify-end"
-                            style={{ height: '32px' }}
+                            className="relative flex items-center"
+                            style={{ height: '28px', marginBottom: '8px' }}
                           >
-                            {/* תווית Y */}
-                            <div className="w-8 text-xs text-gray-600 font-medium text-center order-last">
-                              {item.count}
-                            </div>
+                            {/* נקודת התחלה - נקודת אפס (היום) */}
+                            <div className="absolute right-8 w-2 h-2 bg-gray-800 rounded-full z-10 transform -translate-x-1/2"></div>
                             
                             {/* החץ האופקי (מימין לשמאל) */}
-                            <div className="flex-1 relative mr-4 flex justify-end">
+                            <div className="absolute right-8 flex items-center">
                               <div
-                                className="relative h-6 rounded-l-lg flex items-center cursor-pointer transition-all duration-200 hover:opacity-80 hover:scale-105 group"
+                                className="relative h-5 flex items-center cursor-pointer transition-all duration-200 hover:opacity-80 hover:scale-105 group"
                                 style={{
                                   backgroundColor: item.color,
                                   width: `${arrowWidth}px`,
-                                  clipPath: 'polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%)'
+                                  clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%)',
+                                  transform: 'translateX(-100%)'
                                 }}
-                                title={`${item.count} הרשאות פוגות ב-${item.dateLabel}`}
                               >
                                 {/* תוכן החץ */}
-                                <div className="px-3 text-white text-xs font-medium truncate flex-1 text-right">
+                                <div className="px-2 text-white text-xs font-medium truncate flex-1 text-center">
                                   {new Date(item.date).toLocaleDateString('he-IL', { month: 'short', year: 'numeric' })}
                                 </div>
                                 
                                 {/* Tooltip מפורט */}
-                                <div className="absolute bottom-full right-0 mb-2 bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-gray-200 min-w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                <div className="absolute bottom-full left-0 mb-2 bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-gray-200 min-w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20">
                                   <div className="font-medium text-gray-900 mb-2">
                                     פוגות תוקף: {new Date(item.date).toLocaleDateString('he-IL')}
                                   </div>
@@ -1339,10 +1340,22 @@ export default function BudgetAuthorizationsPage() {
                                 </div>
                               </div>
                             </div>
+                            
+                            {/* תווית מספר הרשאות בצד שמאל */}
+                            <div className="absolute left-4 text-xs text-gray-700 font-medium">
+                              {item.count} הרשאות
+                            </div>
                           </div>
                         );
                       })}
                     </div>
+                    
+                    {/* הודעה על גלילה אם יש יותר מ-10 תקופות */}
+                    {allTimelineData.length > 10 && (
+                      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs text-gray-500 bg-white px-2 py-1 rounded shadow">
+                        מציג 10 תקופות מתוך {allTimelineData.length}
+                      </div>
+                    )}
                     
                     {/* מקרא צבעים */}
                     <div className="absolute bottom-2 left-4 flex gap-3 text-xs">
