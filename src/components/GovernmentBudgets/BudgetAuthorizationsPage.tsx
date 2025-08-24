@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, FileCheck, AlertCircle, Clock, CheckCircle, DollarSign, Upload, CalendarIcon, Edit, Trash2 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -1135,6 +1135,93 @@ export default function BudgetAuthorizationsPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* תרשים Timeline לתוקף הרשאות */}
+        <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-foreground">Timeline תוקף הרשאות</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={(() => {
+                    // יצירת נתונים לתרשים Timeline
+                    const timelineData: any[] = [];
+                    const monthNames = [
+                      'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'
+                    ];
+                    
+                    // יצירת 12 חודשים קדימה
+                    for (let i = 0; i < 12; i++) {
+                      const date = new Date();
+                      date.setMonth(date.getMonth() + i);
+                      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                      const monthLabel = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+                      
+                      // ספירת הרשאות שפגות באותו חודש
+                      const expiring = authorizations.filter(auth => {
+                        if (!auth.valid_until) return false;
+                        const validDate = new Date(auth.valid_until);
+                        return validDate.getFullYear() === date.getFullYear() && 
+                               validDate.getMonth() === date.getMonth();
+                      });
+                      
+                      timelineData.push({
+                        month: monthLabel,
+                        expiring: expiring.length,
+                        amount: expiring.reduce((sum, auth) => sum + (auth.amount || 0), 0)
+                      });
+                    }
+                    
+                    return timelineData;
+                  })()}
+                  margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis 
+                    dataKey="month" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                    interval={0}
+                    tick={{ fontSize: 11 }}
+                    stroke="#6B7280"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 11 }}
+                    stroke="#6B7280"
+                    label={{ value: 'מספר הרשאות', angle: -90, position: 'insideLeft' }}
+                  />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload[0]) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-gray-200">
+                            <div className="font-medium text-gray-900 text-sm mb-2">{label}</div>
+                            <div className="text-xs text-gray-600 space-y-1">
+                              <div>הרשאות שפגות: {data.expiring}</div>
+                              <div>סכום: ₪{new Intl.NumberFormat('he-IL').format(data.amount)}</div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar 
+                    dataKey="expiring" 
+                    fill="#EF4444"
+                    radius={[4, 4, 0, 0]}
+                    className="hover:opacity-80 transition-all duration-300"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
