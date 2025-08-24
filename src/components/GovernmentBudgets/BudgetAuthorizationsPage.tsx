@@ -667,22 +667,22 @@ export default function BudgetAuthorizationsPage() {
       cell: ({ row }: any) => {
         const auth = row.original;
         return (
-          <div className="flex gap-2">
+          <div className="flex gap-1">
             <Button
               size="sm"
               variant="outline"
               onClick={() => handleEditAuth(auth)}
+              className="h-8 w-8 p-0"
             >
-              <Edit className="h-4 w-4 mr-1" />
-              עריכה
+              <Edit className="h-4 w-4" />
             </Button>
             <Button
               size="sm"
               variant="destructive"
               onClick={() => handleDeleteAuth(auth.id)}
+              className="h-8 w-8 p-0"
             >
-              <Trash2 className="h-4 w-4 mr-1" />
-              מחיקה
+              <Trash2 className="h-4 w-4" />
             </Button>
           </div>
         );
