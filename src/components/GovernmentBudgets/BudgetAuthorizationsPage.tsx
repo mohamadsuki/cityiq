@@ -1139,62 +1139,56 @@ export default function BudgetAuthorizationsPage() {
           </CardContent>
         </Card>
 
-        {/* תרשים עמודות לתוקף הרשאות */}
+        {/* ציר זמן הרשאות - חיצים אופקיים */}
         <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">ציר זמן של תוקף ההרשאות</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">ציר זמן תוקף הרשאות</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-96">
               {(() => {
-                // יצירת נתונים לתרשים עמודות - הרשאות שפוגות בזמנים שונים
+                // יצירת נתונים חדשים לציר זמן חיצים אופקיים
                 const currentDate = new Date();
-                const timeRanges = [
-                  { label: 'חודש הקרוב', months: 1, color: '#ef4444' },
-                  { label: '3 חודשים', months: 3, color: '#f97316' },
-                  { label: '6 חודשים', months: 6, color: '#eab308' },
-                  { label: 'שנה', months: 12, color: '#22c55e' },
-                  { label: 'שנתיים', months: 24, color: '#3b82f6' },
-                  { label: 'מעל שנתיים', months: 36, color: '#8b5cf6' }
-                ];
+                
+                // קיבוץ הרשאות לפי תאריך סיום תוקף
+                const authsByExpiry = authorizations
+                  .filter(auth => auth.valid_until)
+                  .reduce((acc, auth) => {
+                    const expiryDate = new Date(auth.valid_until);
+                    const monthYear = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}`;
+                    
+                    if (!acc[monthYear]) {
+                      acc[monthYear] = {
+                        date: expiryDate,
+                        dateLabel: monthYear,
+                        authorizations: [],
+                        count: 0,
+                        totalAmount: 0,
+                        daysFromNow: Math.ceil((expiryDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+                      };
+                    }
+                    
+                    acc[monthYear].authorizations.push(auth);
+                    acc[monthYear].count += 1;
+                    acc[monthYear].totalAmount += auth.amount || 0;
+                    
+                    return acc;
+                  }, {});
 
-                // חישוב הרשאות שפוגות לכל טווח זמן
-                const chartData = timeRanges.map((range, index) => {
-                  const startDate = index === 0 ? new Date() : new Date(currentDate);
-                  const endDate = new Date(currentDate);
-                  
-                  if (index === 0) {
-                    // חודש הקרוב
-                    endDate.setMonth(endDate.getMonth() + 1);
-                  } else if (index === timeRanges.length - 1) {
-                    // מעל שנתיים - כל מה שמעבר ל-24 חודשים
-                    startDate.setMonth(startDate.getMonth() + 24);
-                    endDate.setFullYear(endDate.getFullYear() + 10); // תאריך רחוק
-                  } else {
-                    // טווחי זמן רגילים
-                    const prevRange = timeRanges[index - 1];
-                    startDate.setMonth(startDate.getMonth() + prevRange.months);
-                    endDate.setMonth(currentDate.getMonth() + range.months);
-                  }
+                // המרה למערך וסידור לפי תאריך
+                const timelineData = Object.values(authsByExpiry)
+                  .sort((a: any, b: any) => a.date.getTime() - b.date.getTime())
+                  .map((item: any, index) => ({
+                    ...item,
+                    y: index + 1, // מיקום על ציר Y
+                    width: Math.max(item.daysFromNow, 30), // רוחב החץ (מינימום 30 יום)
+                    color: item.daysFromNow < 0 ? '#ef4444' : 
+                           item.daysFromNow <= 90 ? '#f97316' :
+                           item.daysFromNow <= 180 ? '#eab308' :
+                           item.daysFromNow <= 365 ? '#22c55e' : '#3b82f6'
+                  }));
 
-                  const expiringAuths = authorizations.filter(auth => {
-                    if (!auth.valid_until) return false;
-                    const validDate = new Date(auth.valid_until);
-                    return validDate >= startDate && validDate < endDate;
-                  });
-
-                  const totalAmount = expiringAuths.reduce((sum, auth) => sum + (auth.amount || 0), 0);
-
-                  return {
-                    period: range.label,
-                    count: expiringAuths.length,
-                    totalAmount,
-                    color: range.color,
-                    authorizations: expiringAuths
-                  };
-                });
-
-                if (authorizations.length === 0) {
+                if (timelineData.length === 0) {
                   return (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
                       אין נתונים להצגה
@@ -1203,92 +1197,113 @@ export default function BudgetAuthorizationsPage() {
                 }
 
                 return (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 80,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                      <XAxis 
-                        dataKey="period"
-                        tick={{ fontSize: 12, fill: '#374151' }}
-                        axisLine={{ stroke: '#d1d5db' }}
-                        tickLine={{ stroke: '#d1d5db' }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={80}
-                        interval={0}
-                      />
-                      <YAxis 
-                        tick={{ fontSize: 12, fill: '#6b7280' }}
-                        axisLine={{ stroke: '#d1d5db' }}
-                        tickLine={{ stroke: '#d1d5db' }}
-                        label={{ value: 'מספר הרשאות', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle' } }}
-                      />
-                      <Tooltip 
-                        content={({ active, payload, label }) => {
-                          if (active && payload && payload[0]) {
-                            const data = payload[0].payload;
-                            return (
-                              <div className="bg-white/98 backdrop-blur-sm p-4 rounded-lg shadow-xl border border-gray-200 max-w-sm">
-                                <div className="font-semibold text-gray-900 mb-3 text-center border-b pb-2">
-                                  {data.period}
+                  <div className="relative w-full h-full bg-gray-50 rounded-lg overflow-hidden">
+                    {/* כותרת ציר X */}
+                    <div className="absolute top-4 left-4 text-xs text-gray-600 font-medium">
+                      היום
+                    </div>
+                    <div className="absolute top-4 right-4 text-xs text-gray-600 font-medium">
+                      עתיד
+                    </div>
+                    
+                    {/* ציר זמן מרכזי */}
+                    <div className="absolute top-8 left-8 right-8 h-0.5 bg-gray-300"></div>
+                    
+                    {/* חיצים אופקיים */}
+                    <div className="pt-16 pb-4 px-8 overflow-y-auto max-h-full">
+                      {timelineData.map((item: any, index) => {
+                        const maxWidth = 300; // רוחב מקסימלי
+                        const arrowWidth = Math.min(maxWidth, Math.max(50, item.width / 5));
+                        
+                        return (
+                          <div 
+                            key={index}
+                            className="relative mb-4 flex items-center"
+                            style={{ height: '32px' }}
+                          >
+                            {/* תווית Y */}
+                            <div className="w-8 text-xs text-gray-600 font-medium text-center">
+                              {item.count}
+                            </div>
+                            
+                            {/* החץ האופקי */}
+                            <div className="flex-1 relative ml-4">
+                              <div
+                                className="relative h-6 rounded-r-lg flex items-center cursor-pointer transition-all duration-200 hover:opacity-80 hover:scale-105 group"
+                                style={{
+                                  backgroundColor: item.color,
+                                  width: `${arrowWidth}px`,
+                                  clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)'
+                                }}
+                                title={`${item.count} הרשאות פוגות ב-${item.dateLabel}`}
+                              >
+                                {/* תוכן החץ */}
+                                <div className="px-3 text-white text-xs font-medium truncate">
+                                  {new Date(item.date).toLocaleDateString('he-IL', { month: 'short', year: 'numeric' })}
                                 </div>
-                                <div className="space-y-2 text-sm">
-                                  <div className="flex justify-between items-center bg-blue-50 px-3 py-2 rounded">
-                                    <span className="font-medium text-blue-800">מספר הרשאות:</span>
-                                    <span className="font-bold text-blue-900 text-lg">{data.count}</span>
+                                
+                                {/* Tooltip מפורט */}
+                                <div className="absolute bottom-full left-0 mb-2 bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-gray-200 min-w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                                  <div className="font-medium text-gray-900 mb-2">
+                                    פוגות תוקף: {new Date(item.date).toLocaleDateString('he-IL')}
                                   </div>
-                                  <div className="flex justify-between items-center bg-green-50 px-3 py-2 rounded">
-                                    <span className="font-medium text-green-800">סה"כ תקציב:</span>
-                                    <span className="font-bold text-green-900">
-                                      ₪{new Intl.NumberFormat('he-IL').format(data.totalAmount)}
-                                    </span>
-                                  </div>
-                                  {data.authorizations.length > 0 && (
-                                    <div className="border-t pt-3 mt-3">
-                                      <div className="font-medium text-gray-700 mb-2">דוגמאות הרשאות:</div>
-                                      <div className="space-y-2 max-h-32 overflow-y-auto text-xs">
-                                        {data.authorizations.slice(0, 3).map((auth, i) => (
-                                          <div key={i} className="bg-gray-50 p-2 rounded border-r-2 border-blue-400">
-                                            <div className="font-medium text-gray-800 mb-1">{auth.program}</div>
-                                            <div className="text-gray-600">
-                                              ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}
-                                            </div>
-                                          </div>
-                                        ))}
-                                        {data.authorizations.length > 3 && (
-                                          <div className="text-center text-gray-500 italic">
-                                            + עוד {data.authorizations.length - 3} הרשאות
-                                          </div>
-                                        )}
-                                      </div>
+                                  <div className="space-y-1 text-xs text-gray-600 mb-3">
+                                    <div className="flex justify-between">
+                                      <span>מספר הרשאות:</span>
+                                      <span className="font-bold">{item.count}</span>
                                     </div>
-                                  )}
+                                    <div className="flex justify-between">
+                                      <span>סה"כ תקציב:</span>
+                                      <span className="font-bold">₪{new Intl.NumberFormat('he-IL').format(item.totalAmount)}</span>
+                                    </div>
+                                  </div>
+                                  <div className="border-t pt-2">
+                                    <div className="text-xs font-medium text-gray-700 mb-1">הרשאות:</div>
+                                    <div className="max-h-24 overflow-y-auto space-y-1">
+                                      {item.authorizations.slice(0, 3).map((auth: any, i: number) => (
+                                        <div key={i} className="text-xs text-gray-600">
+                                          • {auth.program?.substring(0, 35)}{auth.program?.length > 35 ? '...' : ''}
+                                        </div>
+                                      ))}
+                                      {item.authorizations.length > 3 && (
+                                        <div className="text-xs text-gray-500 italic">
+                                          +{item.authorizations.length - 3} נוספות...
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Bar 
-                        dataKey="count" 
-                        radius={[4, 4, 0, 0]}
-                        stroke="#fff"
-                        strokeWidth={2}
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* מקרא צבעים */}
+                    <div className="absolute bottom-2 left-4 flex gap-3 text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+                        <span>פג תוקף</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#f97316' }}></div>
+                        <span>עד 3 חודשים</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#eab308' }}></div>
+                        <span>עד 6 חודשים</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#22c55e' }}></div>
+                        <span>עד שנה</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                        <span>מעל שנה</span>
+                      </div>
+                    </div>
+                  </div>
                 );
               })()}
             </div>
