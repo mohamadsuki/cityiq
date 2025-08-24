@@ -105,29 +105,61 @@ export default function BudgetAuthorizationsPage() {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
+      console.log('🔍 Raw fetched authorizations:', data);
       
       // If no data, use mock data
       if (!data || data.length === 0) {
+        console.log('No data found, using mock data');
         setAuthorizations(mockAuthorizations);
       } else {
-        const cleanedData = data.map(item => ({
-          ...item,
-          authorization_number: item.ministry || item.authorization_number?.toString() || 'לא צוין',
-          program: item.program || 'לא צוין',
-          purpose: item.purpose || '',
-          amount: item.amount || 0,
-          ministry: item.authorization_number || 'לא צוין',
-          valid_until: item.valid_until || null,
-          department_slug: item.department_slug || 'finance',
-          approved_at: item.approved_at || null,
-          status: item.approved_at ? 'approved' : (item.status || 'pending'),
-          notes: item.notes || ''
-        }));
+        // Filter out the total sum row (33,413,631) - it has no program description
+        const filteredData = data.filter(item => 
+          item.program && 
+          item.program.trim() && 
+          item.amount !== 33413631 // Remove the total sum row
+        );
+
+        // Map the data correctly based on the actual Excel structure
+        const cleanedData = filteredData.map(item => {
+          console.log('🔍 Processing item:', item);
+          
+          // Extract approval date first from both sources
+          const dateFromNotes = extractDateFromNotes(item.notes);
+          const approvalDate = item.approved_at || dateFromNotes;
+          
+          const cleanedItem = {
+            ...item,
+            // authorization_number should be the ministry field (which contains the actual codes)
+            authorization_number: item.ministry || item.authorization_number?.toString() || 'לא צוין',
+            // program contains the actual authorization description
+            program: item.program || 'לא צוין',
+            // purpose contains the tabar number - leave empty if not specified
+            purpose: item.purpose || '',
+            // amount is correct
+            amount: item.amount || 0,
+            // ministry - map from the authorization_number field or extract from program
+            ministry: mapSequenceToMinistry(item.authorization_number, item.program),
+            // valid_until - use actual valid_until from Excel, don't calculate if empty
+            valid_until: item.valid_until || calculateValidityDate(approvalDate),
+            // department_slug - map based on program content
+            department_slug: mapProgramToDepartment(item.program),
+            // approved_at - priority to approved_at field, then notes
+            approved_at: approvalDate,
+            // status - automatically set to approved if we have approval date
+            status: approvalDate ? 'approved' : (item.status || 'pending'),
+            // notes - only use actual notes column if it has content (not dates)
+            notes: cleanNotes(item.notes)
+          };
+          
+          console.log('🔍 Cleaned item:', cleanedItem);
+          return cleanedItem;
+        });
         
         setAuthorizations(cleanedData);
       }
     } catch (error) {
       console.error('Error fetching authorizations:', error);
+      console.log('Using mock data due to error');
       setAuthorizations(mockAuthorizations);
     } finally {
       setLoading(false);
@@ -171,17 +203,401 @@ export default function BudgetAuthorizationsPage() {
 
   const fetchGrants = async () => {
     try {
+      console.log('🔍 Fetching grants from database...');
       const { data, error } = await supabase
         .from('grants')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
+      console.log('✅ Grants fetched successfully:', data);
+      console.log('✅ Number of grants:', data?.length || 0);
+      console.log('✅ Approved grants:', data?.filter(g => g.status === 'אושר').length || 0);
+      console.log('✅ Total approved amount:', data?.filter(g => g.status === 'אושר').reduce((sum, g) => sum + (g.amount || 0), 0) || 0);
       setGrants(data || []);
     } catch (error) {
-      console.error('Error fetching grants:', error);
+      console.error('❌ Error fetching grants:', error);
       setGrants([]);
     }
+  };
+
+  // Map sequence number to ministry based on patterns
+  const mapSequenceToMinistry = (seqNumber: any, program: string): string => {
+    const seq = seqNumber?.toString() || '';
+    const prog = program || '';
+    
+    // Educational institutions
+    if (prog.includes('חט"ע') || prog.includes('כיתות לימוד') || prog.includes('בית ספר') || prog.includes('גן')) {
+      return 'משרד החינוך';
+    }
+    
+    // Sports and culture
+    if (prog.includes('ספורט') || prog.includes('אולם') || prog.includes('אצטדיון')) {
+      return 'משרד התרבות והספורט';
+    }
+    
+    // Health
+    if (prog.includes('טיפת חלב') || prog.includes('בריאות')) {
+      return 'משרד הבריאות';
+    }
+    
+    // Security and enforcement
+    if (prog.includes('אכיפה') || prog.includes('חירום') || prog.includes('בטחון')) {
+      return 'משרד הבטחון הפנימי';
+    }
+    
+    // Infrastructure and construction
+    if (prog.includes('בניה') || prog.includes('שיפוץ') || prog.includes('תשתית') || prog.includes('תכנון')) {
+      return 'משרד הפנים';
+    }
+    
+    // Environment and energy
+    if (prog.includes('אנרגיה') || prog.includes('סביבה')) {
+      return 'משרד האנרגיה';
+    }
+    
+    return 'משרד הפנים'; // Default
+  };
+
+  // Map program to department
+  const mapProgramToDepartment = (program: string): string => {
+    const prog = program || '';
+    
+    if (prog.includes('חט"ע') || prog.includes('כיתות לימוד') || prog.includes('בית ספר')) {
+      return 'education';
+    }
+    if (prog.includes('ספורט') || prog.includes('תרבות')) {
+      return 'non-formal';
+    }
+    if (prog.includes('בניה') || prog.includes('תכנון') || prog.includes('הנדס')) {
+      return 'engineering';
+    }
+    if (prog.includes('רווחה') || prog.includes('טיפת חלב') || prog.includes('קשישים')) {
+      return 'welfare';
+    }
+    
+    return 'finance'; // Default
+  };
+
+  // Calculate validity date (typically 1 year from approval date)
+  const calculateValidityDate = (approvalDate: string | null): string | null => {
+    if (!approvalDate) {
+      // If no approval date, don't create fake validity date
+      return null;
+    }
+    
+    try {
+      const approval = new Date(approvalDate);
+      // Add 1 year to approval date
+      approval.setFullYear(approval.getFullYear() + 1);
+      return approval.toISOString().split('T')[0];
+    } catch {
+      return null;
+    }
+  };
+
+  // Extract date from notes (format: dd.mm.yyyy)
+  const extractDateFromNotes = (notes: string): string | null => {
+    if (!notes) return null;
+    
+    const dateMatch = notes.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+    if (dateMatch) {
+      const [, day, month, year] = dateMatch;
+      // Convert to ISO format
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    }
+    
+    return null;
+  };
+
+  // Clean notes - remove dates, keep only actual notes
+  const cleanNotes = (notes: string): string => {
+    if (!notes || !notes.trim()) return '';
+    
+    // If notes contain only dates, return empty string
+    // Otherwise, keep the full notes content
+    const datePattern = /^\d{1,2}\.\d{1,2}\.\d{4}\s*$/;
+    if (datePattern.test(notes.trim())) {
+      return '';
+    }
+    
+    return notes.trim();
+  };
+
+  const updateAuthorizationStatus = async (id: string, newStatus: string) => {
+    try {
+      // If changing to approved, show date picker
+      if (newStatus === 'approved') {
+        setStatusUpdateId(id);
+        setShowDatePicker(true);
+        return;
+      } else {
+        // For other status changes, clear approval date if changing from approved
+        const currentAuth = authorizations.find(a => a.id === id);
+        const updateData: any = { status: newStatus };
+        
+        if (currentAuth?.status === 'approved' && newStatus !== 'approved') {
+          updateData.approved_at = null;
+        }
+
+        const { error } = await supabase
+          .from('budget_authorizations')
+          .update(updateData)
+          .eq('id', id);
+
+        if (error) throw error;
+
+        // Update local state
+        setAuthorizations(prev => 
+          prev.map(auth => 
+            auth.id === id ? { ...auth, ...updateData } : auth
+          )
+        );
+
+        toast({
+          title: "הצלחה",
+          description: "הסטטוס עודכן בהצלחה",
+        });
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לעדכן את הסטטוס",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDateConfirm = async () => {
+    if (!selectedDate || !statusUpdateId) {
+      toast({
+        title: "שגיאה",
+        description: "נא לבחור תאריך",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const approvalDate = format(selectedDate, 'yyyy-MM-dd');
+
+      // Update both status and approval date
+      const { error } = await supabase
+        .from('budget_authorizations')
+        .update({ 
+          status: 'approved',
+          approved_at: approvalDate
+        })
+        .eq('id', statusUpdateId);
+
+      if (error) throw error;
+
+      // Update local state
+      setAuthorizations(prev => 
+        prev.map(auth => 
+          auth.id === statusUpdateId ? { ...auth, status: 'approved', approved_at: approvalDate } : auth
+        )
+      );
+
+      setShowDatePicker(false);
+      setSelectedDate(undefined);
+      setStatusUpdateId('');
+
+      toast({
+        title: "הצלחה",
+        description: "הסטטוס עודכן בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לעדכן את הסטטוס",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateNewAuth = async () => {
+    try {
+      // Validate required fields
+      if (!newAuthData.authorization_number || !newAuthData.ministry || !newAuthData.program || !newAuthData.amount) {
+        toast({
+          title: "שגיאה",
+          description: "נא למלא את כל השדות הנדרשים",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const authData = {
+        ...newAuthData,
+        amount: parseFloat(newAuthData.amount) || 0,
+        status: 'pending' as const,
+        user_id: '11111111-1111-1111-1111-111111111111', // Demo user ID
+        department_slug: newAuthData.department_slug as any,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('budget_authorizations')
+        .insert(authData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Add to local state
+      setAuthorizations(prev => [data, ...prev]);
+      
+      // Reset form
+      setNewAuthData({
+        authorization_number: '',
+        ministry: '',
+        program: '',
+        purpose: '',
+        amount: '',
+        valid_until: '',
+        department_slug: 'finance',
+        notes: ''
+      });
+      
+      setShowNewAuthDialog(false);
+
+      toast({
+        title: "הצלחה",
+        description: "ההרשאה נוספה בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error creating authorization:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן ליצור את ההרשאה",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditAuth = (auth: any) => {
+    setEditingAuth(auth);
+    setNewAuthData({
+      authorization_number: auth.authorization_number || '',
+      ministry: auth.ministry || '',
+      program: auth.program || '',
+      purpose: auth.purpose || '',
+      amount: auth.amount?.toString() || '',
+      valid_until: auth.valid_until || '',
+      department_slug: auth.department_slug || 'finance',
+      notes: auth.notes || ''
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleDeleteAuth = async (authId: string) => {
+    if (!confirm('האם אתה בטוח שברצונך למחוק הרשאה זו?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('budget_authorizations')
+        .delete()
+        .eq('id', authId);
+
+      if (error) throw error;
+
+      // Update local state
+      setAuthorizations(prev => prev.filter(auth => auth.id !== authId));
+
+      toast({
+        title: "הצלחה",
+        description: "ההרשאה נמחקה בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error deleting authorization:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן למחוק את ההרשאה",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUpdateAuth = async () => {
+    try {
+      // Validate required fields
+      if (!newAuthData.authorization_number || !newAuthData.ministry || !newAuthData.program || !newAuthData.amount) {
+        toast({
+          title: "שגיאה",
+          description: "נא למלא את כל השדות הנדרשים",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const updateData = {
+        authorization_number: newAuthData.authorization_number,
+        ministry: newAuthData.ministry,
+        program: newAuthData.program,
+        purpose: newAuthData.purpose,
+        amount: parseFloat(newAuthData.amount) || 0,
+        valid_until: newAuthData.valid_until || null,
+        department_slug: newAuthData.department_slug as any,
+        notes: newAuthData.notes,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('budget_authorizations')
+        .update(updateData)
+        .eq('id', editingAuth.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setAuthorizations(prev => 
+        prev.map(auth => 
+          auth.id === editingAuth.id ? { ...auth, ...updateData } : auth
+        )
+      );
+      
+      // Reset form
+      setNewAuthData({
+        authorization_number: '',
+        ministry: '',
+        program: '',
+        purpose: '',
+        amount: '',
+        valid_until: '',
+        department_slug: 'finance',
+        notes: ''
+      });
+      
+      setShowEditDialog(false);
+      setEditingAuth(null);
+
+      toast({
+        title: "הצלחה",
+        description: "ההרשאה עודכנה בהצלחה",
+      });
+    } catch (error) {
+      console.error('Error updating authorization:', error);
+      toast({
+        title: "שגיאה",
+        description: "לא ניתן לעדכן את ההרשאה",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUploadSuccess = () => {
+    setShowUploader(false);
+    fetchAuthorizations();
+    toast({
+      title: "הצלחה",
+      description: "הקובץ הועלה בהצלחה והנתונים נשמרו",
+    });
   };
 
   useEffect(() => {
@@ -194,16 +610,33 @@ export default function BudgetAuthorizationsPage() {
       accessorKey: "authorization_number",
       header: "מספר הרשאה",
       enableSorting: true,
+      cell: ({ getValue }: any) => {
+        const value = getValue();
+        return value || 'לא צוין';
+      }
     },
     {
       accessorKey: "ministry",
       header: "משרד מממן",
       enableSorting: true,
+      cell: ({ getValue }: any) => {
+        const value = getValue();
+        return value || 'לא צוין';
+      }
     },
     {
       accessorKey: "program",
       header: "תיאור ההרשאה",
       enableSorting: true,
+      cell: ({ getValue }: any) => {
+        const value = getValue();
+        return value || 'לא צוין';
+      }
+    },
+    {
+      accessorKey: "purpose",
+      header: "מס' תב\"ר",
+      enableSorting: true
     },
     {
       accessorKey: "amount",
@@ -225,6 +658,72 @@ export default function BudgetAuthorizationsPage() {
           return 'תאריך לא תקין';
         }
       }
+    },
+    {
+      accessorKey: "department_slug",
+      header: "מחלקה מטפלת",
+      enableSorting: true,
+      cell: ({ getValue }: any) => {
+        const value = getValue();
+        const deptMap: Record<string, string> = {
+          'finance': 'כספים',
+          'engineering': 'הנדסה',
+          'education': 'חינוך',
+          'welfare': 'רווחה',
+          'non-formal': 'תרבות'
+        };
+        return deptMap[value] || value || 'כספים';
+      }
+    },
+    {
+      accessorKey: "approved_at", 
+      header: "תאריך אישור מליאה",
+      enableSorting: true,
+      cell: ({ getValue }: any) => {
+        const value = getValue();
+        if (!value) return 'ממתין לאישור';
+        try {
+          return new Date(value).toLocaleDateString('he-IL');
+        } catch {
+          return 'תאריך לא תקין';
+        }
+      }
+    },
+    {
+      accessorKey: "notes",
+      header: "הערות",
+      enableSorting: true,
+      cell: ({ getValue }: any) => {
+        const value = getValue();
+        return value && value.trim() ? value : '';
+      }
+    },
+    {
+      id: "actions",
+      header: "פעולות",
+      cell: ({ row }: any) => {
+        const auth = row.original;
+        return (
+          <div className="flex gap-1">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleEditAuth(auth)}
+              className="h-8 w-8 p-0"
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => handleDeleteAuth(auth.id)}
+              className="h-8 w-8 p-0"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+      }
     }
   ];
 
@@ -232,16 +731,45 @@ export default function BudgetAuthorizationsPage() {
     console.log(`Exporting authorizations`);
   };
 
-  // סטטיסטיקות מהירות
+  // סטטיסטיקות מהירות - חישוב נכון של סכום ההרשאות התקציביות
   const validAuthorizations = authorizations.filter(auth => 
     auth.program && 
     auth.program.trim() && 
     typeof auth.amount === 'number' && 
     auth.amount > 0
   );
+  
+  // חישוב סטטיסטיקות קולות קוראים
+  const STATUS_LABELS: Record<string, string> = {
+    'הוגש': 'הוגש',
+    'אושר': 'אושר',
+    'נדחה': 'נדחה',
+    'לא רלוונטי': 'לא רלוונטי',
+    // Map English statuses to Hebrew
+    'SUBMITTED': 'הוגש',
+    'APPROVED': 'אושר',
+    'REJECTED': 'נדחה',
+    'NOT_RELEVANT': 'לא רלוונטי',
+    'submitted': 'הוגש',
+    'approved': 'אושר',
+    'rejected': 'נדחה',
+    'not_relevant': 'לא רלוונטי',
+  };
 
-  const approvedGrants = grants.filter(g => g.status === 'אושר');
-  const approvedGrantsAmount = approvedGrants.reduce((sum, g) => sum + (g.amount || 0), 0);
+  const approvedGrants = grants.filter(g => {
+    const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
+    return hebrewStatus === 'אושר';
+  });
+
+  // Calculate approved grants amount using approved_amount or submission_amount if available, otherwise amount
+  const approvedGrantsAmount = approvedGrants.reduce((sum, g) => {
+    // Use approved_amount if available, otherwise submission_amount, otherwise amount
+    const grantAmount = g.approved_amount || g.submission_amount || g.amount || 0;
+    return sum + grantAmount;
+  }, 0);
+
+  // Calculate total grants amount (like in grants page)
+  const totalGrantsAmount = grants.reduce((sum, g) => sum + (g.amount || 0), 0);
   
   const stats = {
     total: validAuthorizations.length,
@@ -249,9 +777,20 @@ export default function BudgetAuthorizationsPage() {
     pending: validAuthorizations.filter(a => !a.approved_at).length,
     totalAmount: validAuthorizations.reduce((sum, a) => sum + (a.amount || 0), 0),
     approvedAmount: validAuthorizations.filter(a => a.approved_at).reduce((sum, a) => sum + (a.amount || 0), 0),
+    grantsTotal: grants.length,
+    approvedGrantsCount: approvedGrants.length,
+    approvedGrantsAmount: approvedGrantsAmount,
+    totalGrantsAmount: totalGrantsAmount
   };
 
   // נתוני גרפים
+  const statusData = [
+    { name: 'מאושרות', value: stats.approved, color: '#10B981', icon: '✓' },
+    { name: 'ממתינות', value: stats.pending, color: '#F59E0B', icon: '⏳' },
+    { name: 'בבדיקה', value: authorizations.filter(a => a.status === 'in_review').length, color: '#3B82F6', icon: '👁️' },
+    { name: 'נדחו', value: authorizations.filter(a => a.status === 'rejected').length, color: '#EF4444', icon: '✗' }
+  ]; // Show all statuses, even if value is 0
+
   const ministryData = authorizations.reduce((acc: any[], auth) => {
     const existing = acc.find(item => item.ministry === auth.ministry);
     if (existing) {
@@ -270,62 +809,69 @@ export default function BudgetAuthorizationsPage() {
     color: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3'][index % 6]
   }));
 
-  // נתונים לתרשים תוקף ההרשאות - בסגנון Progress Bar
-  const createTimelineData = () => {
-    const currentDate = new Date();
-    
-    // קיבוץ הרשאות לפי תאריך סיום תוקף
-    const authsByExpiry = authorizations
-      .filter(auth => auth.valid_until)
-      .reduce((acc, auth) => {
-        const expiryDate = new Date(auth.valid_until);
-        const monthYear = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}`;
-        
-        if (!acc[monthYear]) {
-          acc[monthYear] = {
-            date: expiryDate,
-            dateLabel: monthYear,
-            authorizations: [],
-            count: 0,
-            totalAmount: 0,
-            daysFromNow: Math.ceil((expiryDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
-          };
-        }
-        
-        acc[monthYear].authorizations.push(auth);
-        acc[monthYear].count += 1;
-        acc[monthYear].totalAmount += auth.amount || 0;
-        
-        return acc;
-      }, {});
-
-    // המרה למערך וסידור לפי תאריך, הצגת 10 ראשונים
-    const allTimelineData = Object.values(authsByExpiry)
-      .sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
-    
-    // חישוב אורך מקסימלי לנורמליזציה
-    const maxDays = Math.max(...allTimelineData.map((item: any) => Math.abs(item.daysFromNow)));
-    
-    const timelineData = allTimelineData
-      .slice(0, 10)
-      .map((item: any, index) => {
-        // חישוב אחוז התקדמות (0-100%)
-        const progressPercentage = maxDays > 0 ? Math.min(100, Math.max(5, (Math.abs(item.daysFromNow) / maxDays) * 100)) : 50;
-        
-        return {
-          ...item,
-          y: index + 1,
-          progressPercentage,
-          isExpired: item.daysFromNow < 0,
-          color: item.daysFromNow < 0 ? '#dc2626' : 
-                 item.daysFromNow <= 90 ? '#ea580c' :
-                 item.daysFromNow <= 180 ? '#ca8a04' :
-                 item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
-        };
+  const departmentData = authorizations.reduce((acc: any[], auth) => {
+    const deptMap: Record<string, string> = {
+      'finance': 'כספים',
+      'engineering': 'הנדסה', 
+      'education': 'חינוך',
+      'welfare': 'רווחה',
+      'non-formal': 'תרבות'
+    };
+    const deptName = deptMap[auth.department_slug] || auth.department_slug || 'לא צוין';
+    const existing = acc.find(item => item.department === deptName);
+    if (existing) {
+      existing.count += 1;
+      existing.amount += auth.amount || 0;
+    } else {
+      acc.push({
+        department: deptName,
+        count: 1,
+        amount: auth.amount || 0
       });
+    }
+    return acc;
+  }, []).map((item, index) => ({
+    ...item,
+    color: ['#8B5CF6', '#06B6D4', '#F59E0B', '#EF4444', '#10B981', '#3B82F6'][index % 6]
+  }));
 
-    return { timelineData, allTimelineData };
-  };
+  // נתונים לתרשים תוקף ההרשאות
+  const validityData = authorizations.reduce((acc: any[], auth) => {
+    if (!auth.valid_until) return acc;
+    
+    const today = new Date();
+    const validUntil = new Date(auth.valid_until);
+    const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
+    
+    let category = '';
+    if (monthsDiff < 0) {
+      category = 'פג תוקף';
+    } else if (monthsDiff <= 3) {
+      category = 'פג תוקף עד 3 חודשים';
+    } else if (monthsDiff <= 6) {
+      category = 'פג תוקף עד 6 חודשים';
+    } else if (monthsDiff <= 12) {
+      category = 'פג תוקף עד שנה';
+    } else {
+      category = 'תקף למעלה משנה';
+    }
+    
+    const existing = acc.find(item => item.category === category);
+    if (existing) {
+      existing.count += 1;
+      existing.amount += auth.amount || 0;
+    } else {
+      acc.push({
+        category,
+        count: 1,
+        amount: auth.amount || 0
+      });
+    }
+    return acc;
+  }, []).map((item, index) => ({
+    ...item,
+    color: ['#EF4444', '#F59E0B', '#FBBF24', '#10B981', '#3B82F6'][index % 5]
+  }));
 
   return (
     <div className="space-y-6">
@@ -378,8 +924,8 @@ export default function BudgetAuthorizationsPage() {
       </div>
 
       {/* גרפים */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* תרשים משרדים */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+
         <Card className="border-0 shadow-elevated bg-card overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי משרד ממשלתי מממן</CardTitle>
@@ -407,6 +953,10 @@ export default function BudgetAuthorizationsPage() {
                           key={`cell-${index}`} 
                           fill={entry.color}
                           className="hover:opacity-80 transition-all duration-300"
+                          style={{
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                            cursor: 'pointer'
+                          }}
                         />
                       ))}
                     </Pie>
@@ -415,7 +965,7 @@ export default function BudgetAuthorizationsPage() {
                         if (active && payload && payload[0]) {
                           const data = payload[0].payload;
                           return (
-                            <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-xl border border-gray-200">
+                            <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-xl border border-gray-200 animate-fade-in">
                               <div className="flex items-center gap-2 mb-1">
                                 <div 
                                   className="w-2 h-2 rounded-full"
@@ -436,19 +986,259 @@ export default function BudgetAuthorizationsPage() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
+              <div className="w-40 border-r border-border pr-2">
+                <h4 className="text-xs font-semibold text-foreground mb-2 pb-1 border-b border-border">משרדים</h4>
+                <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  {ministryData.map((item, index) => (
+                    <div key={index} className="flex items-center gap-1 p-1.5 rounded-md hover:bg-gray-50 transition-colors">
+                      <div 
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div 
+                          className="font-medium text-gray-900 text-xs leading-tight" 
+                          style={{ wordBreak: 'break-word', lineHeight: '1.2' }}
+                          title={item.ministry}
+                        >
+                          {item.ministry}
+                        </div>
+                        <div className="text-gray-500 text-xs">{item.count} הרשאות</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* ציר זמן תוקף הרשאות - בסגנון Progress Bar */}
         <Card className="border-0 shadow-elevated bg-card overflow-hidden">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי מחלקה</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 h-64">
+              <div className="flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={departmentData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ percent }) => percent > 5 ? `${(percent * 100).toFixed(0)}%` : ''}
+                      outerRadius={60}
+                      innerRadius={25}
+                      fill="#8884d8"
+                      dataKey="count"
+                      stroke="#fff"
+                      strokeWidth={2}
+                    >
+                      {departmentData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.color}
+                          className="hover:opacity-80 transition-all duration-300"
+                          style={{
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload[0]) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-xl border border-gray-200 animate-fade-in">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div 
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: data.color }}
+                                />
+                                <span className="font-medium text-gray-900 text-sm">{data.department}</span>
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                <div>{data.count} הרשאות</div>
+                                <div>₪{new Intl.NumberFormat('he-IL').format(data.amount)}</div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-32 border-r border-border pr-3">
+                <h4 className="text-xs font-semibold text-foreground mb-2 pb-1 border-b border-border">מחלקות</h4>
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {departmentData.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-gray-900 truncate text-xs">{item.department}</div>
+                        <div className="text-gray-500 text-xs">{item.count}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* תרשים תוקף ההרשאות */}
+        <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2 xl:col-span-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base font-semibold text-foreground">התפלגות לפי תוקף ההרשאה</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 h-64">
+              <div className="flex-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={validityData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      outerRadius={60}
+                      innerRadius={25}
+                      fill="#8884d8"
+                      dataKey="count"
+                      stroke="#fff"
+                      strokeWidth={2}
+                    >
+                      {validityData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.color}
+                          className="hover:opacity-80 transition-all duration-300 hover:drop-shadow-lg"
+                          style={{
+                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
+                            cursor: 'pointer'
+                          }}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      content={({ active, payload }) => {
+                        if (active && payload && payload[0]) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white/95 backdrop-blur-sm p-2 rounded-lg shadow-xl border border-gray-200">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div 
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: data.color }}
+                                />
+                                <span className="font-medium text-gray-900 text-sm">{data.category}</span>
+                              </div>
+                              <div className="text-xs text-gray-600">
+                                <div>{data.count} הרשאות</div>
+                                <div>₪{new Intl.NumberFormat('he-IL').format(data.amount)}</div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="w-32 border-r border-border pr-3">
+                <h4 className="text-xs font-semibold text-foreground mb-2 pb-1 border-b border-border">תוקף</h4>
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {validityData.map((item, index) => (
+                    <div key={index} className="flex items-center gap-2 p-2 rounded-md hover:bg-gray-50 transition-colors">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0 shadow-sm"
+                        style={{ backgroundColor: item.color }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-gray-900 truncate text-xs">{item.category}</div>
+                        <div className="text-gray-500 text-xs">{item.count} הרשאות</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ציר זמן הרשאות - חיצים אופקיים משופרים */}
+        <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-foreground">ציר זמן תוקף הרשאות</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-96">
               {(() => {
-                const { timelineData, allTimelineData } = createTimelineData();
+                // יצירת נתונים לציר זמן משופר עם חישובי אורך מדויקים
+                const currentDate = new Date();
+                
+                // קיבוץ הרשאות לפי תאריך סיום תוקף
+                const authsByExpiry = authorizations
+                  .filter(auth => auth.valid_until)
+                  .reduce((acc, auth) => {
+                    const expiryDate = new Date(auth.valid_until);
+                    const monthYear = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}`;
+                    
+                    if (!acc[monthYear]) {
+                      acc[monthYear] = {
+                        date: expiryDate,
+                        dateLabel: monthYear,
+                        authorizations: [],
+                        count: 0,
+                        totalAmount: 0,
+                        daysFromNow: Math.ceil((expiryDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
+                      };
+                    }
+                    
+                    acc[monthYear].authorizations.push(auth);
+                    acc[monthYear].count += 1;
+                    acc[monthYear].totalAmount += auth.amount || 0;
+                    
+                    return acc;
+                  }, {});
+
+                // המרה למערך וסידור לפי תאריך, הצגת 10 ראשונים
+                const allTimelineData = Object.values(authsByExpiry)
+                  .sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
+                
+                // חישוב אורך מקסימלי לנורמליזציה
+                const maxDays = Math.max(...allTimelineData.map((item: any) => Math.abs(item.daysFromNow)));
+                const maxWidth = 280; // רוחב מקסימלי פיקסל
+                const minWidth = 40;  // רוחב מינימלי
+                
+                const timelineData = allTimelineData
+                  .slice(0, 10)
+                  .map((item: any, index) => {
+                    // חישוב אורך החץ באופן פרופורציונלי למרחק בזמן
+                    const normalizedWidth = Math.abs(item.daysFromNow) / maxDays;
+                    const arrowWidth = Math.max(minWidth, normalizedWidth * maxWidth);
+                    
+                    return {
+                      ...item,
+                      y: index + 1,
+                      width: arrowWidth,
+                      isExpired: item.daysFromNow < 0,
+                      color: item.daysFromNow < 0 ? '#dc2626' : 
+                             item.daysFromNow <= 90 ? '#ea580c' :
+                             item.daysFromNow <= 180 ? '#ca8a04' :
+                             item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
+                    };
+                  });
 
                 if (timelineData.length === 0) {
                   return (
@@ -458,131 +1248,163 @@ export default function BudgetAuthorizationsPage() {
                   );
                 }
 
+                // יצירת ציר זמן מובלט
+                const timeScale = timelineData.map(item => ({
+                  date: new Date(item.date),
+                  label: new Date(item.date).toLocaleDateString('he-IL', { month: 'short', year: 'numeric' })
+                }));
+
                 return (
-                  <div className="relative w-full h-full bg-gradient-to-br from-slate-50 to-white rounded-xl overflow-hidden border border-slate-200">
-                    {/* כותרת */}
-                    <div className="absolute top-0 left-0 right-0 h-12 bg-white border-b border-slate-200 flex items-center justify-between px-6">
-                      <div className="text-sm font-semibold text-slate-700">ציר זמן תוקף הרשאות</div>
-                      <div className="text-xs text-slate-500">מהיום עד פג התוקף</div>
+                  <div className="relative w-full h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-xl overflow-hidden border border-slate-200 shadow-inner">
+                    {/* כותרת וציר זמן עליון */}
+                    <div className="absolute top-0 left-0 right-0 h-14 bg-white/90 backdrop-blur-sm border-b border-slate-200 shadow-sm">
+                      <div className="flex items-center justify-between h-full px-6">
+                        <div className="text-sm font-semibold text-slate-700 flex items-center gap-3">
+                          <div className="w-4 h-4 bg-blue-600 rounded-full shadow-md"></div>
+                          <span>נקודת התחלה - היום</span>
+                        </div>
+                        <div className="text-sm font-semibold text-slate-700 flex items-center gap-3">
+                          <span>תאריכי פג תוקף</span>
+                          <div className="w-4 h-4 bg-gradient-to-r from-yellow-500 to-red-500 rounded-full shadow-md"></div>
+                        </div>
+                      </div>
                     </div>
                     
-                    {/* פסי התקדמות עם חצים */}
-                    <div className="pt-16 pb-8 px-8 space-y-4 overflow-y-auto max-h-full">
+                    {/* ציר זמן מרכזי אנכי */}
+                    <div className="absolute top-14 right-20 bottom-6 w-1 bg-gradient-to-b from-blue-600 via-emerald-500 via-yellow-500 to-red-500 rounded-full shadow-lg"></div>
+                    
+                    {/* נקודת התחלה - היום */}
+                    <div className="absolute top-14 right-20 w-5 h-5 bg-blue-600 rounded-full border-4 border-white shadow-xl z-30 transform -translate-x-1/2">
+                      <div className="absolute inset-1 bg-blue-300 rounded-full animate-pulse"></div>
+                    </div>
+                    
+                    {/* חיצים אופקיים עם הפרדה ברורה */}
+                    <div className="pt-20 pb-8 px-6 space-y-6 overflow-y-auto max-h-full">
                       {timelineData.map((item: any, index) => {
                         return (
                           <div 
                             key={index}
-                            className="relative group animate-fade-in"
-                            style={{ marginBottom: '16px' }}
+                            className="relative flex items-center animate-fade-in"
+                            style={{ 
+                              height: '40px',
+                              minHeight: '40px'
+                            }}
                           >
-                            {/* פס התקדמות עם חץ */}
-                            <div className="relative w-full h-12 bg-slate-100 rounded-lg overflow-hidden shadow-sm">
-                              {/* פס התקדמות צבעוני */}
+                            {/* החץ האופקי המשופר - מימין (היום) לשמאל (עתיד) */}
+                            <div 
+                              className="absolute right-20 top-1/2 transform -translate-y-1/2"
+                              style={{ zIndex: 10 }}
+                            >
                               <div
-                                className="relative h-full flex items-center transition-all duration-500 hover:brightness-110"
+                                className="relative h-8 flex items-center cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl group"
                                 style={{
-                                  background: `linear-gradient(135deg, ${item.color}, ${item.color}dd)`,
-                                  width: `${item.progressPercentage}%`,
-                                  clipPath: 'polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)',
-                                  boxShadow: `0 4px 12px ${item.color}30`
+                                  background: `linear-gradient(135deg, ${item.color}ee, ${item.color}cc)`,
+                                  width: `${item.width}px`,
+                                  clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%)',
+                                  border: `2px solid ${item.color}`,
+                                  boxShadow: `0 6px 20px ${item.color}40, 0 2px 8px ${item.color}20`,
+                                  borderRadius: '4px 0 0 4px'
                                 }}
                               >
-                                {/* תוכן הפס */}
-                                <div className="px-4 text-white font-semibold text-sm flex items-center gap-2">
-                                  <span>{item.count} הרשאות</span>
-                                  <span className="text-xs opacity-90">
-                                    (₪{new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(item.totalAmount)})
-                                  </span>
+                                {/* תוכן החץ */}
+                                <div className="px-4 text-white text-sm font-bold truncate flex-1 text-center drop-shadow-sm">
+                                  {item.count} הרשאות
                                 </div>
                                 
-                                {/* מספר ימים במקום החץ */}
+                                {/* נקודת סיום מובלטת */}
                                 <div 
-                                  className="absolute left-full top-1/2 transform -translate-y-1/2 bg-white text-slate-700 px-2 py-1 rounded shadow-sm font-bold text-xs border-2 ml-2"
-                                  style={{ borderColor: item.color }}
+                                  className="absolute -right-2 top-1/2 w-4 h-4 rounded-full border-3 border-white shadow-lg transform -translate-y-1/2 z-10"
+                                  style={{ backgroundColor: item.color }}
                                 >
-                                  {Math.abs(item.daysFromNow)}d
+                                  <div className="absolute inset-1 bg-white/30 rounded-full"></div>
                                 </div>
-                              </div>
-                              
-                              {/* תווית תאריך */}
-                              <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-600 text-sm font-medium">
-                                {new Date(item.date).toLocaleDateString('he-IL', { 
-                                  day: 'numeric',
-                                  month: 'short',
-                                  year: '2-digit'
-                                })}
-                                {item.isExpired && <span className="text-red-500 mr-1">⚠</span>}
-                              </div>
-                            </div>
-                            
-                            {/* Tooltip מפורט */}
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-slate-200 min-w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-40">
-                              <div className="text-center mb-3">
-                                <div className="font-bold text-slate-900 text-lg flex items-center justify-center gap-2">
-                                  {item.isExpired && <span className="text-red-500">⚠️</span>}
-                                  {new Date(item.date).toLocaleDateString('he-IL')}
-                                  {item.isExpired ? ' (פג תוקף)' : ''}
-                                </div>
-                                <div className="text-sm text-slate-600">
-                                  {item.isExpired ? 'פג תוקף לפני' : 'פג תוקף בעוד'} {Math.abs(item.daysFromNow)} ימים
-                                </div>
-                              </div>
-                              
-                              <div className="grid grid-cols-2 gap-4 mb-3">
-                                <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                  <div className="text-2xl font-bold text-blue-600">{item.count}</div>
-                                  <div className="text-xs text-slate-600">מספר הרשאות</div>
-                                </div>
-                                <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
-                                  <div className="text-lg font-bold text-green-600">
-                                    ₪{new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(item.totalAmount)}
-                                  </div>
-                                  <div className="text-xs text-slate-600">סה"כ תקציב</div>
-                                </div>
-                              </div>
-                              
-                              <div className="border-t pt-3 mb-3">
-                                <div className="text-sm font-medium text-slate-700 mb-2">רשימת הרשאות:</div>
-                                <div className="max-h-24 overflow-y-auto space-y-1">
-                                  {item.authorizations.slice(0, 3).map((auth: any, i: number) => (
-                                    <div key={i} className="text-xs text-slate-600 bg-slate-50 p-2 rounded border">
-                                      • {auth.program?.substring(0, 45)}{auth.program?.length > 45 ? '...' : ''}
-                                    </div>
-                                  ))}
-                                  {item.authorizations.length > 3 && (
-                                    <div className="text-xs text-slate-500 italic text-center py-1">
-                                      +{item.authorizations.length - 3} הרשאות נוספות...
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <div className="border-t pt-3">
-                                <button
-                                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
-                                  onClick={() => {
-                                    const today = new Date();
-                                    const validUntil = new Date(item.date);
-                                    const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
-                                    
-                                    let category = '';
-                                    if (monthsDiff < 0) {
-                                      category = 'פג תוקף';
-                                    } else if (monthsDiff <= 3) {
-                                      category = 'פג תוקף עד 3 חודשים';
-                                    } else if (monthsDiff <= 6) {
-                                      category = 'פג תוקף עד 6 חודשים';
-                                    } else if (monthsDiff <= 12) {
-                                      category = 'פג תוקף עד שנה';
-                                    } else {
-                                      category = 'תקף למעלה משנה';
-                                    }
-                                    
-                                    handleFilterByCategory(category);
+                                
+                                {/* תווית תאריך פג תוקף */}
+                                <div 
+                                  className="absolute -right-2 -bottom-8 text-xs font-medium text-slate-600 whitespace-nowrap bg-white/90 px-2 py-1 rounded shadow-sm"
+                                  style={{ 
+                                    transform: 'translateX(50%)',
+                                    borderLeft: `3px solid ${item.color}`
                                   }}
                                 >
-                                  הצג בטבלה
-                                </button>
+                                  {new Date(item.date).toLocaleDateString('he-IL', { 
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: '2-digit'
+                                  })}
+                                  {item.isExpired && <span className="text-red-600 mr-1">⚠</span>}
+                                </div>
+                                
+                                {/* Tooltip מפורט ומשופר */}
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-4 bg-white/97 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-slate-200 min-w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-40">
+                                  <div className="text-center mb-3">
+                                    <div className="font-bold text-slate-900 text-lg flex items-center justify-center gap-2">
+                                      {item.isExpired && <span className="text-red-500">⚠️</span>}
+                                      {new Date(item.date).toLocaleDateString('he-IL')}
+                                      {item.isExpired ? ' (פג תוקף)' : ''}
+                                    </div>
+                                    <div className="text-sm text-slate-600">
+                                      {item.isExpired ? 'פג תוקף לפני' : 'פג תוקף בעוד'} {Math.abs(item.daysFromNow)} ימים
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-4 mb-3">
+                                    <div className="text-center p-2 bg-blue-50 rounded-lg">
+                                      <div className="text-2xl font-bold text-blue-600">{item.count}</div>
+                                      <div className="text-xs text-gray-600">מספר הרשאות</div>
+                                    </div>
+                                    <div className="text-center p-2 bg-green-50 rounded-lg">
+                                      <div className="text-lg font-bold text-green-600">
+                                        ₪{new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(item.totalAmount)}
+                                      </div>
+                                      <div className="text-xs text-gray-600">סה"כ תקציב</div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="border-t pt-3 mb-3">
+                                    <div className="text-sm font-medium text-gray-700 mb-2">רשימת הרשאות:</div>
+                                    <div className="max-h-24 overflow-y-auto space-y-1">
+                                      {item.authorizations.slice(0, 3).map((auth: any, i: number) => (
+                                        <div key={i} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                                          • {auth.program?.substring(0, 40)}{auth.program?.length > 40 ? '...' : ''}
+                                        </div>
+                                      ))}
+                                      {item.authorizations.length > 3 && (
+                                        <div className="text-xs text-gray-500 italic text-center py-1">
+                                          +{item.authorizations.length - 3} הרשאות נוספות...
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="border-t pt-3">
+                                    <button
+                                      className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                                      onClick={() => {
+                                        const today = new Date();
+                                        const validUntil = new Date(item.date);
+                                        const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
+                                        
+                                        let category = '';
+                                        if (monthsDiff < 0) {
+                                          category = 'פג תוקף';
+                                        } else if (monthsDiff <= 3) {
+                                          category = 'פג תוקף עד 3 חודשים';
+                                        } else if (monthsDiff <= 6) {
+                                          category = 'פג תוקף עד 6 חודשים';
+                                        } else if (monthsDiff <= 12) {
+                                          category = 'פג תוקף עד שנה';
+                                        } else {
+                                          category = 'תקף למעלה משנה';
+                                        }
+                                        
+                                        handleFilterByCategory(category);
+                                      }}
+                                    >
+                                      הצג בטבלה
+                                    </button>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -590,12 +1412,36 @@ export default function BudgetAuthorizationsPage() {
                       })}
                     </div>
                     
-                    {/* הודעה על גלילה */}
+                    {/* הודעה על גלילה אם יש יותר מ-10 תקופות */}
                     {allTimelineData.length > 10 && (
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-sm text-slate-600 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-slate-200">
-                        מציג 10 תקופות ראשונות מתוך {allTimelineData.length}
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-sm text-gray-600 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-gray-200">
+                        מציג 10 תקופות ראשונות מתוך {allTimelineData.length} • גלול למעלה לעוד פרטים
                       </div>
                     )}
+                    
+                    {/* מקרא צבעים */}
+                    <div className="absolute bottom-2 left-4 flex gap-3 text-xs">
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ef4444' }}></div>
+                        <span>פג תוקף</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#f97316' }}></div>
+                        <span>עד 3 חודשים</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#eab308' }}></div>
+                        <span>עד 6 חודשים</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#22c55e' }}></div>
+                        <span>עד שנה</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
+                        <span>מעל שנה</span>
+                      </div>
+                    </div>
                   </div>
                 );
               })()}
@@ -604,67 +1450,387 @@ export default function BudgetAuthorizationsPage() {
         </Card>
       </div>
 
-      {/* סינון פעיל */}
-      {filterCategory && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="text-sm font-medium text-blue-900">
-                מציג הרשאות: {filterCategory}
-              </span>
-              <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                {filteredAuthorizations.length} הרשאות
-              </span>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearFilter}
-              className="text-blue-600 border-blue-300 hover:bg-blue-100"
-            >
-              נקה סינון
-            </Button>
-          </div>
-        </div>
-      )}
-
       {/* טבלת הרשאות */}
       <Card className="border-0 shadow-elevated bg-card">
-        <CardHeader className="pb-4">
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-lg font-semibold text-foreground">
-              {filterCategory ? `הרשאות: ${filterCategory}` : 'כל ההרשאות'}
-            </CardTitle>
-            <ExportButtons data={filterCategory ? filteredAuthorizations : authorizations} />
-          </div>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-xl font-bold text-foreground">רשימת הרשאות תקציביות</CardTitle>
+          {filterCategory && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">מסונן לפי: {filterCategory}</span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={clearFilter}
+                className="h-8"
+              >
+                נקה סינון
+              </Button>
+            </div>
+          )}
         </CardHeader>
-        <CardContent className="p-0">
-          <DataTable
-            columns={columns}
-            data={filterCategory ? filteredAuthorizations : authorizations}
-          />
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <DataTable
+              data={filteredAuthorizations.length > 0 ? filteredAuthorizations : authorizations}
+              columns={columns}
+              searchableColumnIds={["ministry", "department_slug"]}
+              searchPlaceholder="חפש לפי משרד מממן או מחלקה..."
+              filterableColumns={{
+                ministry: {
+                  label: "המשרדים",
+                  options: Array.from(new Set(authorizations.map(a => a.ministry).filter(Boolean)))
+                    .map(ministry => ({ label: ministry, value: ministry }))
+                },
+                department_slug: {
+                  label: "המחלקות",
+                  options: [
+                    { label: 'כספים', value: 'finance' },
+                    { label: 'הנדסה', value: 'engineering' },
+                    { label: 'חינוך', value: 'education' },
+                    { label: 'רווחה', value: 'welfare' },
+                    { label: 'תרבות', value: 'non-formal' }
+                  ].filter(dept => authorizations.some(a => a.department_slug === dept.value))
+                }
+              }}
+            />
+          )}
         </CardContent>
       </Card>
 
-      {/* חלונות דיאלוג */}
+      {/* Upload Dialog */}
       {showUploader && (
         <Dialog open={showUploader} onOpenChange={setShowUploader}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent dir="rtl" className="max-w-4xl">
             <DialogHeader>
-              <DialogTitle>העלה קובץ הרשאות תקציביות</DialogTitle>
+              <DialogTitle>ייבוא הרשאות תקציביות מקובץ אקסל</DialogTitle>
             </DialogHeader>
-            <DataUploader
-              context="budget_authorizations"
-              onUploadSuccess={() => {
-                setShowUploader(false);
-                fetchAuthorizations();
-                toast({
-                  title: "הצלחה",
-                  description: "הקובץ הועלה בהצלחה והנתונים נשמרו",
-                });
-              }}
-            />
+            <div className="space-y-4">
+              <DataUploader 
+                context="budget_authorizations"
+                onUploadSuccess={handleUploadSuccess}
+              />
+              <div className="mt-4 text-sm text-muted-foreground">
+                העלה קובץ אקסל עם הרשאות תקציביות. הקובץ צריך להכיל עמודות: מספר הרשאה, משרד מממן, תיאור ההרשאה, סכום ההרשאה, תוקף ההרשאה.
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Date Picker Dialog */}
+      {showDatePicker && (
+        <Dialog open={showDatePicker} onOpenChange={setShowDatePicker}>
+          <DialogContent dir="rtl" className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>בחר תאריך אישור מליאה</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-right font-normal",
+                      !selectedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="ml-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, "dd/MM/yyyy") : <span>בחר תאריך</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowDatePicker(false);
+                    setSelectedDate(undefined);
+                    setStatusUpdateId('');
+                  }}
+                >
+                  ביטול
+                </Button>
+                <Button onClick={handleDateConfirm}>
+                  אישור
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* New Authorization Dialog */}
+      {showNewAuthDialog && (
+        <Dialog open={showNewAuthDialog} onOpenChange={setShowNewAuthDialog}>
+          <DialogContent dir="rtl" className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>הוספת הרשאה חדשה</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="auth-number">מספר הרשאה *</Label>
+                  <Input
+                    id="auth-number"
+                    value={newAuthData.authorization_number}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, authorization_number: e.target.value }))}
+                    placeholder="מספר הרשאה"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ministry">משרד מממן *</Label>
+                  <Input
+                    id="ministry"
+                    value={newAuthData.ministry}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, ministry: e.target.value }))}
+                    placeholder="שם המשרד"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="program">תיאור ההרשאה *</Label>
+                <Textarea
+                  id="program"
+                  value={newAuthData.program}
+                  onChange={(e) => setNewAuthData(prev => ({ ...prev, program: e.target.value }))}
+                  placeholder="תיאור מפורט של ההרשאה"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="purpose">מס' תב"ר</Label>
+                  <Input
+                    id="purpose"
+                    value={newAuthData.purpose}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, purpose: e.target.value }))}
+                    placeholder="מספר תב&quot;ר (אופציונלי)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">סכום ההרשאה (₪) *</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    value={newAuthData.amount}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, amount: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="valid-until">תוקף ההרשאה</Label>
+                  <Input
+                    id="valid-until"
+                    type="date"
+                    value={newAuthData.valid_until}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, valid_until: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="department">מחלקה מטפלת</Label>
+                  <Select
+                    value={newAuthData.department_slug}
+                    onValueChange={(value) => setNewAuthData(prev => ({ ...prev, department_slug: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="בחר מחלקה" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="finance">כספים</SelectItem>
+                      <SelectItem value="engineering">הנדסה</SelectItem>
+                      <SelectItem value="education">חינוך</SelectItem>
+                      <SelectItem value="welfare">רווחה</SelectItem>
+                      <SelectItem value="non-formal">תרבות</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">הערות</Label>
+                <Textarea
+                  id="notes"
+                  value={newAuthData.notes}
+                  onChange={(e) => setNewAuthData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="הערות נוספות (אופציונלי)"
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowNewAuthDialog(false);
+                    setNewAuthData({
+                      authorization_number: '',
+                      ministry: '',
+                      program: '',
+                      purpose: '',
+                      amount: '',
+                      valid_until: '',
+                      department_slug: 'finance',
+                      notes: ''
+                    });
+                  }}
+                >
+                  ביטול
+                </Button>
+                <Button onClick={handleCreateNewAuth}>
+                  שמור הרשאה
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Edit Authorization Dialog */}
+      {showEditDialog && (
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent dir="rtl" className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>עריכת הרשאה</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-auth-number">מספר הרשאה *</Label>
+                  <Input
+                    id="edit-auth-number"
+                    value={newAuthData.authorization_number}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, authorization_number: e.target.value }))}
+                    placeholder="מספר הרשאה"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-ministry">משרד מממן *</Label>
+                  <Input
+                    id="edit-ministry"
+                    value={newAuthData.ministry}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, ministry: e.target.value }))}
+                    placeholder="שם המשרד"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-program">תיאור ההרשאה *</Label>
+                <Textarea
+                  id="edit-program"
+                  value={newAuthData.program}
+                  onChange={(e) => setNewAuthData(prev => ({ ...prev, program: e.target.value }))}
+                  placeholder="תיאור מפורט של ההרשאה"
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-purpose">מס' תב"ר</Label>
+                  <Input
+                    id="edit-purpose"
+                    value={newAuthData.purpose}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, purpose: e.target.value }))}
+                    placeholder="מספר תב&quot;ר (אופציונלי)"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-amount">סכום ההרשאה (₪) *</Label>
+                  <Input
+                    id="edit-amount"
+                    type="number"
+                    value={newAuthData.amount}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, amount: e.target.value }))}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-valid-until">תוקף ההרשאה</Label>
+                  <Input
+                    id="edit-valid-until"
+                    type="date"
+                    value={newAuthData.valid_until}
+                    onChange={(e) => setNewAuthData(prev => ({ ...prev, valid_until: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-department">מחלקה מטפלת</Label>
+                  <Select
+                    value={newAuthData.department_slug}
+                    onValueChange={(value) => setNewAuthData(prev => ({ ...prev, department_slug: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="בחר מחלקה" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="finance">כספים</SelectItem>
+                      <SelectItem value="engineering">הנדסה</SelectItem>
+                      <SelectItem value="education">חינוך</SelectItem>
+                      <SelectItem value="welfare">רווחה</SelectItem>
+                      <SelectItem value="non-formal">תרבות</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-notes">הערות</Label>
+                <Textarea
+                  id="edit-notes"
+                  value={newAuthData.notes}
+                  onChange={(e) => setNewAuthData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="הערות נוספות (אופציונלי)"
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setShowEditDialog(false);
+                    setEditingAuth(null);
+                    setNewAuthData({
+                      authorization_number: '',
+                      ministry: '',
+                      program: '',
+                      purpose: '',
+                      amount: '',
+                      valid_until: '',
+                      department_slug: 'finance',
+                      notes: ''
+                    });
+                  }}
+                >
+                  ביטול
+                </Button>
+                <Button onClick={handleUpdateAuth}>
+                  עדכן הרשאה
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       )}
