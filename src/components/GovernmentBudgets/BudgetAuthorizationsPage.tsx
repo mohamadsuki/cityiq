@@ -1176,7 +1176,7 @@ export default function BudgetAuthorizationsPage() {
           </CardContent>
         </Card>
 
-        {/* ציר זמן הרשאות - חיצים אופקיים */}
+        {/* ציר זמן הרשאות - חיצים אופקיים משופרים */}
         <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-foreground">ציר זמן תוקף הרשאות</CardTitle>
@@ -1184,7 +1184,7 @@ export default function BudgetAuthorizationsPage() {
           <CardContent>
             <div className="h-96">
               {(() => {
-                // יצירת נתונים חדשים לציר זמן חיצים אופקיים (מנקודת אפס)
+                // יצירת נתונים לציר זמן משופר
                 const currentDate = new Date();
                 
                 // קיבוץ הרשאות לפי תאריך סיום תוקף
@@ -1212,20 +1212,21 @@ export default function BudgetAuthorizationsPage() {
                     return acc;
                   }, {});
 
-                // המרה למערך וסידור לפי תאריך (מהקרוב לרחוק), הצגת 10 ראשונים בלבד
+                // המרה למערך וסידור לפי תאריך, הצגת 10 ראשונים
                 const allTimelineData = Object.values(authsByExpiry)
                   .sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
                 
                 const timelineData = allTimelineData
-                  .slice(0, 10) // הגבלה ל-10 תקופות בלבד
+                  .slice(0, 10)
                   .map((item: any, index) => ({
                     ...item,
-                    y: index + 1, // מיקום על ציר Y
-                    width: Math.max(Math.abs(item.daysFromNow), 30), // רוחב החץ (מינימום 30 יום)
-                    color: item.daysFromNow < 0 ? '#ef4444' : 
-                           item.daysFromNow <= 90 ? '#f97316' :
-                           item.daysFromNow <= 180 ? '#eab308' :
-                           item.daysFromNow <= 365 ? '#22c55e' : '#3b82f6'
+                    y: index + 1,
+                    // חישוב אורך החץ יחסי לזמן
+                    width: Math.max(80, Math.min(300, Math.abs(item.daysFromNow) / 2)),
+                    color: item.daysFromNow < 0 ? '#dc2626' : 
+                           item.daysFromNow <= 90 ? '#ea580c' :
+                           item.daysFromNow <= 180 ? '#ca8a04' :
+                           item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
                   }));
 
                 if (timelineData.length === 0) {
@@ -1236,82 +1237,134 @@ export default function BudgetAuthorizationsPage() {
                   );
                 }
 
+                // יצירת ציר זמן מובלט
+                const timeScale = timelineData.map(item => ({
+                  date: new Date(item.date),
+                  label: new Date(item.date).toLocaleDateString('he-IL', { month: 'short', year: 'numeric' })
+                }));
+
                 return (
-                    <div className="relative w-full h-full bg-gray-50 rounded-lg overflow-hidden">
-                    {/* כותרת ציר X */}
-                    <div className="absolute top-4 right-4 text-xs text-gray-600 font-medium">
-                      היום
-                    </div>
-                    <div className="absolute top-4 left-4 text-xs text-gray-600 font-medium">
-                      פג תוקף
+                  <div className="relative w-full h-full bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                    {/* כותרת וציר זמן עליון */}
+                    <div className="absolute top-0 left-0 right-0 h-12 bg-white/80 backdrop-blur-sm border-b border-gray-200">
+                      <div className="flex items-center justify-between h-full px-6">
+                        <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          <span>נקודת התחלה - היום</span>
+                        </div>
+                        <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <span>תאריכי פג תוקף</span>
+                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                        </div>
+                      </div>
                     </div>
                     
-                    {/* ציר זמן מרכזי אנכי בצד ימין */}
-                    <div className="absolute top-12 right-8 bottom-8 w-0.5 bg-gray-300"></div>
+                    {/* ציר זמן מרכזי אנכי */}
+                    <div className="absolute top-12 right-20 bottom-4 w-1 bg-gradient-to-b from-blue-500 via-yellow-500 to-red-500 rounded-full shadow-sm"></div>
                     
-                    {/* חיצים אופקיים (מימין לשמאל) */}
-                    <div className="pt-16 pb-4 px-8 space-y-2 overflow-y-auto max-h-full">
+                    {/* סימוני זמן על הציר */}
+                    <div className="absolute top-12 right-16 bottom-4">
+                      {timeScale.map((scale, index) => {
+                        const position = ((index + 1) / (timeScale.length + 1)) * 100;
+                        return (
+                          <div 
+                            key={index}
+                            className="absolute text-xs text-gray-600 font-medium whitespace-nowrap"
+                            style={{ top: `${position}%`, transform: 'translateY(-50%)' }}
+                          >
+                            {scale.label}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* נקודת התחלה - היום */}
+                    <div className="absolute top-12 right-20 w-4 h-4 bg-blue-600 rounded-full border-4 border-white shadow-lg z-20 transform -translate-x-1/2 animate-pulse"></div>
+                    
+                    {/* חיצים אופקיים משופרים */}
+                    <div className="pt-16 pb-8 px-6 space-y-3 overflow-y-auto max-h-full">
                       {timelineData.map((item: any, index) => {
-                        const maxWidth = 250; // רוחב מקסימלי
-                        const arrowWidth = Math.min(maxWidth, Math.max(60, Math.abs(item.daysFromNow) / 3));
+                        const yPosition = ((index + 1) / (timelineData.length + 1)) * 100;
                         
                         return (
                           <div 
                             key={index}
-                            className="relative flex items-center"
-                            style={{ height: '28px', marginBottom: '8px' }}
+                            className="relative flex items-center animate-fade-in"
+                            style={{ 
+                              height: '36px',
+                              position: 'absolute',
+                              top: `${12 + (yPosition / 100) * (100 - 24)}%`,
+                              right: '80px',
+                              left: '24px',
+                              transform: 'translateY(-50%)'
+                            }}
                           >
-                            {/* נקודת התחלה - נקודת אפס (היום) */}
-                            <div className="absolute right-8 w-2 h-2 bg-gray-800 rounded-full z-10 transform -translate-x-1/2"></div>
-                            
-                            {/* החץ האופקי (מימין לשמאל) */}
-                            <div className="absolute right-8 flex items-center">
+                            {/* החץ האופקי המשופר */}
+                            <div className="relative group">
                               <div
-                                className="relative h-5 flex items-center cursor-pointer transition-all duration-200 hover:opacity-80 hover:scale-105 group"
+                                className="relative h-8 flex items-center cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg rounded-r-lg"
                                 style={{
-                                  backgroundColor: item.color,
-                                  width: `${arrowWidth}px`,
-                                  clipPath: 'polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%)',
-                                  transform: 'translateX(-100%)'
+                                  background: `linear-gradient(135deg, ${item.color}dd, ${item.color})`,
+                                  width: `${item.width}px`,
+                                  clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)',
+                                  border: `2px solid ${item.color}`,
+                                  boxShadow: `0 4px 12px ${item.color}30`
                                 }}
                               >
                                 {/* תוכן החץ */}
-                                <div className="px-2 text-white text-xs font-medium truncate flex-1 text-center">
-                                  {new Date(item.date).toLocaleDateString('he-IL', { month: 'short', year: 'numeric' })}
+                                <div className="px-4 text-white text-sm font-semibold truncate flex-1 text-center drop-shadow-sm">
+                                  {item.count} הרשאות
                                 </div>
                                 
-                                {/* Tooltip מפורט */}
-                                <div className="absolute bottom-full left-0 mb-2 bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-gray-200 min-w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-20">
-                                  <div className="font-medium text-gray-900 mb-2">
-                                    פוגות תוקף: {new Date(item.date).toLocaleDateString('he-IL')}
-                                  </div>
-                                  <div className="space-y-1 text-xs text-gray-600 mb-3">
-                                    <div className="flex justify-between">
-                                      <span>מספר הרשאות:</span>
-                                      <span className="font-bold">{item.count}</span>
+                                {/* נקודת סיום */}
+                                <div 
+                                  className="absolute -right-1 top-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md transform -translate-y-1/2"
+                                  style={{ backgroundColor: item.color }}
+                                ></div>
+                                
+                                {/* Tooltip מפורט ומשופר */}
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-gray-200 min-w-72 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-30">
+                                  <div className="text-center mb-3">
+                                    <div className="font-bold text-gray-900 text-lg">
+                                      {new Date(item.date).toLocaleDateString('he-IL')}
                                     </div>
-                                    <div className="flex justify-between">
-                                      <span>סה"כ תקציב:</span>
-                                      <span className="font-bold">₪{new Intl.NumberFormat('he-IL').format(item.totalAmount)}</span>
+                                    <div className="text-sm text-gray-600">
+                                      תאריך פג תוקף
                                     </div>
                                   </div>
-                                  <div className="border-t pt-2 mb-2">
-                                    <div className="text-xs font-medium text-gray-700 mb-1">הרשאות:</div>
+                                  
+                                  <div className="grid grid-cols-2 gap-4 mb-3">
+                                    <div className="text-center p-2 bg-blue-50 rounded-lg">
+                                      <div className="text-2xl font-bold text-blue-600">{item.count}</div>
+                                      <div className="text-xs text-gray-600">מספר הרשאות</div>
+                                    </div>
+                                    <div className="text-center p-2 bg-green-50 rounded-lg">
+                                      <div className="text-lg font-bold text-green-600">
+                                        ₪{new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(item.totalAmount)}
+                                      </div>
+                                      <div className="text-xs text-gray-600">סה"כ תקציב</div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="border-t pt-3 mb-3">
+                                    <div className="text-sm font-medium text-gray-700 mb-2">רשימת הרשאות:</div>
                                     <div className="max-h-24 overflow-y-auto space-y-1">
                                       {item.authorizations.slice(0, 3).map((auth: any, i: number) => (
-                                        <div key={i} className="text-xs text-gray-600">
-                                          • {auth.program?.substring(0, 35)}{auth.program?.length > 35 ? '...' : ''}
+                                        <div key={i} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                                          • {auth.program?.substring(0, 40)}{auth.program?.length > 40 ? '...' : ''}
                                         </div>
                                       ))}
                                       {item.authorizations.length > 3 && (
-                                        <div className="text-xs text-gray-500 italic">
-                                          +{item.authorizations.length - 3} נוספות...
+                                        <div className="text-xs text-gray-500 italic text-center py-1">
+                                          +{item.authorizations.length - 3} הרשאות נוספות...
                                         </div>
                                       )}
                                     </div>
                                   </div>
-                                  <div className="border-t pt-2">
+                                  
+                                  <div className="border-t pt-3">
                                     <button
+                                      className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
                                       onClick={() => {
                                         const today = new Date();
                                         const validUntil = new Date(item.date);
@@ -1332,18 +1385,12 @@ export default function BudgetAuthorizationsPage() {
                                         
                                         handleFilterByCategory(category);
                                       }}
-                                      className="w-full text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors"
                                     >
                                       הצג בטבלה
                                     </button>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                            
-                            {/* תווית מספר הרשאות בצד שמאל */}
-                            <div className="absolute left-4 text-xs text-gray-700 font-medium">
-                              {item.count} הרשאות
                             </div>
                           </div>
                         );
@@ -1352,8 +1399,8 @@ export default function BudgetAuthorizationsPage() {
                     
                     {/* הודעה על גלילה אם יש יותר מ-10 תקופות */}
                     {allTimelineData.length > 10 && (
-                      <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs text-gray-500 bg-white px-2 py-1 rounded shadow">
-                        מציג 10 תקופות מתוך {allTimelineData.length}
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-sm text-gray-600 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-gray-200">
+                        מציג 10 תקופות ראשונות מתוך {allTimelineData.length} • גלול למעלה לעוד פרטים
                       </div>
                     )}
                     
