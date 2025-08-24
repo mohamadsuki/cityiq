@@ -582,11 +582,20 @@ export default function BudgetAuthorizationsPage() {
 
   const approvedGrants = grants.filter(g => {
     const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
+    console.log(`Grant ${g.name}: status=${g.status}, hebrewStatus=${hebrewStatus}, approved=${hebrewStatus === 'אושר'}`);
     return hebrewStatus === 'אושר';
   });
 
+  console.log('Approved grants:', approvedGrants);
+
   // Use approved_amount if available, otherwise use amount field
-  const approvedGrantsAmount = approvedGrants.reduce((sum, g) => sum + (g.approved_amount || g.amount || 0), 0);
+  const approvedGrantsAmount = approvedGrants.reduce((sum, g) => {
+    const amount = g.approved_amount || g.amount || 0;
+    console.log(`Grant ${g.name}: approved_amount=${g.approved_amount}, amount=${g.amount}, using=${amount}`);
+    return sum + amount;
+  }, 0);
+
+  console.log('Total approved grants amount:', approvedGrantsAmount);
   
   const stats = {
     total: validAuthorizations.length,
