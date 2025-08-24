@@ -1142,7 +1142,7 @@ export default function BudgetAuthorizationsPage() {
         {/* תרשים Timeline לתוקף הרשאות */}
         <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">תאריכי תוקף ההרשאות לפי תמצית תיאור ההרשאה</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">ציר זמן של תוקף ההרשאות על לפי הרשאה</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="py-8">
