@@ -751,10 +751,17 @@ export default function BudgetAuthorizationsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              ₪515,000
+              ₪{new Intl.NumberFormat('he-IL').format(
+                grants
+                  .filter(g => g.status === 'אושר')
+                  .reduce((sum, g) => sum + (g.amount || 0), 0)
+              )}
             </div>
             <p className="text-xs text-green-700 dark:text-green-300">
-              5 קולות קוראים מאושרים מתוך {grants.length}
+              {grants.filter(g => g.status === 'אושר').length} קולות קוראים מאושרים מתוך {grants.length}
+            </p>
+            <p className="text-xs text-green-700 dark:text-green-300">
+              DEBUG: {JSON.stringify(grants.map(g => ({name: g.name, status: g.status, amount: g.amount})).slice(0,3))}
             </p>
           </CardContent>
         </Card>
