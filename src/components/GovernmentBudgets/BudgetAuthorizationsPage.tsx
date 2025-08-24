@@ -649,21 +649,24 @@ export default function BudgetAuthorizationsPage() {
 
       {/* חלונות דיאלוג */}
       {showUploader && (
-        <DataUploader
-          onClose={() => setShowUploader(false)}
-          onSuccess={() => {
-            setShowUploader(false);
-            fetchAuthorizations();
-            toast({
-              title: "הצלחה",
-              description: "הקובץ הועלה בהצלחה והנתונים נשמרו",
-            });
-          }}
-          acceptedFileTypes=".xlsx,.xls"
-          tableName="budget_authorizations"
-          title="העלה קובץ הרשאות תקציביות"
-          description="קובץ Excel עם נתוני הרשאות תקציביות"
-        />
+        <Dialog open={showUploader} onOpenChange={setShowUploader}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>העלה קובץ הרשאות תקציביות</DialogTitle>
+            </DialogHeader>
+            <DataUploader
+              context="budget_authorizations"
+              onUploadSuccess={() => {
+                setShowUploader(false);
+                fetchAuthorizations();
+                toast({
+                  title: "הצלחה",
+                  description: "הקובץ הועלה בהצלחה והנתונים נשמרו",
+                });
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
