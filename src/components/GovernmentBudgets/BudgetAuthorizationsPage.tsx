@@ -721,7 +721,7 @@ export default function BudgetAuthorizationsPage() {
       </div>
 
       {/* כרטיסי סטטיסטיקות */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border-0 bg-gradient-to-br from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">סה"כ הרשאות</CardTitle>
@@ -741,27 +741,6 @@ export default function BudgetAuthorizationsPage() {
             <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
               ₪{new Intl.NumberFormat('he-IL').format(stats.totalAmount)}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 bg-gradient-to-br from-green-50 to-green-100/50 dark:from-green-950/30 dark:to-green-900/20">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
-              סכום קולות קוראים מאושרים ({grants.length} גרנטים)
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              ₪{new Intl.NumberFormat('he-IL').format(
-                grants
-                  .filter(g => g.status === 'אושר')
-                  .reduce((sum, g) => sum + (g.amount || 0), 0)
-              )}
-            </div>
-            <p className="text-xs text-green-700 dark:text-green-300">
-              {grants.filter(g => g.status === 'אושר').length} קולות קוראים מאושרים מתוך {grants.length}
-            </p>
           </CardContent>
         </Card>
       </div>
