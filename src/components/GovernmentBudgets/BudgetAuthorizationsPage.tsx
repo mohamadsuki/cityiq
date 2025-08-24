@@ -456,7 +456,6 @@ export default function BudgetAuthorizationsPage() {
       enableSorting: true,
       cell: ({ getValue }: any) => {
         const value = getValue();
-        console.log('🔍 Authorization number value:', value);
         return value || 'לא צוין';
       }
     },
@@ -466,7 +465,6 @@ export default function BudgetAuthorizationsPage() {
       enableSorting: true,
       cell: ({ getValue }: any) => {
         const value = getValue();
-        console.log('🔍 Ministry value:', value);
         return value || 'לא צוין';
       }
     },
@@ -476,7 +474,6 @@ export default function BudgetAuthorizationsPage() {
       enableSorting: true,
       cell: ({ getValue }: any) => {
         const value = getValue();
-        console.log('🔍 Program value:', value);
         return value || 'לא צוין';
       }
     },
@@ -497,7 +494,6 @@ export default function BudgetAuthorizationsPage() {
       enableSorting: true,
       cell: ({ getValue }: any) => {
         const value = getValue();
-        console.log('🔍 Valid until value:', value);
         if (!value) return 'לא הוגדר תוקף';
         try {
           const date = new Date(value);
@@ -520,7 +516,6 @@ export default function BudgetAuthorizationsPage() {
           'welfare': 'רווחה',
           'non-formal': 'תרבות'
         };
-        console.log('🔍 Department value:', value);
         return deptMap[value] || value || 'כספים';
       }
     },
@@ -530,7 +525,6 @@ export default function BudgetAuthorizationsPage() {
       enableSorting: true,
       cell: ({ getValue }: any) => {
         const value = getValue();
-        console.log('🔍 Approved at value:', value);
         if (!value) return 'ממתין לאישור';
         try {
           return new Date(value).toLocaleDateString('he-IL');
@@ -545,7 +539,6 @@ export default function BudgetAuthorizationsPage() {
       enableSorting: true,
       cell: ({ getValue }: any) => {
         const value = getValue();
-        console.log('🔍 Notes value:', value);
         return value && value.trim() ? value : '';
       }
     },
@@ -582,20 +575,13 @@ export default function BudgetAuthorizationsPage() {
 
   const approvedGrants = grants.filter(g => {
     const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
-    console.log(`Grant ${g.name}: status=${g.status}, hebrewStatus=${hebrewStatus}, approved=${hebrewStatus === 'אושר'}`);
     return hebrewStatus === 'אושר';
   });
 
-  console.log('Approved grants:', approvedGrants);
-
-  // Use approved_amount if available, otherwise use amount field
+  // Calculate approved grants amount using the amount field
   const approvedGrantsAmount = approvedGrants.reduce((sum, g) => {
-    const amount = g.approved_amount || g.amount || 0;
-    console.log(`Grant ${g.name}: approved_amount=${g.approved_amount}, amount=${g.amount}, using=${amount}`);
-    return sum + amount;
+    return sum + (g.amount || 0);
   }, 0);
-
-  console.log('Total approved grants amount:', approvedGrantsAmount);
   
   const stats = {
     total: validAuthorizations.length,
