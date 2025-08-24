@@ -56,6 +56,7 @@ type Grant = {
   support_amount?: number | null;
   municipality_participation?: number | null;
   notes?: string | null;
+  rejection_reason?: string | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -94,6 +95,14 @@ export default function GrantsApp() {
   const canCreate = role === 'mayor' || role === 'ceo' || role === 'manager';
   const visibleDepartments: DepartmentSlug[] = (role === 'mayor' || role === 'ceo') ?
     ['finance','education','engineering','welfare','non-formal','business'] : departments;
+
+  // Rejection reasons for when status is "נדחה" or "לא רלוונטי"
+  const rejectionReasons = [
+    "אי-עמידה בתנאי סף",
+    "חוסר תקצוב", 
+    "החלטת עירייה",
+    "אחר"
+  ];
 
   const [loading, setLoading] = useState(false);
   const [grants, setGrants] = useState<Grant[]>([]);
@@ -296,6 +305,7 @@ export default function GrantsApp() {
       department_slug: form.department_slug,
       submitted_at: form.submitted_at || null,
       decision_at: form.decision_at || null,
+      rejection_reason: (form.status === 'נדחה' || form.status === 'לא רלוונטי') ? form.rejection_reason : null,
       user_id: user.id,
     };
     let error;
@@ -817,20 +827,25 @@ export default function GrantsApp() {
                 <td className="py-3">{g.submission_amount ? g.submission_amount.toLocaleString('he-IL') : '—'}</td>
                 <td className="py-3">{g.approved_amount ? g.approved_amount.toLocaleString('he-IL') : '—'}</td>
                 <td className="py-3">
-                  <Select
-                    value={g.status || 'הוגש'}
-                    onValueChange={(newStatus) => updateGrantStatus(g.id, newStatus)}
-                  >
-                    <SelectTrigger className="w-auto min-w-[100px] h-8">
-                      <span className="text-xs">{labelForStatus(g.status)}</span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="הוגש">הוגש</SelectItem>
-                      <SelectItem value="אושר">אושר</SelectItem>
-                      <SelectItem value="נדחה">נדחה</SelectItem>
-                      <SelectItem value="לא רלוונטי">לא רלוונטי</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1">
+                    <Select
+                      value={g.status || 'הוגש'}
+                      onValueChange={(newStatus) => updateGrantStatus(g.id, newStatus)}
+                    >
+                      <SelectTrigger className="w-auto min-w-[100px] h-8">
+                        <span className="text-xs">{labelForStatus(g.status)}</span>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="הוגש">הוגש</SelectItem>
+                        <SelectItem value="אושר">אושר</SelectItem>
+                        <SelectItem value="נדחה">נדחה</SelectItem>
+                        <SelectItem value="לא רלוונטי">לא רלוונטי</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {(g.status === 'נדחה' || g.status === 'לא רלוונטי') && g.rejection_reason && (
+                      <div className="text-xs text-muted-foreground">{g.rejection_reason}</div>
+                    )}
+                  </div>
                 </td>
                 <td className="py-3 space-x-2 space-x-reverse">
                   <Button size="sm" variant="outline" onClick={() => openEdit(g)}>עריכה</Button>
@@ -874,6 +889,19 @@ export default function GrantsApp() {
                 </SelectContent>
               </Select>
             </div>
+            {((form.status === 'נדחה' || form.status === 'לא רלוונטי')) && (
+              <div>
+                <Label>סיבת הדחייה</Label>
+                <Select value={(form.rejection_reason as string) || ''} onValueChange={(v) => setForm((f) => ({ ...f, rejection_reason: v }))}>
+                  <SelectTrigger><SelectValue placeholder="בחר סיבה" /></SelectTrigger>
+                  <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+                    {rejectionReasons.map((reason) => (
+                      <SelectItem key={reason} value={reason}>{reason}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>מחלקה</Label>
               <Select value={(form.department_slug as DepartmentSlug) ?? 'finance'} onValueChange={(v) => setForm((f) => ({ ...f, department_slug: v as DepartmentSlug }))}>

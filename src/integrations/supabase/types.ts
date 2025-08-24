@@ -270,6 +270,7 @@ export type Database = {
           name: string | null
           notes: string | null
           project_description: string | null
+          rejection_reason: string | null
           responsible_person: string | null
           status: string | null
           submission_amount: number | null
@@ -292,6 +293,7 @@ export type Database = {
           name?: string | null
           notes?: string | null
           project_description?: string | null
+          rejection_reason?: string | null
           responsible_person?: string | null
           status?: string | null
           submission_amount?: number | null
@@ -314,6 +316,7 @@ export type Database = {
           name?: string | null
           notes?: string | null
           project_description?: string | null
+          rejection_reason?: string | null
           responsible_person?: string | null
           status?: string | null
           submission_amount?: number | null
