@@ -1147,22 +1147,53 @@ export default function BudgetAuthorizationsPage() {
           <CardContent>
             <div className="py-8">
               {(() => {
-                // יצירת נתונים לתרשים Timeline
-                const timelineData = authorizations
-                  .filter(auth => auth.valid_until && auth.purpose) // רק הרשאות עם תאריך תוקף ותיאור
-                  .sort((a, b) => new Date(a.valid_until).getTime() - new Date(b.valid_until).getTime())
-                  .slice(0, 6); // מגביל ל-6 הרשאות להצגה נקייה
-
-                const colors = [
-                  'hsl(45, 95%, 58%)',   // זהב
-                  'hsl(25, 95%, 58%)',   // כתום
-                  'hsl(355, 85%, 58%)',  // אדום
-                  'hsl(335, 85%, 58%)',  // ורוד
-                  'hsl(270, 85%, 58%)',  // סגול
-                  'hsl(200, 85%, 35%)'   // כחול כהה
+                // יצירת נתונים לתרשים Timeline - הרשאות שפוגות בזמנים שונים
+                const currentDate = new Date();
+                const timeRanges = [
+                  { label: 'חודש הקרוב', months: 1, color: 'hsl(355, 85%, 58%)' },
+                  { label: '3 חודשים', months: 3, color: 'hsl(25, 95%, 58%)' },
+                  { label: '6 חודשים', months: 6, color: 'hsl(45, 95%, 58%)' },
+                  { label: 'שנה', months: 12, color: 'hsl(120, 85%, 48%)' },
+                  { label: 'שנתיים', months: 24, color: 'hsl(200, 85%, 48%)' },
+                  { label: 'מעל שנתיים', months: 36, color: 'hsl(270, 85%, 58%)' }
                 ];
 
-                if (timelineData.length === 0) {
+                // חישוב הרשאות שפוגות לכל טווח זמן
+                const timelineData = timeRanges.map((range, index) => {
+                  const startDate = index === 0 ? new Date() : new Date(currentDate);
+                  const endDate = new Date(currentDate);
+                  
+                  if (index === 0) {
+                    // חודש הקרוב
+                    endDate.setMonth(endDate.getMonth() + 1);
+                  } else if (index === timeRanges.length - 1) {
+                    // מעל שנתיים - כל מה שמעבר ל-24 חודשים
+                    startDate.setMonth(startDate.getMonth() + 24);
+                    endDate.setFullYear(endDate.getFullYear() + 10); // תאריך רחוק
+                  } else {
+                    // טווחי זמן רגילים
+                    const prevRange = timeRanges[index - 1];
+                    startDate.setMonth(startDate.getMonth() + prevRange.months);
+                    endDate.setMonth(currentDate.getMonth() + range.months);
+                  }
+
+                  const expiringAuths = authorizations.filter(auth => {
+                    if (!auth.valid_until) return false;
+                    const validDate = new Date(auth.valid_until);
+                    return validDate >= startDate && validDate < endDate;
+                  });
+
+                  const totalAmount = expiringAuths.reduce((sum, auth) => sum + (auth.amount || 0), 0);
+
+                  return {
+                    ...range,
+                    count: expiringAuths.length,
+                    totalAmount,
+                    expiringAuths: expiringAuths.slice(0, 3) // מגביל ל-3 הרשאות לתצוגה
+                  };
+                });
+
+                if (authorizations.length === 0) {
                   return (
                     <div className="flex items-center justify-center h-32 text-muted-foreground">
                       אין נתונים להצגה
@@ -1173,31 +1204,43 @@ export default function BudgetAuthorizationsPage() {
                 return (
                   <div className="relative px-4">
                     {/* קו ציר הזמן הראשי */}
-                    <div className="absolute top-1/2 left-4 right-4 h-2 bg-gradient-to-r from-yellow-400 via-orange-500 via-red-500 via-pink-500 via-purple-600 to-slate-700 rounded-full shadow-lg transform -translate-y-1/2"></div>
+                    <div className="absolute top-1/2 left-4 right-4 h-2 bg-gradient-to-r from-red-500 via-orange-500 via-yellow-400 via-green-500 via-blue-500 to-purple-600 rounded-full shadow-lg transform -translate-y-1/2"></div>
                     
                     {/* נקודות הזמן */}
                     <div className="relative flex justify-between items-center h-32">
-                      {timelineData.map((auth, index) => {
+                      {timelineData.map((timePoint, index) => {
                         const isEven = index % 2 === 0;
-                        const date = new Date(auth.valid_until);
-                        const formattedDate = date.toLocaleDateString('he-IL', { year: 'numeric', month: 'long' });
                         
                         return (
-                          <div key={auth.id} className="relative flex flex-col items-center group">
+                          <div key={index} className="relative flex flex-col items-center group">
                             {/* תיאור עליון/תחתון לחילופין */}
-                            <div className={`absolute w-48 px-3 py-2 text-center transition-all duration-300 group-hover:scale-105 ${
-                              isEven ? '-top-16' : 'top-12'
+                            <div className={`absolute w-52 px-3 py-2 text-center transition-all duration-300 group-hover:scale-105 ${
+                              isEven ? '-top-20' : 'top-16'
                             }`}>
-                              <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200 p-2">
-                                <div className="font-semibold text-xs text-gray-900 mb-1 leading-tight">
-                                  {auth.program.length > 40 ? auth.program.substring(0, 40) + '...' : auth.program}
+                              <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200 p-3">
+                                <div className="font-semibold text-sm text-gray-900 mb-1">
+                                  {timePoint.label}
                                 </div>
-                                <div className="text-xs text-gray-600">
-                                  {formattedDate}
+                                <div className="text-xs text-gray-600 mb-2">
+                                  {timePoint.count} הרשאות פגות
                                 </div>
-                                <div className="text-xs font-medium text-gray-700 mt-1">
-                                  ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}
+                                <div className="text-xs font-medium text-gray-700 mb-2">
+                                  ₪{new Intl.NumberFormat('he-IL').format(timePoint.totalAmount)}
                                 </div>
+                                {timePoint.expiringAuths.length > 0 && (
+                                  <div className="text-xs text-gray-500 space-y-1">
+                                    {timePoint.expiringAuths.map((auth, i) => (
+                                      <div key={i} className="truncate">
+                                        {auth.program?.substring(0, 30)}...
+                                      </div>
+                                    ))}
+                                    {timePoint.count > 3 && (
+                                      <div className="font-medium">
+                                        +{timePoint.count - 3} נוספות
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                               {/* חץ מצביע */}
                               <div className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 ${
@@ -1209,11 +1252,14 @@ export default function BudgetAuthorizationsPage() {
                             
                             {/* הנקודה המרכזית */}
                             <div 
-                              className="relative w-16 h-16 rounded-full border-4 border-white shadow-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 cursor-pointer z-10"
-                              style={{ backgroundColor: colors[index] }}
+                              className="relative w-16 h-16 rounded-full border-4 border-white shadow-xl flex flex-col items-center justify-center transform transition-all duration-300 hover:scale-110 cursor-pointer z-10"
+                              style={{ backgroundColor: timePoint.color }}
                             >
-                              <span className="text-white font-bold text-sm">
-                                {date.getFullYear()}
+                              <span className="text-white font-bold text-xs leading-tight">
+                                {timePoint.count}
+                              </span>
+                              <span className="text-white text-xs opacity-90">
+                                פוגות
                               </span>
                             </div>
                           </div>
