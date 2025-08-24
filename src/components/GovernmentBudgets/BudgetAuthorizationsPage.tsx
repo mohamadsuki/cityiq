@@ -449,6 +449,11 @@ export default function BudgetAuthorizationsPage() {
     fetchGrants();
   }, []);
 
+  // Ensure grants are also fetched properly
+  useEffect(() => {
+    fetchGrants();
+  }, []);
+
   const columns = [
     {
       accessorKey: "authorization_number",
@@ -746,13 +751,14 @@ export default function BudgetAuthorizationsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              ₪515,000
+              ₪{new Intl.NumberFormat('he-IL').format(
+                grants
+                  .filter(g => g.status === 'אושר')
+                  .reduce((sum, g) => sum + (g.amount || 0), 0)
+              )}
             </div>
             <p className="text-xs text-green-700 dark:text-green-300">
-              5 קולות קוראים מאושרים
-            </p>
-            <p className="text-xs text-green-700 dark:text-green-300">
-              DEBUG: גרנטים שנטענו: {grants.length}
+              {grants.filter(g => g.status === 'אושר').length} קולות קוראים מאושרים
             </p>
           </CardContent>
         </Card>
