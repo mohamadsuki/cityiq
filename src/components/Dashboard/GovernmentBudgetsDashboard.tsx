@@ -362,79 +362,6 @@ export default function GovernmentBudgetsDashboard() {
         </Card>
       </div>
 
-      {/* גרף השוואה לפי משרדים */}
-      <Card className="border-0 shadow-elevated bg-card">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-foreground">השוואה בין קולות קוראים והרשאות תקציביות לפי משרד ממשלתי</CardTitle>
-          <p className="text-sm text-muted-foreground">מציג את המספר הכולל של קולות קוראים והרשאות תקציביות לכל משרד</p>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center items-center h-80">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : ministryComparisonData.length > 0 ? (
-            <div className="space-y-4">
-              {ministryComparisonData.slice(0, 8).map((item, index) => (
-                <div key={index} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-foreground truncate" title={item.ministry}>
-                      {item.ministry}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      סה"כ: {item['קולות קוראים'] + item['הרשאות תקציביות']}
-                    </span>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-blue-600 w-20">קולות קוראים</span>
-                      <div className="flex-1 bg-blue-100 rounded-full h-3 overflow-hidden">
-                        <div 
-                          className="bg-blue-500 h-full transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-1"
-                          style={{ 
-                            width: item['קולות קוראים'] > 0 
-                              ? `${Math.max(10, (item['קולות קוראים'] / Math.max(...ministryComparisonData.map(d => d['קולות קוראים']))) * 100)}%`
-                              : '0%'
-                          }}
-                        >
-                          {item['קולות קוראים'] > 0 && (
-                            <span className="text-xs text-white font-medium">{item['קולות קוראים']}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-green-600 w-20">הרשאות</span>
-                      <div className="flex-1 bg-green-100 rounded-full h-3 overflow-hidden">
-                        <div 
-                          className="bg-green-500 h-full transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-1"
-                          style={{ 
-                            width: item['הרשאות תקציביות'] > 0 
-                              ? `${Math.max(10, (item['הרשאות תקציביות'] / Math.max(...ministryComparisonData.map(d => d['הרשאות תקציביות']))) * 100)}%`
-                              : '0%'
-                          }}
-                        >
-                          {item['הרשאות תקציביות'] > 0 && (
-                            <span className="text-xs text-white font-medium">{item['הרשאות תקציביות']}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col justify-center items-center h-80 text-muted-foreground">
-              <div className="text-center">
-                <p className="text-lg mb-2">אין נתונים להצגה</p>
-                <p className="text-sm">לא נמצאו נתונים של קולות קוראים או הרשאות תקציביות</p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* גרפים לפי משרדים */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-0 shadow-elevated bg-card overflow-hidden">
@@ -636,10 +563,10 @@ export default function GovernmentBudgetsDashboard() {
                             title={item.ministry}
                           >
                             {item.ministry}
-                            <div className="font-medium">₪{new Intl.NumberFormat('he-IL').format(item.amount)}</div>
+                          </div>
                           <div className="text-muted-foreground text-xs mt-1">
                             <div>{item.count} הרשאות</div>
-                        </div>
+                            <div className="font-medium">₪{new Intl.NumberFormat('he-IL').format(item.amount)}</div>
                           </div>
                         </div>
                       </div>
@@ -704,8 +631,7 @@ export default function GovernmentBudgetsDashboard() {
                     <Legend 
                       verticalAlign="bottom" 
                       height={36}
-                      iconType="circle"
-                      wrapperStyle={{ paddingTop: '10px' }}
+                      wrapperStyle={{ color: '#374151' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -764,8 +690,7 @@ export default function GovernmentBudgetsDashboard() {
                     <Legend 
                       verticalAlign="bottom" 
                       height={36}
-                      iconType="circle"
-                      wrapperStyle={{ paddingTop: '10px' }}
+                      wrapperStyle={{ color: '#374151' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
@@ -779,70 +704,74 @@ export default function GovernmentBudgetsDashboard() {
         </Card>
       </div>
 
-      {/* גרף הכנסות לעומת סכומים מבוקשים */}
+      {/* גרף השוואה לפי משרדים - הועבר לסוף הדף */}
       <Card className="border-0 shadow-elevated bg-card">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold text-foreground">תקציבים מאושרים לעומת סכומים מבוקשים</CardTitle>
+          <CardTitle className="text-lg font-semibold text-foreground">השוואה בין קולות קוראים והרשאות תקציביות לפי משרד ממשלתי</CardTitle>
+          <p className="text-sm text-muted-foreground">מציג את המספר הכולל של קולות קוראים והרשאות תקציביות לכל משרד</p>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center items-center h-80">
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
+          ) : ministryComparisonData.length > 0 ? (
+            <div className="space-y-4">
+              {ministryComparisonData.slice(0, 8).map((item, index) => (
+                <div key={index} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-foreground truncate" title={item.ministry}>
+                      {item.ministry}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      סה"כ: {item['קולות קוראים'] + item['הרשאות תקציביות']}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-blue-600 w-20">קולות קוראים</span>
+                      <div className="flex-1 bg-blue-100 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="bg-blue-500 h-full transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-1"
+                          style={{ 
+                            width: item['קולות קוראים'] > 0 
+                              ? `${Math.max(10, (item['קולות קוראים'] / Math.max(...ministryComparisonData.map(d => d['קולות קוראים']))) * 100)}%`
+                              : '0%'
+                          }}
+                        >
+                          {item['קולות קוראים'] > 0 && (
+                            <span className="text-xs text-white font-medium">{item['קולות קוראים']}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-green-600 w-20">הרשאות</span>
+                      <div className="flex-1 bg-green-100 rounded-full h-3 overflow-hidden">
+                        <div 
+                          className="bg-green-500 h-full transition-all duration-1000 ease-out rounded-full flex items-center justify-end pr-1"
+                          style={{ 
+                            width: item['הרשאות תקציביות'] > 0 
+                              ? `${Math.max(10, (item['הרשאות תקציביות'] / Math.max(...ministryComparisonData.map(d => d['הרשאות תקציביות']))) * 100)}%`
+                              : '0%'
+                          }}
+                        >
+                          {item['הרשאות תקציביות'] > 0 && (
+                            <span className="text-xs text-white font-medium">{item['הרשאות תקציביות']}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={[
-                    { 
-                      type: 'קולות קוראים',
-                      'סכום מבוקש': grants.reduce((sum, g) => sum + (g.submission_amount || 0), 0),
-                      'סכום מאושר': grantsStats.totalAmount
-                    },
-                    { 
-                      type: 'הרשאות תקציביות',
-                      'סכום מבוקש': authorizations.reduce((sum, a) => sum + (a.amount || 0), 0),
-                      'סכום מאושר': authStats.totalAmount
-                    }
-                  ]} 
-                  margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis 
-                    dataKey="type" 
-                    tick={{ fontSize: 12 }}
-                    height={60}
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => `₪${new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(value)}`}
-                  />
-                  <Tooltip 
-                    formatter={(value, name) => [
-                      `₪${new Intl.NumberFormat('he-IL').format(value as number)}`,
-                      name
-                    ]}
-                    labelStyle={{ color: '#374151' }}
-                    contentStyle={{ 
-                      backgroundColor: '#fff', 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '6px',
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }}
-                  />
-                  <Legend />
-                  <Bar 
-                    dataKey="סכום מבוקש" 
-                    fill="#f59e0b"
-                    radius={[4, 4, 0, 0]}
-                  />
-                  <Bar 
-                    dataKey="סכום מאושר" 
-                    fill="#22c55e"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="flex flex-col justify-center items-center h-80 text-muted-foreground">
+              <div className="text-center">
+                <p className="text-lg mb-2">אין נתונים להצגה</p>
+                <p className="text-sm">לא נמצאו נתונים של קולות קוראים או הרשאות תקציביות</p>
+              </div>
             </div>
           )}
         </CardContent>
