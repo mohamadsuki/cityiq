@@ -1139,27 +1139,27 @@ export default function BudgetAuthorizationsPage() {
           </CardContent>
         </Card>
 
-        {/* תרשים Timeline לתוקף הרשאות */}
+        {/* תרשים עמודות אופקיות לתוקף הרשאות */}
         <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">ציר זמן של תוקף ההרשאות על לפי הרשאה</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">ציר זמן של תוקף ההרשאות</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="py-8">
+            <div className="h-80">
               {(() => {
-                // יצירת נתונים לתרשים Timeline - הרשאות שפוגות בזמנים שונים
+                // יצירת נתונים לתרשים עמודות אופקיות - הרשאות שפוגות בזמנים שונים
                 const currentDate = new Date();
                 const timeRanges = [
-                  { label: 'חודש הקרוב', months: 1, color: 'hsl(355, 85%, 58%)' },
-                  { label: '3 חודשים', months: 3, color: 'hsl(25, 95%, 58%)' },
-                  { label: '6 חודשים', months: 6, color: 'hsl(45, 95%, 58%)' },
-                  { label: 'שנה', months: 12, color: 'hsl(120, 85%, 48%)' },
-                  { label: 'שנתיים', months: 24, color: 'hsl(200, 85%, 48%)' },
-                  { label: 'מעל שנתיים', months: 36, color: 'hsl(270, 85%, 58%)' }
+                  { label: 'חודש הקרוב', months: 1, color: '#ef4444' },
+                  { label: '3 חודשים', months: 3, color: '#f97316' },
+                  { label: '6 חודשים', months: 6, color: '#eab308' },
+                  { label: 'שנה', months: 12, color: '#22c55e' },
+                  { label: 'שנתיים', months: 24, color: '#3b82f6' },
+                  { label: 'מעל שנתיים', months: 36, color: '#8b5cf6' }
                 ];
 
                 // חישוב הרשאות שפוגות לכל טווח זמן
-                const timelineData = timeRanges.map((range, index) => {
+                const chartData = timeRanges.map((range, index) => {
                   const startDate = index === 0 ? new Date() : new Date(currentDate);
                   const endDate = new Date(currentDate);
                   
@@ -1186,109 +1186,109 @@ export default function BudgetAuthorizationsPage() {
                   const totalAmount = expiringAuths.reduce((sum, auth) => sum + (auth.amount || 0), 0);
 
                   return {
-                    ...range,
+                    period: range.label,
                     count: expiringAuths.length,
                     totalAmount,
-                    expiringAuths: expiringAuths.slice(0, 5) // מגביל ל-5 הרשאות לתצוגה
+                    color: range.color,
+                    authorizations: expiringAuths
                   };
                 });
 
                 if (authorizations.length === 0) {
                   return (
-                    <div className="flex items-center justify-center h-32 text-muted-foreground">
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
                       אין נתונים להצגה
                     </div>
                   );
                 }
 
                 return (
-                  <div className="relative px-4">
-                    {/* קו ציר הזמן הראשי */}
-                    <div className="absolute top-1/2 left-4 right-4 h-2 bg-gradient-to-r from-red-500 via-orange-500 via-yellow-400 via-green-500 via-blue-500 to-purple-600 rounded-full shadow-lg transform -translate-y-1/2"></div>
-                    
-                    {/* נקודות הזמן */}
-                    <div className="relative flex justify-between items-center h-32">
-                      {timelineData.map((timePoint, index) => {
-                        const isEven = index % 2 === 0;
-                        
-                        return (
-                          <div key={index} className="relative flex flex-col items-center group">
-                            {/* תיאור עליון/תחתון לחילופין */}
-                            <div className={`absolute w-80 px-4 py-3 text-center transition-all duration-300 group-hover:scale-105 opacity-0 group-hover:opacity-100 pointer-events-none z-20 ${
-                              isEven ? '-top-24' : 'top-20'
-                            }`}>
-                              <div className="bg-white/98 backdrop-blur-sm rounded-lg shadow-2xl border border-gray-200 p-4 max-h-96 overflow-y-auto">
-                                <div className="font-semibold text-lg text-gray-900 mb-2 border-b pb-2">
-                                  {timePoint.label}
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="horizontal"
+                      data={chartData}
+                      margin={{
+                        top: 20,
+                        right: 30,
+                        left: 100,
+                        bottom: 20,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        type="number" 
+                        domain={[0, 'dataMax']}
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                        axisLine={{ stroke: '#d1d5db' }}
+                        tickLine={{ stroke: '#d1d5db' }}
+                      />
+                      <YAxis 
+                        type="category" 
+                        dataKey="period"
+                        tick={{ fontSize: 12, fill: '#374151' }}
+                        axisLine={{ stroke: '#d1d5db' }}
+                        tickLine={{ stroke: '#d1d5db' }}
+                        width={90}
+                      />
+                      <Tooltip 
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload[0]) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-white/98 backdrop-blur-sm p-4 rounded-lg shadow-xl border border-gray-200 max-w-xs">
+                                <div className="font-semibold text-gray-900 mb-2 border-b pb-2">
+                                  {data.period}
                                 </div>
-                                <div className="text-sm text-gray-600 mb-3 flex justify-between">
-                                  <span>{timePoint.count} הרשאות פגות</span>
-                                  <span className="font-medium">₪{new Intl.NumberFormat('he-IL').format(timePoint.totalAmount)}</span>
-                                </div>
-                                
-                                {timePoint.expiringAuths.length > 0 ? (
-                                  <div className="space-y-3 text-right">
-                                    {timePoint.expiringAuths.map((auth, i) => (
-                                      <div key={i} className="bg-gray-50 rounded-lg p-3 border-r-4 border-blue-400">
-                                        <div className="font-medium text-gray-900 text-sm mb-1">
-                                          {auth.program}
-                                        </div>
-                                        <div className="text-xs text-gray-600 space-y-1">
-                                          <div>משרד: {auth.ministry}</div>
-                                          <div>סכום: ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}</div>
-                                          <div>פוגה: {new Date(auth.valid_until).toLocaleDateString('he-IL')}</div>
-                                          {auth.authorization_number && (
-                                            <div>מספר הרשאה: {auth.authorization_number}</div>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span>מספר הרשאות:</span>
+                                    <span className="font-medium">{data.count}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>סה"כ תקציב:</span>
+                                    <span className="font-medium text-green-600">
+                                      ₪{new Intl.NumberFormat('he-IL').format(data.totalAmount)}
+                                    </span>
+                                  </div>
+                                  {data.authorizations.length > 0 && (
+                                    <>
+                                      <div className="border-t pt-2 mt-2">
+                                        <div className="font-medium text-gray-700 mb-1">הרשאות:</div>
+                                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                                          {data.authorizations.slice(0, 3).map((auth, i) => (
+                                            <div key={i} className="text-xs text-gray-600">
+                                              • {auth.program} - ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}
+                                            </div>
+                                          ))}
+                                          {data.authorizations.length > 3 && (
+                                            <div className="text-xs text-gray-500 italic">
+                                              + עוד {data.authorizations.length - 3} הרשאות
+                                            </div>
                                           )}
-                                          <div className={`inline-block px-2 py-1 rounded text-xs ${
-                                            auth.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                            auth.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                            auth.status === 'in_review' ? 'bg-blue-100 text-blue-800' :
-                                            'bg-red-100 text-red-800'
-                                          }`}>
-                                            {statusLabels[auth.status]?.label || auth.status}
-                                          </div>
                                         </div>
                                       </div>
-                                    ))}
-                                    {timePoint.count > timePoint.expiringAuths.length && (
-                                      <div className="text-center text-gray-500 text-sm pt-2 border-t">
-                                        +{timePoint.count - timePoint.expiringAuths.length} הרשאות נוספות
-                                      </div>
-                                    )}
-                                  </div>
-                                ) : (
-                                  <div className="text-gray-500 text-sm text-center py-4">
-                                    אין הרשאות פגות בתקופה זו
-                                  </div>
-                                )}
+                                    </>
+                                  )}
+                                </div>
                               </div>
-                              {/* חץ מצביע */}
-                              <div className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 ${
-                                isEven 
-                                  ? 'top-full border-l-6 border-r-6 border-t-6 border-transparent border-t-gray-200' 
-                                  : 'bottom-full border-l-6 border-r-6 border-b-6 border-transparent border-b-gray-200'
-                              }`}></div>
-                            </div>
-                            
-                            {/* הנקודה המרכזית */}
-                            <div 
-                              className="relative w-16 h-16 rounded-full border-4 border-white shadow-xl flex flex-col items-center justify-center transform transition-all duration-300 hover:scale-110 cursor-pointer z-10 group-hover:shadow-2xl"
-                              style={{ backgroundColor: timePoint.color }}
-                              title={`${timePoint.label}: ${timePoint.count} הרשאות פגות`}
-                            >
-                              <span className="text-white font-bold text-xs leading-tight">
-                                {timePoint.count}
-                              </span>
-                              <span className="text-white text-xs opacity-90">
-                                פוגות
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar 
+                        dataKey="count" 
+                        fill="#8b5cf6"
+                        radius={[0, 4, 4, 0]}
+                        stroke="#fff"
+                        strokeWidth={1}
+                      >
+                        {chartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 );
               })()}
             </div>
