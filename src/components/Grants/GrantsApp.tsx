@@ -35,7 +35,7 @@ const CHART_COLORS = [
 ];
 
 // Grant types aligned with DB
-export type GrantStatus = 'draft' | 'submitted' | 'pending' | 'approved' | 'rejected';
+export type GrantStatus = 'הוגש' | 'אושר' | 'נדחה' | 'לא רלוונטי';
 
 type Grant = {
   id: string;
@@ -59,20 +59,18 @@ type Grant = {
 };
 
 const STATUS_LABELS: Record<GrantStatus, string> = {
-  draft: 'טיוטה',
-  submitted: 'הוגש',
-  pending: 'ממתין',
-  approved: 'אושר',
-  rejected: 'נדחה',
+  'הוגש': 'הוגש',
+  'אושר': 'אושר',
+  'נדחה': 'נדחה',
+  'לא רלוונטי': 'לא רלוונטי',
 };
 
 const statusVariant = (s: string | null): 'default' | 'secondary' | 'destructive' | 'outline' => {
-  switch ((s || '').toLowerCase()) {
-    case 'approved': return 'default';
-    case 'rejected': return 'destructive';
-    case 'submitted':
-    case 'pending': return 'secondary';
-    case 'draft':
+  switch (s) {
+    case 'אושר': return 'default';
+    case 'נדחה': return 'destructive';
+    case 'הוגש': return 'secondary';
+    case 'לא רלוונטי': return 'outline';
     default: return 'outline';
   }
 };
@@ -110,7 +108,7 @@ export default function GrantsApp() {
     return grants.filter((g) => {
       const text = `${g.name ?? ''} ${g.ministry ?? ''}`.toLowerCase();
       if (q && !text.includes(q.toLowerCase())) return false;
-      if (status !== 'all' && (g.status || '').toLowerCase() !== status) return false;
+      if (status !== 'all' && g.status !== status) return false;
       if (role === 'manager' && departments && !departments.includes((g.department_slug as DepartmentSlug))) return false;
       if (department !== 'all' && g.department_slug !== department) return false;
       if (ministry !== 'all' && g.ministry !== ministry) return false;
@@ -252,7 +250,7 @@ export default function GrantsApp() {
     name: '',
     ministry: '',
     amount: null,
-    status: 'draft',
+    status: 'הוגש',
     department_slug: (visibleDepartments?.[0] ?? 'finance') as DepartmentSlug,
     submitted_at: '',
     decision_at: '',
@@ -261,7 +259,7 @@ export default function GrantsApp() {
   function openCreate() {
     setEditing(null);
     setForm({
-      name: '', ministry: '', amount: null, status: 'draft',
+      name: '', ministry: '', amount: null, status: 'הוגש',
       department_slug: (visibleDepartments?.[0] ?? 'finance') as DepartmentSlug,
       submitted_at: '', decision_at: ''
     });
@@ -328,6 +326,7 @@ export default function GrantsApp() {
     const approved = grants.filter(g => g.status === 'אושר').length;
     const submitted = grants.filter(g => g.status === 'הוגש').length;
     const rejected = grants.filter(g => g.status === 'נדחה').length;
+    const notRelevant = grants.filter(g => g.status === 'לא רלוונטי').length;
     const totalAmount = grants.reduce((sum, g) => sum + (g.amount || 0), 0);
     const approvedAmount = grants.filter(g => g.status === 'אושר').reduce((sum, g) => sum + (g.amount || 0), 0);
     const submittedAmount = grants.filter(g => g.status === 'הוגש').reduce((sum, g) => sum + (g.amount || 0), 0);
@@ -337,6 +336,7 @@ export default function GrantsApp() {
       approved,
       submitted,
       rejected,
+      notRelevant,
       totalAmount,
       approvedAmount,
       submittedAmount,
@@ -349,7 +349,7 @@ export default function GrantsApp() {
     { name: 'מאושרים', value: stats.approved, color: '#22c55e' },
     { name: 'הוגשו', value: stats.submitted, color: '#f59e0b' },
     { name: 'נדחים', value: stats.rejected, color: '#ef4444' },
-    { name: 'אחרים', value: stats.total - stats.approved - stats.submitted - stats.rejected, color: '#6b7280' }
+    { name: 'לא רלוונטי', value: stats.notRelevant, color: '#6b7280' }
   ].filter(item => item.value > 0);
 
   // Ministry data for pie chart
@@ -707,11 +707,10 @@ export default function GrantsApp() {
               <SelectTrigger><SelectValue placeholder="סטטוס" /></SelectTrigger>
               <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                 <SelectItem value="all">הכל</SelectItem>
-                <SelectItem value="draft">טיוטה</SelectItem>
-                <SelectItem value="submitted">הוגש</SelectItem>
-                <SelectItem value="pending">ממתין</SelectItem>
-                <SelectItem value="approved">אושר</SelectItem>
-                <SelectItem value="rejected">נדחה</SelectItem>
+                <SelectItem value="הוגש">הוגש</SelectItem>
+                <SelectItem value="אושר">אושר</SelectItem>
+                <SelectItem value="נדחה">נדחה</SelectItem>
+                <SelectItem value="לא רלוונטי">לא רלוונטי</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -791,18 +790,17 @@ export default function GrantsApp() {
                 <td className="py-3">{g.approved_amount ? g.approved_amount.toLocaleString('he-IL') : '—'}</td>
                 <td className="py-3">
                   <Select
-                    value={g.status || 'draft'}
+                    value={g.status || 'הוגש'}
                     onValueChange={(newStatus) => updateGrantStatus(g.id, newStatus)}
                   >
                     <SelectTrigger className="w-auto min-w-[100px] h-8">
                       <span className="text-xs">{labelForStatus(g.status)}</span>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="draft">טיוטה</SelectItem>
-                      <SelectItem value="submitted">הוגש</SelectItem>
-                      <SelectItem value="pending">ממתין</SelectItem>
-                      <SelectItem value="approved">אושר</SelectItem>
-                      <SelectItem value="rejected">נדחה</SelectItem>
+                      <SelectItem value="הוגש">הוגש</SelectItem>
+                      <SelectItem value="אושר">אושר</SelectItem>
+                      <SelectItem value="נדחה">נדחה</SelectItem>
+                      <SelectItem value="לא רלוונטי">לא רלוונטי</SelectItem>
                     </SelectContent>
                   </Select>
                 </td>
@@ -838,14 +836,13 @@ export default function GrantsApp() {
             </div>
             <div>
               <Label>סטטוס</Label>
-              <Select value={(form.status as string) || 'draft'} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
+              <Select value={(form.status as string) || 'הוגש'} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
                 <SelectTrigger><SelectValue placeholder="סטטוס" /></SelectTrigger>
                 <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
-                  <SelectItem value="draft">טיוטה</SelectItem>
-                  <SelectItem value="submitted">הוגש</SelectItem>
-                  <SelectItem value="pending">ממתין</SelectItem>
-                  <SelectItem value="approved">אושר</SelectItem>
-                  <SelectItem value="rejected">נדחה</SelectItem>
+                  <SelectItem value="הוגש">הוגש</SelectItem>
+                  <SelectItem value="אושר">אושר</SelectItem>
+                  <SelectItem value="נדחה">נדחה</SelectItem>
+                  <SelectItem value="לא רלוונטי">לא רלוונטי</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -909,8 +906,7 @@ function deptLabel(d: DepartmentSlug) {
 
 function labelForStatus(s: string | null) {
   if (!s) return '—';
-  const key = (s as string).toLowerCase() as GrantStatus;
-  return STATUS_LABELS[key] || s;
+  return STATUS_LABELS[s as GrantStatus] || s;
 }
 
 function formatDays(diff: number | null) {
