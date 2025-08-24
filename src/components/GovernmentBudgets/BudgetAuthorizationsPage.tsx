@@ -744,14 +744,19 @@ export default function BudgetAuthorizationsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-900 dark:text-green-100">
-              ₪{new Intl.NumberFormat('he-IL').format(
-                grants
-                  .filter(g => {
-                    const hebrewStatus = g.status ? (STATUS_LABELS[g.status] || g.status) : null;
-                    return hebrewStatus === 'אושר';
-                  })
-                  .reduce((sum, g) => sum + (g.amount || 0), 0)
-              )}
+              {(() => {
+                console.log('🔍 Total grants in BudgetAuth:', grants.length);
+                console.log('🔍 Grants data:', grants);
+                const approved = grants.filter(g => {
+                  const hebrewStatus = g.status ? (STATUS_LABELS[g.status] || g.status) : null;
+                  console.log(`🔍 Grant: ${g.name}, status: ${g.status}, hebrew: ${hebrewStatus}, amount: ${g.amount}`);
+                  return hebrewStatus === 'אושר';
+                });
+                console.log('🔍 Approved grants:', approved);
+                const total = approved.reduce((sum, g) => sum + (g.amount || 0), 0);
+                console.log('🔍 Total approved amount:', total);
+                return `₪${new Intl.NumberFormat('he-IL').format(total)}`;
+              })()}
             </div>
             <p className="text-xs text-green-700 dark:text-green-300">
               {grants.filter(g => {
