@@ -127,12 +127,11 @@ export default function GovernmentBudgetsDashboard() {
   // חישוב סטטיסטיקות
   const grantsStats = {
     total: grants.length,
-    approved: grants.filter(g => g.status === 'approved').length,
-    pending: grants.filter(g => g.status === 'pending').length,
-    totalAmount: grants.filter(g => g.status === 'approved').reduce((sum, g) => {
-      // נשתמש ב approved_amount אם קיים, אחרת ב amount
-      const approvedAmount = g.approved_amount || g.amount || 0;
-      return sum + approvedAmount;
+    approved: grants.filter(g => g.status === 'אושר').length,
+    pending: grants.filter(g => g.status === 'הוגש' || g.status === 'pending').length,
+    totalAmount: grants.filter(g => g.status === 'אושר').reduce((sum, g) => {
+      // נשתמש ב amount - זה הסכום המבוקש של הגרנט
+      return sum + (g.amount || 0);
     }, 0)
   };
 
