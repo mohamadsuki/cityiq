@@ -538,13 +538,20 @@ export default function BudgetAuthorizationsPage() {
     console.log(`Exporting authorizations`);
   };
 
-  // סטטיסטיקות מהירות
+  // סטטיסטיקות מהירות - חישוב נכון של סכום ההרשאות התקציביות
+  const validAuthorizations = authorizations.filter(auth => 
+    auth.program && 
+    auth.program.trim() && 
+    typeof auth.amount === 'number' && 
+    auth.amount > 0
+  );
+  
   const stats = {
-    total: authorizations.length,
-    approved: authorizations.filter(a => a.approved_at).length,
-    pending: authorizations.filter(a => !a.approved_at).length,
-    totalAmount: authorizations.reduce((sum, a) => sum + (a.amount || 0), 0),
-    approvedAmount: authorizations.filter(a => a.approved_at).reduce((sum, a) => sum + (a.amount || 0), 0)
+    total: validAuthorizations.length,
+    approved: validAuthorizations.filter(a => a.approved_at).length,
+    pending: validAuthorizations.filter(a => !a.approved_at).length,
+    totalAmount: validAuthorizations.reduce((sum, a) => sum + (a.amount || 0), 0),
+    approvedAmount: validAuthorizations.filter(a => a.approved_at).reduce((sum, a) => sum + (a.amount || 0), 0)
   };
 
   // נתוני גרפים
