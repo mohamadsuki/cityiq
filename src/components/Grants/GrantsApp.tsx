@@ -514,7 +514,7 @@ export default function GrantsApp() {
 
         <Card className="border-0 bg-gradient-to-br from-yellow-50 to-yellow-100/50 dark:from-yellow-950/30 dark:to-yellow-900/20">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-900 dark:text-yellow-100">הוגשו</CardTitle>
+            <CardTitle className="text-sm font-medium text-yellow-900 dark:text-yellow-100">הוגשו וטרם אושרו</CardTitle>
             <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
           </CardHeader>
           <CardContent>
