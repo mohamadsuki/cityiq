@@ -58,15 +58,25 @@ type Grant = {
   notes?: string | null;
 };
 
-const STATUS_LABELS: Record<GrantStatus, string> = {
+const STATUS_LABELS: Record<string, string> = {
   'הוגש': 'הוגש',
   'אושר': 'אושר',
   'נדחה': 'נדחה',
   'לא רלוונטי': 'לא רלוונטי',
+  // Map English statuses to Hebrew
+  'SUBMITTED': 'הוגש',
+  'APPROVED': 'אושר',
+  'REJECTED': 'נדחה',
+  'NOT_RELEVANT': 'לא רלוונטי',
+  'submitted': 'הוגש',
+  'approved': 'אושר',
+  'rejected': 'נדחה',
+  'not_relevant': 'לא רלוונטי',
 };
 
 const statusVariant = (s: string | null): 'default' | 'secondary' | 'destructive' | 'outline' => {
-  switch (s) {
+  const hebrewStatus = s ? STATUS_LABELS[s] || s : null;
+  switch (hebrewStatus) {
     case 'אושר': return 'default';
     case 'נדחה': return 'destructive';
     case 'הוגש': return 'secondary';
@@ -323,13 +333,31 @@ export default function GrantsApp() {
   // Statistics calculations
   const stats = useMemo(() => {
     const total = grants.length;
-    const approved = grants.filter(g => g.status === 'אושר').length;
-    const submitted = grants.filter(g => g.status === 'הוגש').length;
-    const rejected = grants.filter(g => g.status === 'נדחה').length;
-    const notRelevant = grants.filter(g => g.status === 'לא רלוונטי').length;
+    const approved = grants.filter(g => {
+      const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
+      return hebrewStatus === 'אושר';
+    }).length;
+    const submitted = grants.filter(g => {
+      const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
+      return hebrewStatus === 'הוגש';
+    }).length;
+    const rejected = grants.filter(g => {
+      const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
+      return hebrewStatus === 'נדחה';
+    }).length;
+    const notRelevant = grants.filter(g => {
+      const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
+      return hebrewStatus === 'לא רלוונטי';
+    }).length;
     const totalAmount = grants.reduce((sum, g) => sum + (g.amount || 0), 0);
-    const approvedAmount = grants.filter(g => g.status === 'אושר').reduce((sum, g) => sum + (g.amount || 0), 0);
-    const submittedAmount = grants.filter(g => g.status === 'הוגש').reduce((sum, g) => sum + (g.amount || 0), 0);
+    const approvedAmount = grants.filter(g => {
+      const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
+      return hebrewStatus === 'אושר';
+    }).reduce((sum, g) => sum + (g.amount || 0), 0);
+    const submittedAmount = grants.filter(g => {
+      const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
+      return hebrewStatus === 'הוגש';
+    }).reduce((sum, g) => sum + (g.amount || 0), 0);
     
     return {
       total,
@@ -906,7 +934,7 @@ function deptLabel(d: DepartmentSlug) {
 
 function labelForStatus(s: string | null) {
   if (!s) return '—';
-  return STATUS_LABELS[s as GrantStatus] || s;
+  return STATUS_LABELS[s] || s;
 }
 
 function formatDays(diff: number | null) {
