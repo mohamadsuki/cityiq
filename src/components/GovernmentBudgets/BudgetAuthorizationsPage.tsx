@@ -580,6 +580,8 @@ export default function BudgetAuthorizationsPage() {
     'not_relevant': 'לא רלוונטי',
   };
 
+  console.log('All grants:', grants);
+  
   const approvedGrants = grants.filter(g => {
     const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
     console.log(`Grant ${g.name}: status=${g.status}, hebrewStatus=${hebrewStatus}, approved=${hebrewStatus === 'אושר'}`);
@@ -588,10 +590,10 @@ export default function BudgetAuthorizationsPage() {
 
   console.log('Approved grants:', approvedGrants);
 
-  // Use approved_amount if available, otherwise use amount field
+  // Use amount field (not approved_amount) for approved grants calculation
   const approvedGrantsAmount = approvedGrants.reduce((sum, g) => {
-    const amount = g.approved_amount || g.amount || 0;
-    console.log(`Grant ${g.name}: approved_amount=${g.approved_amount}, amount=${g.amount}, using=${amount}`);
+    const amount = g.amount || 0; // Use the main amount field
+    console.log(`Grant ${g.name}: amount=${g.amount}, adding=${amount}`);
     return sum + amount;
   }, 0);
 
