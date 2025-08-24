@@ -164,15 +164,20 @@ export default function BudgetAuthorizationsPage() {
 
   const fetchGrants = async () => {
     try {
+      console.log('🔍 Fetching grants from database...');
       const { data, error } = await supabase
         .from('grants')
         .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
+      console.log('✅ Grants fetched successfully:', data);
+      console.log('✅ Number of grants:', data?.length || 0);
+      console.log('✅ Approved grants:', data?.filter(g => g.status === 'אושר').length || 0);
+      console.log('✅ Total approved amount:', data?.filter(g => g.status === 'אושר').reduce((sum, g) => sum + (g.amount || 0), 0) || 0);
       setGrants(data || []);
     } catch (error) {
-      console.error('Error fetching grants:', error);
+      console.error('❌ Error fetching grants:', error);
       setGrants([]);
     }
   };
@@ -446,11 +451,6 @@ export default function BudgetAuthorizationsPage() {
 
   useEffect(() => {
     fetchAuthorizations();
-    fetchGrants();
-  }, []);
-
-  // Ensure grants are also fetched properly
-  useEffect(() => {
     fetchGrants();
   }, []);
 
@@ -759,9 +759,6 @@ export default function BudgetAuthorizationsPage() {
             </div>
             <p className="text-xs text-green-700 dark:text-green-300">
               {grants.filter(g => g.status === 'אושר').length} קולות קוראים מאושרים מתוך {grants.length}
-            </p>
-            <p className="text-xs text-green-700 dark:text-green-300">
-              DEBUG: {JSON.stringify(grants.map(g => ({name: g.name, status: g.status, amount: g.amount})).slice(0,3))}
             </p>
           </CardContent>
         </Card>
