@@ -828,20 +828,9 @@ export default function GrantsApp() {
                 <td className="py-3">{g.approved_amount ? g.approved_amount.toLocaleString('he-IL') : '—'}</td>
                 <td className="py-3">
                   <div className="space-y-1">
-                    <Select
-                      value={g.status || 'הוגש'}
-                      onValueChange={(newStatus) => updateGrantStatus(g.id, newStatus)}
-                    >
-                      <SelectTrigger className="w-auto min-w-[100px] h-8">
-                        <span className="text-xs">{labelForStatus(g.status)}</span>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="הוגש">הוגש</SelectItem>
-                        <SelectItem value="אושר">אושר</SelectItem>
-                        <SelectItem value="נדחה">נדחה</SelectItem>
-                        <SelectItem value="לא רלוונטי">לא רלוונטי</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Badge variant={statusVariant(g.status)}>
+                      {labelForStatus(g.status)}
+                    </Badge>
                     {(g.status === 'נדחה' || g.status === 'לא רלוונטי') && g.rejection_reason && (
                       <div className="text-xs text-muted-foreground">{g.rejection_reason}</div>
                     )}
