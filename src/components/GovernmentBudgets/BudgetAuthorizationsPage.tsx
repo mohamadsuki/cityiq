@@ -585,7 +585,8 @@ export default function BudgetAuthorizationsPage() {
     return hebrewStatus === 'אושר';
   });
 
-  const approvedGrantsAmount = approvedGrants.reduce((sum, g) => sum + (g.amount || 0), 0);
+  // Use approved_amount if available, otherwise use amount field
+  const approvedGrantsAmount = approvedGrants.reduce((sum, g) => sum + (g.approved_amount || g.amount || 0), 0);
   
   const stats = {
     total: validAuthorizations.length,
