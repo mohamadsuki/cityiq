@@ -1139,90 +1139,110 @@ export default function BudgetAuthorizationsPage() {
           </CardContent>
         </Card>
 
-        {/* תרשים Timeline לתוקף הרשאות */}
+        {/* תרשים תוקף הרשאות כללי לפי ציר זמן */}
         <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">תאריכי תוקף ההרשאות לפי תמצית תיאור ההרשאה</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">תוקף הרשאות לפי ציר זמן</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="py-8">
-              {(() => {
-                // יצירת נתונים לתרשים Timeline
-                const timelineData = authorizations
-                  .filter(auth => auth.valid_until && auth.purpose) // רק הרשאות עם תאריך תוקף ותיאור
-                  .sort((a, b) => new Date(a.valid_until).getTime() - new Date(b.valid_until).getTime())
-                  .slice(0, 6); // מגביל ל-6 הרשאות להצגה נקייה
-
-                const colors = [
-                  'hsl(45, 95%, 58%)',   // זהב
-                  'hsl(25, 95%, 58%)',   // כתום
-                  'hsl(355, 85%, 58%)',  // אדום
-                  'hsl(335, 85%, 58%)',  // ורוד
-                  'hsl(270, 85%, 58%)',  // סגול
-                  'hsl(200, 85%, 35%)'   // כחול כהה
-                ];
-
-                if (timelineData.length === 0) {
-                  return (
-                    <div className="flex items-center justify-center h-32 text-muted-foreground">
-                      אין נתונים להצגה
-                    </div>
-                  );
-                }
-
-                return (
-                  <div className="relative px-4">
-                    {/* קו ציר הזמן הראשי */}
-                    <div className="absolute top-1/2 left-4 right-4 h-2 bg-gradient-to-r from-yellow-400 via-orange-500 via-red-500 via-pink-500 via-purple-600 to-slate-700 rounded-full shadow-lg transform -translate-y-1/2"></div>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={(() => {
+                  // יצירת נתונים לתרשים ציר זמן כללי
+                  const timelineData = [];
+                  const currentDate = new Date();
+                  
+                  // יצירת טווח של 12 חודשים קדימה
+                  for (let i = 0; i < 12; i++) {
+                    const monthDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1);
+                    const monthName = monthDate.toLocaleDateString('he-IL', { month: 'short', year: 'numeric' });
                     
-                    {/* נקודות הזמן */}
-                    <div className="relative flex justify-between items-center h-32">
-                      {timelineData.map((auth, index) => {
-                        const isEven = index % 2 === 0;
-                        const date = new Date(auth.valid_until);
-                        const formattedDate = date.toLocaleDateString('he-IL', { year: 'numeric', month: 'long' });
-                        
+                    // ספירת הרשאות שתוקפן פוקע בחודש זה
+                    const expiringAuths = authorizations.filter(auth => {
+                      if (!auth.valid_until) return false;
+                      const validDate = new Date(auth.valid_until);
+                      return validDate.getMonth() === monthDate.getMonth() && 
+                             validDate.getFullYear() === monthDate.getFullYear();
+                    });
+                    
+                    const totalAmount = expiringAuths.reduce((sum, auth) => sum + (auth.amount || 0), 0);
+                    
+                    timelineData.push({
+                      month: monthName,
+                      count: expiringAuths.length,
+                      amount: totalAmount
+                    });
+                  }
+                  
+                  return timelineData;
+                })()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+                  <XAxis 
+                    dataKey="month" 
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <YAxis 
+                    yAxisId="count"
+                    orientation="left"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    label={{ value: 'מספר הרשאות', angle: -90, position: 'insideLeft' }}
+                  />
+                  <YAxis 
+                    yAxisId="amount"
+                    orientation="right"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    label={{ value: 'סכום (₪)', angle: 90, position: 'insideRight' }}
+                  />
+                  <Tooltip 
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
                         return (
-                          <div key={auth.id} className="relative flex flex-col items-center group">
-                            {/* תיאור עליון/תחתון לחילופין */}
-                            <div className={`absolute w-48 px-3 py-2 text-center transition-all duration-300 group-hover:scale-105 ${
-                              isEven ? '-top-16' : 'top-12'
-                            }`}>
-                              <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl border border-gray-200 p-2">
-                                <div className="font-semibold text-xs text-gray-900 mb-1 leading-tight">
-                                  {auth.program.length > 40 ? auth.program.substring(0, 40) + '...' : auth.program}
-                                </div>
-                                <div className="text-xs text-gray-600">
-                                  {formattedDate}
-                                </div>
-                                <div className="text-xs font-medium text-gray-700 mt-1">
-                                  ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}
-                                </div>
+                          <div className="bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-gray-200">
+                            <div className="font-semibold text-gray-900 mb-2">{label}</div>
+                            {payload.map((entry, index) => (
+                              <div key={index} className="flex items-center gap-2 text-sm">
+                                <div 
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: entry.color }}
+                                />
+                                <span className="text-gray-700">
+                                  {entry.dataKey === 'count' 
+                                    ? `${entry.value} הרשאות פוקעות`
+                                    : `₪${new Intl.NumberFormat('he-IL').format(entry.value)}`
+                                  }
+                                </span>
                               </div>
-                              {/* חץ מצביע */}
-                              <div className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 ${
-                                isEven 
-                                  ? 'top-full border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-200' 
-                                  : 'bottom-full border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-200'
-                              }`}></div>
-                            </div>
-                            
-                            {/* הנקודה המרכזית */}
-                            <div 
-                              className="relative w-16 h-16 rounded-full border-4 border-white shadow-xl flex items-center justify-center transform transition-all duration-300 hover:scale-110 cursor-pointer z-10"
-                              style={{ backgroundColor: colors[index] }}
-                            >
-                              <span className="text-white font-bold text-sm">
-                                {date.getFullYear()}
-                              </span>
-                            </div>
+                            ))}
                           </div>
                         );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar 
+                    yAxisId="count"
+                    dataKey="count" 
+                    fill="hsl(210, 100%, 70%)"
+                    opacity={0.6}
+                    radius={[4, 4, 0, 0]}
+                  />
+                  <Line 
+                    yAxisId="amount"
+                    type="monotone" 
+                    dataKey="amount" 
+                    stroke="hsl(25, 95%, 58%)"
+                    strokeWidth={3}
+                    dot={{ fill: 'hsl(25, 95%, 58%)', strokeWidth: 2, r: 6 }}
+                    activeDot={{ r: 8, stroke: 'hsl(25, 95%, 58%)', strokeWidth: 2 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
