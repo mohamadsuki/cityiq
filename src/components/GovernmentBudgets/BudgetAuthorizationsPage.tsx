@@ -575,20 +575,13 @@ export default function BudgetAuthorizationsPage() {
 
   const approvedGrants = grants.filter(g => {
     const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
-    console.log(`🔍 Grant Debug - Name: ${g.name}, Status: ${g.status}, HebrewStatus: ${hebrewStatus}, Amount: ${g.amount}`);
     return hebrewStatus === 'אושר';
   });
 
-  console.log('🔍 All grants:', grants.length);
-  console.log('🔍 Approved grants:', approvedGrants);
-
   // Calculate approved grants amount using the amount field (like grants page)
   const approvedGrantsAmount = approvedGrants.reduce((sum, g) => {
-    console.log(`🔍 Adding grant amount: ${g.amount}`);
     return sum + (g.amount || 0);
   }, 0);
-
-  console.log('🔍 Final approved grants amount:', approvedGrantsAmount);
 
   // Calculate total grants amount (like in grants page)
   const totalGrantsAmount = grants.reduce((sum, g) => sum + (g.amount || 0), 0);
