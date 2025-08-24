@@ -583,9 +583,11 @@ export default function BudgetAuthorizationsPage() {
     return hebrewStatus === 'אושר';
   });
 
-  // Calculate approved grants amount using the amount field (like grants page)
+  // Calculate approved grants amount using approved_amount or submission_amount if available, otherwise amount
   const approvedGrantsAmount = approvedGrants.reduce((sum, g) => {
-    return sum + (g.amount || 0);
+    // Use approved_amount if available, otherwise submission_amount, otherwise amount
+    const grantAmount = g.approved_amount || g.submission_amount || g.amount || 0;
+    return sum + grantAmount;
   }, 0);
 
   // Calculate total grants amount (like in grants page)
