@@ -1184,7 +1184,7 @@ export default function BudgetAuthorizationsPage() {
           <CardContent>
             <div className="h-96">
               {(() => {
-                // יצירת נתונים לציר זמן משופר
+                // יצירת נתונים לציר זמן משופר עם חישובי אורך מדויקים
                 const currentDate = new Date();
                 
                 // קיבוץ הרשאות לפי תאריך סיום תוקף
@@ -1216,18 +1216,29 @@ export default function BudgetAuthorizationsPage() {
                 const allTimelineData = Object.values(authsByExpiry)
                   .sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
                 
+                // חישוב אורך מקסימלי לנורמליזציה
+                const maxDays = Math.max(...allTimelineData.map((item: any) => Math.abs(item.daysFromNow)));
+                const maxWidth = 280; // רוחב מקסימלי פיקסל
+                const minWidth = 40;  // רוחב מינימלי
+                
                 const timelineData = allTimelineData
                   .slice(0, 10)
-                  .map((item: any, index) => ({
-                    ...item,
-                    y: index + 1,
-                    // חישוב אורך החץ יחסי לזמן
-                    width: Math.max(80, Math.min(300, Math.abs(item.daysFromNow) / 2)),
-                    color: item.daysFromNow < 0 ? '#dc2626' : 
-                           item.daysFromNow <= 90 ? '#ea580c' :
-                           item.daysFromNow <= 180 ? '#ca8a04' :
-                           item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
-                  }));
+                  .map((item: any, index) => {
+                    // חישוב אורך החץ באופן פרופורציונלי למרחק בזמן
+                    const normalizedWidth = Math.abs(item.daysFromNow) / maxDays;
+                    const arrowWidth = Math.max(minWidth, normalizedWidth * maxWidth);
+                    
+                    return {
+                      ...item,
+                      y: index + 1,
+                      width: arrowWidth,
+                      isExpired: item.daysFromNow < 0,
+                      color: item.daysFromNow < 0 ? '#dc2626' : 
+                             item.daysFromNow <= 90 ? '#ea580c' :
+                             item.daysFromNow <= 180 ? '#ca8a04' :
+                             item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
+                    };
+                  });
 
                 if (timelineData.length === 0) {
                   return (
@@ -1244,92 +1255,96 @@ export default function BudgetAuthorizationsPage() {
                 }));
 
                 return (
-                  <div className="relative w-full h-full bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl overflow-hidden border border-gray-200">
+                  <div className="relative w-full h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-xl overflow-hidden border border-slate-200 shadow-inner">
                     {/* כותרת וציר זמן עליון */}
-                    <div className="absolute top-0 left-0 right-0 h-12 bg-white/80 backdrop-blur-sm border-b border-gray-200">
+                    <div className="absolute top-0 left-0 right-0 h-14 bg-white/90 backdrop-blur-sm border-b border-slate-200 shadow-sm">
                       <div className="flex items-center justify-between h-full px-6">
-                        <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                        <div className="text-sm font-semibold text-slate-700 flex items-center gap-3">
+                          <div className="w-4 h-4 bg-blue-600 rounded-full shadow-md"></div>
                           <span>נקודת התחלה - היום</span>
                         </div>
-                        <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                        <div className="text-sm font-semibold text-slate-700 flex items-center gap-3">
                           <span>תאריכי פג תוקף</span>
-                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                          <div className="w-4 h-4 bg-gradient-to-r from-yellow-500 to-red-500 rounded-full shadow-md"></div>
                         </div>
                       </div>
                     </div>
                     
                     {/* ציר זמן מרכזי אנכי */}
-                    <div className="absolute top-12 right-20 bottom-4 w-1 bg-gradient-to-b from-blue-500 via-yellow-500 to-red-500 rounded-full shadow-sm"></div>
-                    
-                    {/* סימוני זמן על הציר */}
-                    <div className="absolute top-12 right-16 bottom-4">
-                      {timeScale.map((scale, index) => {
-                        const position = ((index + 1) / (timeScale.length + 1)) * 100;
-                        return (
-                          <div 
-                            key={index}
-                            className="absolute text-xs text-gray-600 font-medium whitespace-nowrap"
-                            style={{ top: `${position}%`, transform: 'translateY(-50%)' }}
-                          >
-                            {scale.label}
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <div className="absolute top-14 right-20 bottom-6 w-1 bg-gradient-to-b from-blue-600 via-emerald-500 via-yellow-500 to-red-500 rounded-full shadow-lg"></div>
                     
                     {/* נקודת התחלה - היום */}
-                    <div className="absolute top-12 right-20 w-4 h-4 bg-blue-600 rounded-full border-4 border-white shadow-lg z-20 transform -translate-x-1/2 animate-pulse"></div>
+                    <div className="absolute top-14 right-20 w-5 h-5 bg-blue-600 rounded-full border-4 border-white shadow-xl z-30 transform -translate-x-1/2">
+                      <div className="absolute inset-1 bg-blue-300 rounded-full animate-pulse"></div>
+                    </div>
                     
-                    {/* חיצים אופקיים משופרים */}
-                    <div className="pt-16 pb-8 px-6 space-y-3 overflow-y-auto max-h-full">
+                    {/* חיצים אופקיים עם הפרדה ברורה */}
+                    <div className="pt-20 pb-8 px-6 space-y-6 overflow-y-auto max-h-full">
                       {timelineData.map((item: any, index) => {
-                        const yPosition = ((index + 1) / (timelineData.length + 1)) * 100;
-                        
                         return (
                           <div 
                             key={index}
                             className="relative flex items-center animate-fade-in"
                             style={{ 
-                              height: '36px',
-                              position: 'absolute',
-                              top: `${12 + (yPosition / 100) * (100 - 24)}%`,
-                              right: '80px',
-                              left: '24px',
-                              transform: 'translateY(-50%)'
+                              height: '40px',
+                              minHeight: '40px'
                             }}
                           >
-                            {/* החץ האופקי המשופר */}
-                            <div className="relative group">
+                            {/* החץ האופקי המשופר - מימין (היום) לשמאל (עתיד) */}
+                            <div 
+                              className="absolute right-20 top-1/2 transform -translate-y-1/2"
+                              style={{ zIndex: 10 }}
+                            >
                               <div
-                                className="relative h-8 flex items-center cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-lg rounded-r-lg"
+                                className="relative h-8 flex items-center cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl group"
                                 style={{
-                                  background: `linear-gradient(135deg, ${item.color}dd, ${item.color})`,
+                                  background: `linear-gradient(135deg, ${item.color}ee, ${item.color}cc)`,
                                   width: `${item.width}px`,
-                                  clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)',
+                                  clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%)',
                                   border: `2px solid ${item.color}`,
-                                  boxShadow: `0 4px 12px ${item.color}30`
+                                  boxShadow: `0 6px 20px ${item.color}40, 0 2px 8px ${item.color}20`,
+                                  borderRadius: '4px 0 0 4px'
                                 }}
                               >
                                 {/* תוכן החץ */}
-                                <div className="px-4 text-white text-sm font-semibold truncate flex-1 text-center drop-shadow-sm">
+                                <div className="px-4 text-white text-sm font-bold truncate flex-1 text-center drop-shadow-sm">
                                   {item.count} הרשאות
                                 </div>
                                 
-                                {/* נקודת סיום */}
+                                {/* נקודת סיום מובלטת */}
                                 <div 
-                                  className="absolute -right-1 top-1/2 w-3 h-3 rounded-full border-2 border-white shadow-md transform -translate-y-1/2"
+                                  className="absolute -right-2 top-1/2 w-4 h-4 rounded-full border-3 border-white shadow-lg transform -translate-y-1/2 z-10"
                                   style={{ backgroundColor: item.color }}
-                                ></div>
+                                >
+                                  <div className="absolute inset-1 bg-white/30 rounded-full"></div>
+                                </div>
+                                
+                                {/* תווית תאריך פג תוקף */}
+                                <div 
+                                  className="absolute -right-2 -bottom-8 text-xs font-medium text-slate-600 whitespace-nowrap bg-white/90 px-2 py-1 rounded shadow-sm"
+                                  style={{ 
+                                    transform: 'translateX(50%)',
+                                    borderLeft: `3px solid ${item.color}`
+                                  }}
+                                >
+                                  {new Date(item.date).toLocaleDateString('he-IL', { 
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: '2-digit'
+                                  })}
+                                  {item.isExpired && <span className="text-red-600 mr-1">⚠</span>}
+                                </div>
                                 
                                 {/* Tooltip מפורט ומשופר */}
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-gray-200 min-w-72 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-30">
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-4 bg-white/97 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-slate-200 min-w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-40">
                                   <div className="text-center mb-3">
-                                    <div className="font-bold text-gray-900 text-lg">
+                                    <div className="font-bold text-slate-900 text-lg flex items-center justify-center gap-2">
+                                      {item.isExpired && <span className="text-red-500">⚠️</span>}
                                       {new Date(item.date).toLocaleDateString('he-IL')}
+                                      {item.isExpired ? ' (פג תוקף)' : ''}
                                     </div>
-                                    <div className="text-sm text-gray-600">
-                                      תאריך פג תוקף
+                                    <div className="text-sm text-slate-600">
+                                      {item.isExpired ? 'פג תוקף לפני' : 'פג תוקף בעוד'} {Math.abs(item.daysFromNow)} ימים
                                     </div>
                                   </div>
                                   
