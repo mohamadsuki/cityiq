@@ -533,17 +533,20 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.category_type = categoryType;
       
       // Map budget and actual amounts from the Excel structure
-      // Based on the logs: __EMPTY_1 seems to be budget, __EMPTY_3 seems to be actual
-      const budgetValue = row['__EMPTY_1'] || normalizedRow.budget_amount || normalizedRow['תקציב'] || '0';
-      const actualValue = row['__EMPTY_3'] || normalizedRow.actual_amount || normalizedRow['ביצוע'] || '0';
+      // Looking for the correct columns based on Excel structure
+      const budgetValue = row['__EMPTY_1'] || normalizedRow.budget_amount || normalizedRow['תקציב מאושר'] || normalizedRow['תקציב'] || '0';
+      const relativeValue = row['__EMPTY_3'] || normalizedRow.actual_amount || normalizedRow['תקציב יחסי'] || '0';
+      const cumulativeValue = row['__EMPTY_5'] || normalizedRow.cumulative_execution || normalizedRow['ביצוע מצטבר'] || '0';
       
       // Clean and parse numeric values (remove commas)
       mapped.budget_amount = parseFloat(String(budgetValue).replace(/,/g, '')) || 0;
-      mapped.actual_amount = parseFloat(String(actualValue).replace(/,/g, '')) || 0;
+      mapped.actual_amount = parseFloat(String(relativeValue).replace(/,/g, '')) || 0; // This is actually "תקציב יחסי לתקופה"
+      mapped.cumulative_execution = parseFloat(String(cumulativeValue).replace(/,/g, '')) || 0; // This is "ביצוע מצטבר"
       
       console.log('🔍 Parsed amounts:', {
         budget: mapped.budget_amount,
-        actual: mapped.actual_amount
+        relative: mapped.actual_amount,
+        cumulative: mapped.cumulative_execution
       });
       
       // Skip empty rows or header rows

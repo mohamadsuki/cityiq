@@ -22,7 +22,8 @@ interface RegularBudgetItem {
   category_type: 'income' | 'expense';
   category_name: string;
   budget_amount: number;
-  actual_amount: number;
+  actual_amount: number; // תקציב יחסי לתקופה
+  cumulative_execution: number; // ביצוע מצטבר
   year: number;
   difference: number;
   percentage: number;
@@ -75,10 +76,11 @@ export default function RegularBudgetPage() {
         category_type: item.category_type,
         category_name: item.category_name,
         budget_amount: item.budget_amount || 0,
-        actual_amount: item.actual_amount || 0,
+        actual_amount: item.actual_amount || 0, // תקציב יחסי לתקופה
+        cumulative_execution: item.cumulative_execution || 0, // ביצוע מצטבר
         year: item.year,
-        difference: (item.actual_amount || 0) - (item.budget_amount || 0),
-        percentage: item.budget_amount ? ((item.actual_amount || 0) / item.budget_amount) * 100 : 0
+        difference: (item.cumulative_execution || 0) - (item.budget_amount || 0),
+        percentage: item.budget_amount ? ((item.cumulative_execution || 0) / item.budget_amount) * 100 : 0
       }));
 
       console.log("🔧 Transformed regular budget data:", transformedData);
@@ -315,10 +317,10 @@ export default function RegularBudgetPage() {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-bold text-blue-600">
-              הכנסות: {incomeSummaryRow ? formatCurrency(incomeSummaryRow.actual_amount) : '₪0'}
+              הכנסות: {incomeSummaryRow ? formatCurrency(incomeSummaryRow.cumulative_execution || 0) : '₪0'}
             </div>
             <div className="text-lg font-bold text-red-600">
-              הוצאות: {expenseSummaryRow ? formatCurrency(expenseSummaryRow.actual_amount) : '₪0'}
+              הוצאות: {expenseSummaryRow ? formatCurrency(expenseSummaryRow.cumulative_execution || 0) : '₪0'}
             </div>
             <p className="text-xs text-muted-foreground">
               ביצוע מצטבר
@@ -334,19 +336,19 @@ export default function RegularBudgetPage() {
           <CardContent>
             <div className="space-y-1">
               <div className={`text-lg font-bold ${
-                incomeSummaryRow && (incomeSummaryRow.actual_amount - incomeSummaryRow.budget_amount) >= 0 ? 'text-green-600' : 'text-red-600'
+                incomeSummaryRow && ((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) >= 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                הכנסות: {incomeSummaryRow ? formatCurrency(Math.abs(incomeSummaryRow.actual_amount - incomeSummaryRow.budget_amount)) : '₪0'}
+                הכנסות: {incomeSummaryRow ? formatCurrency(Math.abs((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0))) : '₪0'}
               </div>
               <div className={`text-lg font-bold ${
-                expenseSummaryRow && (expenseSummaryRow.actual_amount - expenseSummaryRow.budget_amount) >= 0 ? 'text-red-600' : 'text-green-600'
+                expenseSummaryRow && ((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) >= 0 ? 'text-red-600' : 'text-green-600'
               }`}>
-                הוצאות: {expenseSummaryRow ? formatCurrency(Math.abs(expenseSummaryRow.actual_amount - expenseSummaryRow.budget_amount)) : '₪0'}
+                הוצאות: {expenseSummaryRow ? formatCurrency(Math.abs((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0))) : '₪0'}
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              הכנסות: {incomeSummaryRow && incomeSummaryRow.budget_amount > 0 ? (((incomeSummaryRow.actual_amount - incomeSummaryRow.budget_amount) / incomeSummaryRow.budget_amount) * 100).toFixed(1) : 0}% | 
-              הוצאות: {expenseSummaryRow && expenseSummaryRow.budget_amount > 0 ? (((expenseSummaryRow.actual_amount - expenseSummaryRow.budget_amount) / expenseSummaryRow.budget_amount) * 100).toFixed(1) : 0}%
+              הכנסות: {incomeSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 ? ((((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) / (incomeSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}% | 
+              הוצאות: {expenseSummaryRow && (expenseSummaryRow.actual_amount || 0) > 0 ? ((((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) / (expenseSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%
             </p>
           </CardContent>
         </Card>
