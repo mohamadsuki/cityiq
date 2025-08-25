@@ -384,7 +384,7 @@ export default function BusinessDashboard() {
          <Card className="shadow-card">
            <CardHeader><CardTitle className="text-xl">סטטוס עסקים</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
+            <ResponsiveContainer width="100%" height={400}>
               <PieChart>
                 <Pie 
                   data={statusData} 
@@ -392,16 +392,20 @@ export default function BusinessDashboard() {
                   nameKey="name" 
                   cx="50%" 
                   cy="50%" 
-                  outerRadius={130}
+                  outerRadius={120}
                   innerRadius={0}
-                  paddingAngle={5}
+                  paddingAngle={8}
                   label={({ name, value, percent }) => 
                     `${name}: ${value} (${(percent * 100).toFixed(1)}%)`
                   }
                   labelLine={true}
+                  fill="#8884d8"
                 >
                   {statusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip 
