@@ -1214,86 +1214,164 @@ export default function BudgetAuthorizationsPage() {
                     return acc;
                   }, {});
 
-                // נתוני דמיה לבדיקה
-                const sampleData = [
-                  { shortLabel: '01/25', count: 5, color: '#dc2626' },
-                  { shortLabel: '02/25', count: 3, color: '#ea580c' },
-                  { shortLabel: '03/25', count: 8, color: '#ca8a04' },
-                  { shortLabel: '04/25', count: 2, color: '#16a34a' },
-                  { shortLabel: '05/25', count: 6, color: '#2563eb' }
-                ];
-
                 // המרה למערך וסידור לפי תאריך
-                const realTimelineData = Object.values(authsByExpiry)
+                const timelineData = Object.values(authsByExpiry)
                   .sort((a: any, b: any) => a.date.getTime() - b.date.getTime())
                   .slice(0, 12) // הצגת 12 תקופות
                   .map((item: any) => ({
+                    ...item,
+                    // המרת התאריך למספר עבור ציר זמן רציף
+                    dateValue: item.date.getTime(),
+                    // תווית קצרה יותר לתצוגה
                     shortLabel: new Date(item.date.getFullYear(), item.date.getMonth()).toLocaleDateString('he-IL', { 
                       month: '2-digit', 
                       year: '2-digit' 
                     }).replace('.', '/'),
-                    count: item.count,
+                    isExpired: item.daysFromNow < 0,
                     color: item.daysFromNow < 0 ? '#dc2626' : 
                            item.daysFromNow <= 90 ? '#ea580c' :
                            item.daysFromNow <= 180 ? '#ca8a04' :
                            item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
                   }));
 
-                // השתמש בנתונים אמיתיים אם יש, אחרת בנתוני דמיה
-                const timelineData = realTimelineData.length > 0 ? realTimelineData : sampleData;
-
-                console.log('Timeline data:', timelineData);
-                console.log('Real data count:', realTimelineData.length);
-
                 if (timelineData.length === 0) {
                   return (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
-                      אין נתונים להצגה - {authorizations.length} הרשאות נמצאו, {authorizations.filter(a => a.valid_until).length} עם תאריך תוקף
+                      אין נתונים להצגה - {authorizations.length} הרשאות נמצאו
                     </div>
                   );
                 }
 
+                console.log('Timeline data:', timelineData);
+
                 return (
                   <div className="relative w-full h-full">
-                    <div className="text-center text-lg font-bold mb-4">מספר הרשאות</div>
-                    <ResponsiveContainer width="100%" height="85%">
+                    <div className="mb-2 text-xs text-gray-500">
+                      Debug: {timelineData.length} תקופות, {authorizations.length} הרשאות כולל
+                    </div>
+                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={timelineData}
-                        layout="horizontal"
-                        margin={{ top: 20, right: 30, left: 60, bottom: 60 }}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                       >
-                        <CartesianGrid strokeDasharray="none" horizontal={false} stroke="#000000" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
                           type="number"
-                          tick={{ fontSize: 12, fill: '#000000' }}
-                          axisLine={{ stroke: '#000000', strokeWidth: 2 }}
-                          tickLine={{ stroke: '#000000', strokeWidth: 1 }}
-                          domain={[0, 'dataMax + 1']}
+                          dataKey="dateValue"
+                          scale="time"
+                          domain={['dataMin', 'dataMax']}
+                          tick={{ fontSize: 11, fill: '#64748b' }}
+                          tickLine={false}
+                          axisLine={{ stroke: '#e2e8f0' }}
+                          height={50}
+                          tickFormatter={(value) => {
+                            const date = new Date(value);
+                            return date.toLocaleDateString('he-IL', { 
+                              month: '2-digit', 
+                              year: '2-digit' 
+                            }).replace('.', '/');
+                          }}
                         />
                         <YAxis 
-                          type="category"
-                          dataKey="shortLabel"
-                          tick={{ fontSize: 12, fill: '#000000' }}
-                          axisLine={{ stroke: '#000000', strokeWidth: 2 }}
-                          tickLine={{ stroke: '#000000', strokeWidth: 1 }}
-                          width={50}
-                          interval={0}
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                          tickLine={false}
+                          axisLine={{ stroke: '#e2e8f0' }}
+                          label={{ 
+                            value: 'מספר הרשאות', 
+                            angle: -90, 
+                            position: 'insideLeft',
+                            style: { textAnchor: 'middle', fill: '#64748b', fontSize: '12px' }
+                          }}
+                          domain={[0, 'dataMax']}
                         />
                         <Tooltip 
-                          formatter={(value: number) => [`${value}`, 'מספר הרשאות']}
-                          labelFormatter={(label) => `תאריך תפוגה: ${label}`}
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload[0]) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-white/97 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-slate-200 min-w-80 max-w-96">
+                                  <div className="text-center mb-3">
+                                    <div className="font-bold text-slate-900 text-lg flex items-center justify-center gap-2">
+                                      {data.isExpired && <span className="text-red-500">⚠️</span>}
+                                      {label}
+                                      {data.isExpired ? ' (פג תוקף)' : ''}
+                                    </div>
+                                    <div className="text-sm text-slate-600">
+                                      {data.isExpired ? 'פג תוקף לפני' : 'פג תוקף בעוד'} {Math.abs(data.daysFromNow)} ימים
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-4 mb-3">
+                                    <div className="text-center p-2 bg-blue-50 rounded-lg">
+                                      <div className="text-2xl font-bold text-blue-600">{data.count}</div>
+                                      <div className="text-xs text-gray-600">מספר הרשאות</div>
+                                    </div>
+                                    <div className="text-center p-2 bg-green-50 rounded-lg">
+                                      <div className="text-lg font-bold text-green-600">
+                                        ₪{new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(data.totalAmount)}
+                                      </div>
+                                      <div className="text-xs text-gray-600">סה"כ תקציב</div>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="border-t pt-3 mb-3">
+                                    <div className="text-sm font-medium text-gray-700 mb-2">רשימת הרשאות:</div>
+                                    <div className="max-h-32 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-gray-300">
+                                      {data.authorizations.map((auth: any, i: number) => (
+                                        <div key={i} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
+                                          <div className="font-medium">• {auth.program?.substring(0, 60)}{auth.program?.length > 60 ? '...' : ''}</div>
+                                          <div className="text-gray-500 mt-1">
+                                            {auth.ministry} | ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="border-t pt-3">
+                                    <button
+                                      className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                                      onClick={() => {
+                                        const today = new Date();
+                                        const validUntil = new Date(data.date);
+                                        const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
+                                        
+                                        let category = '';
+                                        if (monthsDiff < 0) {
+                                          category = 'פג תוקף';
+                                        } else if (monthsDiff <= 3) {
+                                          category = 'פג תוקף עד 3 חודשים';
+                                        } else if (monthsDiff <= 6) {
+                                          category = 'פג תוקף עד 6 חודשים';
+                                        } else if (monthsDiff <= 12) {
+                                          category = 'פג תוקף עד שנה';
+                                        } else {
+                                          category = 'תקף למעלה משנה';
+                                        }
+                                        
+                                        handleFilterByCategory(category);
+                                      }}
+                                    >
+                                      הצג בטבלה
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
                         />
                         <Bar 
                           dataKey="count" 
-                          fill="#ffffff"
-                          stroke="#000000"
-                          strokeWidth={2}
-                        />
+                          barSize={30}
+                          radius={[4, 4, 0, 0]}
+                        >
+                          {timelineData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
                       </BarChart>
                     </ResponsiveContainer>
-                    <div className="text-center mt-4 text-sm font-medium">
-                      תאריך בו תפוג הרשאה
-                    </div>
                   </div>
                 );
               })()}
