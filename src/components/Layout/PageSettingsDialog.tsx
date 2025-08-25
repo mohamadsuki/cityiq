@@ -19,6 +19,8 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
   const [cityInput, setCityInput] = useState<string>("");
   const [population, setPopulation] = useState<number>(342857);
   const [populationInput, setPopulationInput] = useState<string>("");
+  const [totalBusinesses, setTotalBusinesses] = useState<number | null>(null);
+  const [totalBusinessesInput, setTotalBusinessesInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
   // Load data from database
@@ -27,7 +29,7 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
       try {
         const { data } = await supabase
           .from('city_settings')
-          .select('city_name, logo_url, population')
+          .select('city_name, logo_url, population, total_businesses_in_city')
           .eq('id', 'global')
           .maybeSingle();
 
@@ -35,6 +37,7 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
           setSrc(data.logo_url || null);
           setCityName(data.city_name || "שם העיר");
           setPopulation(data.population || 342857);
+          setTotalBusinesses(data.total_businesses_in_city || null);
         }
       } catch (error) {
         console.error('Error loading city settings:', error);
@@ -57,6 +60,7 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
           setSrc(row.logo_url || null);
           setCityName(row.city_name || "שם העיר");
           setPopulation(row.population || 342857);
+          setTotalBusinesses(row.total_businesses_in_city || null);
         }
       })
       .subscribe();
@@ -71,11 +75,12 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
     if (open) {
       setCityInput(cityName);
       setPopulationInput(population.toString());
+      setTotalBusinessesInput(totalBusinesses?.toString() || "");
       setUrlInput("");
       setFileDataUrl(null);
       setFile(null);
     }
-  }, [open, cityName, population]);
+  }, [open, cityName, population, totalBusinesses]);
 
   const displaySrc = useMemo(() => 
     fileDataUrl || urlInput.trim() || src || "/placeholder.svg", 
@@ -110,6 +115,7 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
     setIsLoading(true);
     const newCity = cityInput.trim() || cityName;
     const newPopulation = populationInput.trim() ? parseInt(populationInput.trim()) || population : population;
+    const newTotalBusinesses = totalBusinessesInput.trim() ? parseInt(totalBusinessesInput.trim()) || null : totalBusinesses;
     let logoUrl: string | null = null;
 
     try {
@@ -149,7 +155,8 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
           id: 'global', 
           city_name: newCity, 
           logo_url: logoUrl,
-          population: newPopulation 
+          population: newPopulation,
+          total_businesses_in_city: newTotalBusinesses
         }, { 
           onConflict: 'id',
           ignoreDuplicates: false 
@@ -164,7 +171,8 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
           .update({ 
             city_name: newCity, 
             logo_url: logoUrl,
-            population: newPopulation 
+            population: newPopulation,
+            total_businesses_in_city: newTotalBusinesses
           })
           .eq('id', 'global');
         
@@ -178,6 +186,7 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
       setSrc(logoUrl);
       setCityName(newCity);
       setPopulation(newPopulation);
+      setTotalBusinesses(newTotalBusinesses);
       
       // Reset form
       setFileDataUrl(null);
@@ -207,7 +216,8 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
           id: 'global', 
           city_name: cityName, 
           logo_url: null,
-          population: population 
+          population: population,
+          total_businesses_in_city: totalBusinesses
         }, { 
           onConflict: 'id',
           ignoreDuplicates: false 
@@ -257,6 +267,17 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
               placeholder="אוכלוסיית העיר" 
               value={populationInput} 
               onChange={(e) => setPopulationInput(e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
+          
+          <div>
+            <label className="text-sm mb-1 block">סה"כ עסקים בעיר</label>
+            <Input 
+              type="number" 
+              placeholder="מספר כלל העסקים בעיר" 
+              value={totalBusinessesInput} 
+              onChange={(e) => setTotalBusinessesInput(e.target.value)}
               disabled={isLoading}
             />
           </div>

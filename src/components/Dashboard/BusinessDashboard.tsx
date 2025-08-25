@@ -72,6 +72,48 @@ export default function BusinessDashboard() {
 
   // Licenses list (DB for auth users, localStorage for demo)
   const [licenses, setLicenses] = useState<LicenseRow[]>([]);
+  const [totalBusinessesInCity, setTotalBusinessesInCity] = useState<number | null>(null);
+  
+  // Load total businesses from city settings
+  useEffect(() => {
+    const loadCitySettings = async () => {
+      try {
+        const { data } = await supabase
+          .from('city_settings')
+          .select('total_businesses_in_city')
+          .eq('id', 'global')
+          .maybeSingle();
+        
+        if (data) {
+          setTotalBusinessesInCity(data.total_businesses_in_city);
+        }
+      } catch (error) {
+        console.error('Error loading city settings:', error);
+      }
+    };
+    
+    loadCitySettings();
+    
+    // Listen for real-time updates
+    const channel = supabase
+      .channel('city-settings-business-updates')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'city_settings',
+        filter: 'id=eq.global'
+      }, (payload) => {
+        const row: any = payload.new || payload.old;
+        if (row) {
+          setTotalBusinessesInCity(row.total_businesses_in_city || null);
+        }
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
   const reloadLicenses = async () => {
     try {
       const { data, error } = await supabase.from('licenses').select('*').order('created_at', { ascending: false });
@@ -107,6 +149,12 @@ export default function BusinessDashboard() {
     const channel = supabase
       .channel('public:licenses')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'licenses' }, () => {
+        reloadLicenses();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'licenses' }, () => {
+        reloadLicenses();
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'licenses' }, () => {
         reloadLicenses();
       })
       .subscribe();
@@ -324,11 +372,12 @@ export default function BusinessDashboard() {
         </div>
       </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">עסקים רשומים</p><p className="text-3xl font-bold">{totalLicenses.toLocaleString()}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">עסקים פעילים</p><p className="text-3xl font-bold">{activeLicenses.toLocaleString()}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">רישיונות פוקעים החודש</p><p className="text-3xl font-bold">{expiringCount}</p></div><Timer className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">בקשות חדשות</p><p className="text-3xl font-bold">{newRequests}</p></div><Bell className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
+        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">סה"כ עסקים בעיר</p><p className="text-3xl font-bold">{totalBusinessesInCity?.toLocaleString() || 'לא הוגדר'}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
       </section>
 
        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">

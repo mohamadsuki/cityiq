@@ -97,13 +97,13 @@ export function AuthActions() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => nav('/profile')}>עריכת פרופיל</DropdownMenuItem>
-          {(role === 'mayor' || role === 'ceo') && (
+          {(role === 'mayor' || role === 'ceo' || (role === 'manager' && departments?.includes('business'))) && (
             <DropdownMenuItem onClick={() => setEditOpen(true)}>עריכת דף</DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={signOut}>התנתקות</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      {(role === 'mayor' || role === 'ceo') && (
+      {(role === 'mayor' || role === 'ceo' || (role === 'manager' && departments?.includes('business'))) && (
         <PageSettingsDialog open={editOpen} onOpenChange={setEditOpen} />
       )}
     </div>

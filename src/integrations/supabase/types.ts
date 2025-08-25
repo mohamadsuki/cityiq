@@ -192,6 +192,7 @@ export type Database = {
           id: string
           logo_url: string | null
           population: number | null
+          total_businesses_in_city: number | null
           updated_at: string
           updated_by: string | null
         }
@@ -201,6 +202,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           population?: number | null
+          total_businesses_in_city?: number | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -210,6 +212,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           population?: number | null
+          total_businesses_in_city?: number | null
           updated_at?: string
           updated_by?: string | null
         }
