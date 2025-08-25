@@ -374,10 +374,11 @@ export default function RegularBudgetPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {totalBudgetIncome > 0 ? ((totalIncome / totalBudgetIncome) * 100).toFixed(1) : 0}%
+              {incomeSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 ? 
+                (((incomeSummaryRow.cumulative_execution || 0) / (incomeSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%
             </div>
             <p className="text-xs text-muted-foreground">
-              מתוך התקציב המתוכנן
+              ביצוע בפועל מתוך תקציב יחסי
             </p>
           </CardContent>
         </Card>
