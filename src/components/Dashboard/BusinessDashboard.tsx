@@ -384,36 +384,55 @@ export default function BusinessDashboard() {
          <Card className="shadow-card">
            <CardHeader><CardTitle className="text-xl">סטטוס עסקים</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={400}>
-              <PieChart>
-                <Pie 
-                  data={statusData} 
-                  dataKey="value" 
-                  nameKey="name" 
-                  cx="50%" 
-                  cy="50%" 
-                  outerRadius={120}
-                  innerRadius={0}
-                  paddingAngle={8}
-                  label={({ name, value, percent }) => 
-                    `${name}: ${value} (${(percent * 100).toFixed(1)}%)`
-                  }
-                  labelLine={true}
-                  fill="#8884d8"
-                >
-                  {statusData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={COLORS[index % COLORS.length]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value) => [value, 'מספר עסקים']}
-                  labelFormatter={(label) => `סטטוס: ${label}`}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col space-y-3">
+                <h3 className="font-semibold text-lg mb-2">פירוט סטטוסים</h3>
+                {statusData.map((item, index) => {
+                  const total = statusData.reduce((sum, s) => sum + s.value, 0);
+                  const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
+                  return (
+                    <div key={item.name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div 
+                          className="w-4 h-4 rounded" 
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                        />
+                        <span className="font-medium">{item.name}</span>
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold text-lg">{item.value}</div>
+                        <div className="text-sm text-muted-foreground">{percentage}%</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie 
+                    data={statusData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    cx="50%" 
+                    cy="50%" 
+                    outerRadius={100}
+                    innerRadius={0}
+                    paddingAngle={8}
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => [value, 'מספר עסקים']}
+                    labelFormatter={(label) => `סטטוס: ${label}`}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
            </CardContent>
          </Card>
 
