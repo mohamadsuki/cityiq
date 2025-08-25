@@ -201,28 +201,43 @@ export default function RegularBudgetPage() {
 
   // Load existing analysis from database
   const loadExistingAnalysis = async () => {
+    if (!user?.id) {
+      console.log('No user ID available for loading analysis');
+      return false;
+    }
+
     try {
+      console.log('Checking for existing analysis...');
       const { data: existingAnalysis, error } = await supabase
         .from('budget_analysis')
         .select('*')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .eq('year', new Date().getFullYear())
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (!error && existingAnalysis) {
+      if (error) {
+        console.error('Error loading existing analysis:', error);
+        return false;
+      }
+
+      if (existingAnalysis) {
+        console.log('Found existing analysis:', existingAnalysis.id);
         setAnalysis(existingAnalysis.analysis_text);
         // Load saved chart data if available
         if (existingAnalysis.analysis_data && typeof existingAnalysis.analysis_data === 'object') {
           console.log('Loaded saved chart data:', existingAnalysis.analysis_data);
         }
         return true;
+      } else {
+        console.log('No existing analysis found, will generate new one');
+        return false;
       }
     } catch (error) {
-      console.log('No existing analysis found');
+      console.error('Exception loading existing analysis:', error);
+      return false;
     }
-    return false;
   };
 
   const handleAnalyzeBudget = async (silent = false) => {
@@ -231,10 +246,18 @@ export default function RegularBudgetPage() {
       return;
     }
 
-    // Check if analysis already exists
-    const hasExisting = await loadExistingAnalysis();
-    if (hasExisting && !silent) {
+    if (!user?.id) {
+      if (!silent) toast.error("יש להתחבר כדי לבצע ניתוח");
       return;
+    }
+
+    // For silent calls, check if analysis already exists first
+    if (silent) {
+      const hasExisting = await loadExistingAnalysis();
+      if (hasExisting) {
+        console.log('Analysis already exists, using saved version');
+        return;
+      }
     }
 
     setIsAnalyzing(true);
@@ -267,6 +290,7 @@ export default function RegularBudgetPage() {
       
       if (data?.analysis && data.analysis.trim()) {
         // Save analysis to database
+        console.log('Saving analysis to database...');
         const analysisData = {
           user_id: user?.id,
           year: new Date().getFullYear(),
@@ -292,6 +316,9 @@ export default function RegularBudgetPage() {
 
         if (saveError) {
           console.error("Error saving analysis:", saveError);
+          if (!silent) toast.error("שגיאה בשמירת הניתוח");
+        } else {
+          console.log("Analysis saved successfully to database");
         }
 
         setAnalysis(data.analysis);
