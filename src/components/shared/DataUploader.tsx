@@ -382,7 +382,21 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.judgment_date = parseDate(normalizedRow['ת. פסק דין'], 'judgment_date');
       mapped.closure_date = parseDate(normalizedRow['תאריך סגירה'], 'closure_date');
       mapped.inspection_date = parseDate(normalizedRow['תאריך ביקורת'], 'inspection_date');
-      mapped.expires_at = parseDate(normalizedRow['תאריך פקיעה'] || normalizedRow['פוקע ב'] || normalizedRow['תא.עדכון ק.תוקף'] || normalizedRow['תאריך עדכון תוקף'], 'expires_at');
+      // Handle expiry dates - check multiple possible columns and prioritize non-empty values
+      const possibleExpiryFields = [
+        normalizedRow['תאריך פקיעה'],
+        normalizedRow['פוקע ב'],
+        normalizedRow['תא.עדכון ק.תוקף'], 
+        normalizedRow['תאריך עדכון תוקף'],
+        normalizedRow['תוקף עד'],
+        normalizedRow['תאריך תפוגה']
+      ].filter(field => field && field.toString().trim() !== '');
+      
+      const expiryDateField = possibleExpiryFields[0]; // Take first non-empty value
+      console.log(`🗓️ Available expiry fields for ${mapped.business_name}:`, possibleExpiryFields);
+      console.log(`🗓️ Selected expiry field:`, expiryDateField);
+      mapped.expires_at = parseDate(expiryDateField, 'expires_at');
+      console.log(`🗓️ Final expires_at for ${mapped.business_name}:`, mapped.expires_at);
       mapped.request_date = parseDate(normalizedRow['תאריך בקשה'] || normalizedRow['תאריך פנייה'], 'request_date');
       
       // Clean request type field - remove leading numbers
