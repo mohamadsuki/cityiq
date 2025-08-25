@@ -75,10 +75,7 @@ export default function CollectionPage() {
         query = query.eq('year', selectedYear);
       }
 
-      // Add user filter if user is logged in
-      if (user?.id) {
-        query = query.eq('user_id', user.id);
-      }
+      // No user filter needed since RLS is disabled
       const {
         data,
         error
