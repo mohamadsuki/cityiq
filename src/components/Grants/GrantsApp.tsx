@@ -859,16 +859,47 @@ export default function GrantsApp() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-2">
             <div className="md:col-span-2">
-              <Label>שם</Label>
-              <Input value={form.name as string} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+              <Label>שם *</Label>
+              <Input value={form.name as string} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="שם הקול הקורא" />
             </div>
             <div>
-              <Label>משרד</Label>
-              <Input value={form.ministry as string} onChange={(e) => setForm((f) => ({ ...f, ministry: e.target.value }))} />
+              <Label>משרד *</Label>
+              <Input value={form.ministry as string} onChange={(e) => setForm((f) => ({ ...f, ministry: e.target.value }))} placeholder="שם המשרד" />
             </div>
             <div>
-              <Label>סכום</Label>
-              <Input type="number" value={(form.amount as number | null) ?? 0} onChange={(e) => setForm((f) => ({ ...f, amount: Number(e.target.value) }))} />
+              <Label>מחלקה</Label>
+              <Select value={(form.department_slug as DepartmentSlug) ?? 'finance'} onValueChange={(v) => setForm((f) => ({ ...f, department_slug: v as DepartmentSlug }))}>
+                <SelectTrigger><SelectValue placeholder="מחלקה" /></SelectTrigger>
+                <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
+                  {visibleDepartments.map((d) => (
+                    <SelectItem key={d} value={d}>{deptLabel(d)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>אחראי</Label>
+              <Input value={form.responsible_person as string || ""} onChange={(e) => setForm((f) => ({ ...f, responsible_person: e.target.value }))} placeholder="שם האחראי" />
+            </div>
+            <div>
+              <Label>תקציב קול קורא</Label>
+              <Input type="number" value={(form.amount as number | null) ?? ""} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
+            </div>
+            <div>
+              <Label>סכום הגשה</Label>
+              <Input type="number" value={(form.submission_amount as number | null) ?? ""} onChange={(e) => setForm((f) => ({ ...f, submission_amount: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
+            </div>
+            <div>
+              <Label>סכום שאושר</Label>
+              <Input type="number" value={(form.approved_amount as number | null) ?? ""} onChange={(e) => setForm((f) => ({ ...f, approved_amount: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
+            </div>
+            <div>
+              <Label>סכום תמיכה</Label>
+              <Input type="number" value={(form.support_amount as number | null) ?? ""} onChange={(e) => setForm((f) => ({ ...f, support_amount: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
+            </div>
+            <div>
+              <Label>השתתפות עירייה</Label>
+              <Input type="number" value={(form.municipality_participation as number | null) ?? ""} onChange={(e) => setForm((f) => ({ ...f, municipality_participation: e.target.value ? Number(e.target.value) : null }))} placeholder="0" />
             </div>
             <div>
               <Label>סטטוס</Label>
@@ -896,23 +927,24 @@ export default function GrantsApp() {
               </div>
             )}
             <div>
-              <Label>מחלקה</Label>
-              <Select value={(form.department_slug as DepartmentSlug) ?? 'finance'} onValueChange={(v) => setForm((f) => ({ ...f, department_slug: v as DepartmentSlug }))}>
-                <SelectTrigger><SelectValue placeholder="מחלקה" /></SelectTrigger>
-                <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
-                  {visibleDepartments.map((d) => (
-                    <SelectItem key={d} value={d}>{deptLabel(d)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
               <Label>תאריך הגשה</Label>
-              <Input type="date" value={form.submitted_at as string} onChange={(e) => setForm((f) => ({ ...f, submitted_at: e.target.value }))} />
+              <Input type="date" value={form.submitted_at as string || ""} onChange={(e) => setForm((f) => ({ ...f, submitted_at: e.target.value }))} />
             </div>
             <div>
               <Label>תאריך החלטה</Label>
-              <Input type="date" value={form.decision_at as string} onChange={(e) => setForm((f) => ({ ...f, decision_at: e.target.value }))} />
+              <Input type="date" value={form.decision_at as string || ""} onChange={(e) => setForm((f) => ({ ...f, decision_at: e.target.value }))} />
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <Label>תיאור הפרויקט</Label>
+              <textarea 
+                className="w-full p-2 border rounded-md min-h-[100px]" 
+                value={form.project_description as string || ""} 
+                onChange={(e) => setForm((f) => ({ ...f, project_description: e.target.value }))}
+                placeholder="תיאור מפורט של הפרויקט"
+              />
             </div>
           </div>
 
