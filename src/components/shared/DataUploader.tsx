@@ -333,6 +333,78 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       const businessNatureRaw = normalizedRow['מהות עסק'] || normalizedRow['טיב עסק'] || '';
       mapped.business_nature = businessNatureRaw ? businessNatureRaw.toString().replace(/^\d+/, '') : '';
       
+      // Add missing fields from Excel
+      mapped.dock_fee = normalizedRow['חייב במזח'] || '';
+      mapped.delivery_date = normalizedRow['תאריך מסירה'] || '';
+      mapped.days_from_request = normalizedRow['ימים מתא.בקשה'] || '';
+      mapped.days_temporary_permit = normalizedRow['ימים בהיתר זמני'] || '';
+      mapped.inspector = normalizedRow['מפקח'] || '';
+      mapped.area = normalizedRow['אזור'] || '';
+      mapped.property = normalizedRow['נכס'] || '';
+      mapped.old_file = normalizedRow['תיק ישן'] || '';
+      mapped.block_parcel_sub = normalizedRow['גוש חלקה תת'] || '';
+      mapped.follow_up_date = normalizedRow['תאריך מעקב'] || '';
+      mapped.judgment_execution = normalizedRow['ביצוע פס\'ד'] || '';
+      mapped.judgment_date = normalizedRow['ת. פסק דין'] || '';
+      mapped.closure_date = normalizedRow['תאריך סגירה'] || '';
+      mapped.location_description = normalizedRow['תאור מקום'] || '';
+      mapped.fire_department_number = normalizedRow['מספר כיבוי אש'] || '';
+      mapped.risk_level = normalizedRow['דרגת סיכון'] || '';
+      mapped.file_holder = normalizedRow['מחזיק בתיק'] || '';
+      mapped.reported_area = normalizedRow['שטח מדווח'] || '';
+      
+      // Handle expires_at date field
+      const expiresAtField = normalizedRow['תא.עדכון ק.תוקף'] || normalizedRow['תאריך עדכון תוקף'] || '';
+      if (expiresAtField && expiresAtField.toString().trim() !== '') {
+        try {
+          const dateStr = expiresAtField.toString();
+          if (!isNaN(Number(dateStr)) && Number(dateStr) > 40000) {
+            const excelDate = new Date((Number(dateStr) - 25569) * 86400 * 1000);
+            mapped.expires_at = excelDate.toISOString().split('T')[0];
+          } else if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(dateStr)) {
+            const parts = dateStr.split(/[\/\-\.]/);
+            if (parts.length === 3) {
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]) - 1;
+              const year = parseInt(parts[2]);
+              const fullYear = year < 100 ? (year > 50 ? 1900 + year : 2000 + year) : year;
+              const parsedDate = new Date(fullYear, month, day);
+              if (!isNaN(parsedDate.getTime())) {
+                mapped.expires_at = parsedDate.toISOString().split('T')[0];
+              }
+            }
+          }
+        } catch (e) {
+          console.log('Failed to parse expires_at date:', expiresAtField);
+        }
+      }
+      
+      // Handle inspection date
+      const inspectionDateField = normalizedRow['תאריך ביקורת'] || '';
+      if (inspectionDateField && inspectionDateField.toString().trim() !== '') {
+        try {
+          const dateStr = inspectionDateField.toString();
+          if (!isNaN(Number(dateStr)) && Number(dateStr) > 40000) {
+            const excelDate = new Date((Number(dateStr) - 25569) * 86400 * 1000);
+            mapped.inspection_date = excelDate.toISOString().split('T')[0];
+          } else if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(dateStr)) {
+            const parts = dateStr.split(/[\/\-\.]/);
+            if (parts.length === 3) {
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]) - 1;
+              const year = parseInt(parts[2]);
+              const fullYear = year < 100 ? (year > 50 ? 1900 + year : 2000 + year) : year;
+              const parsedDate = new Date(fullYear, month, day);
+              if (!isNaN(parsedDate.getTime())) {
+                mapped.inspection_date = parsedDate.toISOString().split('T')[0];
+              }
+            }
+          }
+        } catch (e) {
+          console.log('Failed to parse inspection date:', inspectionDateField);
+        }
+      }
+      
       // Clean request type field - remove leading numbers
       const requestTypeRaw = normalizedRow['סוג בקשה'] || normalizedRow['סוג פנייה'] || '';
       mapped.request_type = requestTypeRaw ? requestTypeRaw.toString().replace(/^\d+/, '') : '';
