@@ -284,7 +284,6 @@ export default function EditGrantDialog({ isOpen, onClose, onSuccess, grant }: E
               />
             </div>
             
-            
             <div className="space-y-2">
               <Label htmlFor="submitted_at">תאריך הגשה</Label>
               <Input
