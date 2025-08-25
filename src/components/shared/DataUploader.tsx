@@ -382,9 +382,8 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.judgment_date = parseDate(normalizedRow['ת. פסק דין'], 'judgment_date');
       mapped.closure_date = parseDate(normalizedRow['תאריך סגירה'], 'closure_date');
       mapped.inspection_date = parseDate(normalizedRow['תאריך ביקורת'], 'inspection_date');
-      mapped.expires_at = parseDate(normalizedRow['תא.עדכון ק.תוקף'] || normalizedRow['תאריך עדכון תוקף'], 'expires_at');
+      mapped.expires_at = parseDate(normalizedRow['תאריך פקיעה'] || normalizedRow['פוקע ב'] || normalizedRow['תא.עדכון ק.תוקף'] || normalizedRow['תאריך עדכון תוקף'], 'expires_at');
       mapped.request_date = parseDate(normalizedRow['תאריך בקשה'] || normalizedRow['תאריך פנייה'], 'request_date');
-      mapped.expiry_date = parseDate(normalizedRow['תאריך פקיעה'] || normalizedRow['פוקע ב'], 'expiry_date');
       
       // Clean request type field - remove leading numbers
       const requestTypeRaw = normalizedRow['סוג בקשה'] || normalizedRow['סוג פנייה'] || '';
@@ -405,16 +404,8 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.status = normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
       mapped.department_slug = 'business'; // Always set department_slug for licenses
       
-      // Handle validity date with proper validation
-      const validityField = normalizedRow['תוקף עד'] || normalizedRow['תוקף'] || '';
-      if (validityField && validityField.toString().trim() !== '' && validityField.toString() !== '0') {
-        const dateValue = validityField.toString().trim();
-        // Only set date if it looks like a valid date (contains numbers and date separators)
-        if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(dateValue) || 
-            /^\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}$/.test(dateValue)) {
-          mapped.expires_at = dateValue;
-        }
-      }
+      // Handle validity field (not a date field)
+      mapped.validity = normalizedRow['תוקף עד'] || normalizedRow['תוקף'] || '';
       
       mapped.reason_no_license = normalizedRow.reason_no_license || normalizedRow['סיבה ללא רישוי'] || '';
       
@@ -444,9 +435,9 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         mapped.issue_date = dateValue;
       }
       
-      if (normalizedRow.expiry_date || normalizedRow['תאריך תפוגה']) {
-        const dateValue = normalizedRow.expiry_date || normalizedRow['תאריך תפוגה'];
-        mapped.expiry_date = dateValue;
+      if (normalizedRow.expires_at || normalizedRow['תאריך תפוגה'] || normalizedRow['תאריך פקיעה']) {
+        const dateValue = normalizedRow.expires_at || normalizedRow['תאריך תפוגה'] || normalizedRow['תאריך פקיעה'];
+        mapped.expires_at = parseDate(dateValue, 'expires_at');
       }
       
       mapped.status = normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
