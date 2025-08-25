@@ -1542,24 +1542,9 @@ export default function BudgetAuthorizationsPage() {
                             className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 text-white px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                             onClick={(e) => {
                               e.stopPropagation();
-                              const today = new Date();
-                              const validUntil = new Date(activeTooltip.date);
-                              const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
-                              
-                              let category = '';
-                              if (monthsDiff < 0) {
-                                category = 'פג תוקף';
-                              } else if (monthsDiff <= 3) {
-                                category = 'פג תוקף עד 3 חודשים';
-                              } else if (monthsDiff <= 6) {
-                                category = 'פג תוקף עד 6 חודשים';
-                              } else if (monthsDiff <= 12) {
-                                category = 'פג תוקף עד שנה';
-                              } else {
-                                category = 'תקף למעלה משנה';
-                              }
-                              
-                              handleFilterByCategory(category);
+                              // Filter by specific month instead of category
+                              console.log('🖱️ Button clicked - filtering by month:', activeTooltip.monthYear);
+                              handleFilterByMonth(activeTooltip.date, activeTooltip.monthYear);
                               setActiveTooltip(null);
                             }}
                           >
