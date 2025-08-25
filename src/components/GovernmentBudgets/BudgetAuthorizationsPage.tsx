@@ -170,9 +170,15 @@ export default function BudgetAuthorizationsPage() {
 
   // Function to filter authorizations by category
   const handleFilterByCategory = (category: string) => {
+    console.log('🔍 Filtering by category:', category);
+    console.log('🔍 Total authorizations:', authorizations.length);
+    
     const today = new Date();
     const filtered = authorizations.filter(auth => {
-      if (!auth.valid_until) return false;
+      if (!auth.valid_until) {
+        console.log('⚠️ Authorization without valid_until date:', auth.authorization_number);
+        return false;
+      }
       
       const validUntil = new Date(auth.valid_until);
       const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
@@ -190,11 +196,27 @@ export default function BudgetAuthorizationsPage() {
         authCategory = 'תקף למעלה משנה';
       }
       
-      return authCategory === category;
+      const matches = authCategory === category;
+      if (matches) {
+        console.log('✅ Match found:', auth.authorization_number, 'Category:', authCategory, 'Valid until:', auth.valid_until);
+      }
+      
+      return matches;
     });
+    
+    console.log('🔍 Filtered results:', filtered.length, 'authorizations');
+    console.log('🔍 Setting filtered data and category:', category);
     
     setFilteredAuthorizations(filtered);
     setFilterCategory(category);
+    
+    // Scroll to table after a short delay
+    setTimeout(() => {
+      const tableElement = document.querySelector('[data-testid="authorizations-table"]');
+      if (tableElement) {
+        tableElement.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
   };
 
   // Function to clear filter
@@ -1537,29 +1559,31 @@ export default function BudgetAuthorizationsPage() {
               <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
-            <DataTable
-              data={filteredAuthorizations.length > 0 ? filteredAuthorizations : authorizations}
-              columns={columns}
-              searchableColumnIds={["ministry", "department_slug"]}
-              searchPlaceholder="חפש לפי משרד מממן או מחלקה..."
-              filterableColumns={{
-                ministry: {
-                  label: "המשרדים",
-                  options: Array.from(new Set(authorizations.map(a => a.ministry).filter(Boolean)))
-                    .map(ministry => ({ label: ministry, value: ministry }))
-                },
-                department_slug: {
-                  label: "המחלקות",
-                  options: [
-                    { label: 'כספים', value: 'finance' },
-                    { label: 'הנדסה', value: 'engineering' },
-                    { label: 'חינוך', value: 'education' },
-                    { label: 'רווחה', value: 'welfare' },
-                    { label: 'תרבות', value: 'non-formal' }
-                  ].filter(dept => authorizations.some(a => a.department_slug === dept.value))
-                }
-              }}
-            />
+            <div data-testid="authorizations-table">
+              <DataTable
+                data={filteredAuthorizations.length > 0 ? filteredAuthorizations : authorizations}
+                columns={columns}
+                searchableColumnIds={["ministry", "department_slug"]}
+                searchPlaceholder="חפש לפי משרד מממן או מחלקה..."
+                filterableColumns={{
+                  ministry: {
+                    label: "המשרדים",
+                    options: Array.from(new Set(authorizations.map(a => a.ministry).filter(Boolean)))
+                      .map(ministry => ({ label: ministry, value: ministry }))
+                  },
+                  department_slug: {
+                    label: "המחלקות",
+                    options: [
+                      { label: 'כספים', value: 'finance' },
+                      { label: 'הנדסה', value: 'engineering' },
+                      { label: 'חינוך', value: 'education' },
+                      { label: 'רווחה', value: 'welfare' },
+                      { label: 'תרבות', value: 'non-formal' }
+                    ].filter(dept => authorizations.some(a => a.department_slug === dept.value))
+                  }
+                }}
+              />
+            </div>
           )}
         </CardContent>
       </Card>
