@@ -390,10 +390,11 @@ export default function RegularBudgetPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-orange-600">
-              {totalBudgetExpenses > 0 ? ((totalExpenses / totalBudgetExpenses) * 100).toFixed(1) : 0}%
+              {expenseSummaryRow && (expenseSummaryRow.actual_amount || 0) > 0 ? 
+                (((expenseSummaryRow.cumulative_execution || 0) / (expenseSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%
             </div>
             <p className="text-xs text-muted-foreground">
-              מתוך התקציב המתוכנן
+              ביצוע בפועל מתוך תקציב יחסי
             </p>
           </CardContent>
         </Card>
