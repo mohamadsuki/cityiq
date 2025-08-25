@@ -33,6 +33,28 @@ export default function AddLicenseDialog({ onSaved }: { onSaved?: () => void }) 
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [validity, setValidity] = useState("");
+  
+  // Additional fields from Excel import
+  const [businessNature, setBusinessNature] = useState("");
+  const [dockFee, setDockFee] = useState("");
+  const [inspector, setInspector] = useState("");
+  const [area, setArea] = useState("");
+  const [property, setProperty] = useState("");
+  const [oldFile, setOldFile] = useState("");
+  const [blockParcelSub, setBlockParcelSub] = useState("");
+  const [locationDescription, setLocationDescription] = useState("");
+  const [fireDepartmentNumber, setFireDepartmentNumber] = useState("");
+  const [riskLevel, setRiskLevel] = useState("");
+  const [fileHolder, setFileHolder] = useState("");
+  const [requestType, setRequestType] = useState("");
+  const [groupCategory, setGroupCategory] = useState("");
+  const [reportedArea, setReportedArea] = useState("");
+  const [requestDate, setRequestDate] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState("");
+  const [followUpDate, setFollowUpDate] = useState("");
+  const [inspectionDate, setInspectionDate] = useState("");
+  const [judgmentDate, setJudgmentDate] = useState("");
+  const [closureDate, setClosureDate] = useState("");
 
   
 
@@ -57,7 +79,27 @@ export default function AddLicenseDialog({ onSaved }: { onSaved?: () => void }) 
         phone: phone || null,
         mobile: mobile || null,
         email: email || null,
-        validity: validity || null
+        validity: validity || null,
+        business_nature: businessNature || null,
+        dock_fee: dockFee || null,
+        inspector: inspector || null,
+        area: area || null,
+        property: property || null,
+        old_file: oldFile || null,
+        block_parcel_sub: blockParcelSub || null,
+        location_description: locationDescription || null,
+        fire_department_number: fireDepartmentNumber || null,
+        risk_level: riskLevel || null,
+        file_holder: fileHolder || null,
+        request_type: requestType || null,
+        group_category: groupCategory || null,
+        reported_area: reportedArea ? parseFloat(reportedArea) : null,
+        request_date: requestDate ? new Date(requestDate).toISOString().slice(0,10) : null,
+        delivery_date: deliveryDate ? new Date(deliveryDate).toISOString().slice(0,10) : null,
+        follow_up_date: followUpDate ? new Date(followUpDate).toISOString().slice(0,10) : null,
+        inspection_date: inspectionDate ? new Date(inspectionDate).toISOString().slice(0,10) : null,
+        judgment_date: judgmentDate ? new Date(judgmentDate).toISOString().slice(0,10) : null,
+        closure_date: closureDate ? new Date(closureDate).toISOString().slice(0,10) : null
       }]).select('id').single();
       if (create.error) throw create.error;
       const licId = create.data.id as string;
@@ -156,6 +198,86 @@ export default function AddLicenseDialog({ onSaved }: { onSaved?: () => void }) 
           <div className="md:col-span-2">
             <Label>תוקף/הערות</Label>
             <Input value={validity} onChange={(e)=>setValidity(e.target.value)} placeholder="הערות נוספות על תוקף הרישיון" />
+          </div>
+          <div>
+            <Label>מהות עסק</Label>
+            <Input value={businessNature} onChange={(e)=>setBusinessNature(e.target.value)} placeholder="סוג פעילות העסק" />
+          </div>
+          <div>
+            <Label>מפקח</Label>
+            <Input value={inspector} onChange={(e)=>setInspector(e.target.value)} placeholder="שם המפקח" />
+          </div>
+          <div>
+            <Label>סוג בקשה</Label>
+            <Input value={requestType} onChange={(e)=>setRequestType(e.target.value)} placeholder="עסק חדש / חידוש / אחר" />
+          </div>
+          <div>
+            <Label>קבוצה</Label>
+            <Input value={groupCategory} onChange={(e)=>setGroupCategory(e.target.value)} placeholder="קטגוריית עסק" />
+          </div>
+          <div>
+            <Label>אזור</Label>
+            <Input value={area} onChange={(e)=>setArea(e.target.value)} placeholder="אזור גיאוגרפי" />
+          </div>
+          <div>
+            <Label>נכס</Label>
+            <Input value={property} onChange={(e)=>setProperty(e.target.value)} placeholder="מספר נכס" />
+          </div>
+          <div>
+            <Label>שטח מדווח (מ\"ר)</Label>
+            <Input value={reportedArea} onChange={(e)=>setReportedArea(e.target.value)} placeholder="שטח במטרים רבועים" type="number" />
+          </div>
+          <div>
+            <Label>גוש חלקה תת</Label>
+            <Input value={blockParcelSub} onChange={(e)=>setBlockParcelSub(e.target.value)} placeholder="מזהה גוש חלקה" />
+          </div>
+          <div className="md:col-span-2">
+            <Label>תיאור מקום</Label>
+            <Input value={locationDescription} onChange={(e)=>setLocationDescription(e.target.value)} placeholder="תיאור מיקום העסק" />
+          </div>
+          <div>
+            <Label>מספר כיבוי אש</Label>
+            <Input value={fireDepartmentNumber} onChange={(e)=>setFireDepartmentNumber(e.target.value)} placeholder="מספר אישור כיבוי אש" />
+          </div>
+          <div>
+            <Label>דרגת סיכון</Label>
+            <Input value={riskLevel} onChange={(e)=>setRiskLevel(e.target.value)} placeholder="רמת סיכון (0-5)" />
+          </div>
+          <div>
+            <Label>מחזיק בתיק</Label>
+            <Input value={fileHolder} onChange={(e)=>setFileHolder(e.target.value)} placeholder="איש קשר אחראי" />
+          </div>
+          <div>
+            <Label>תיק ישן</Label>
+            <Input value={oldFile} onChange={(e)=>setOldFile(e.target.value)} placeholder="מספר תיק קודם" />
+          </div>
+          <div>
+            <Label>חייב במזח</Label>
+            <Input value={dockFee} onChange={(e)=>setDockFee(e.target.value)} placeholder="חובת תשלום מזח" />
+          </div>
+          <div>
+            <Label>תאריך בקשה</Label>
+            <Input type="date" value={requestDate} onChange={(e)=>setRequestDate(e.target.value)} />
+          </div>
+          <div>
+            <Label>תאריך מסירה</Label>
+            <Input type="date" value={deliveryDate} onChange={(e)=>setDeliveryDate(e.target.value)} />
+          </div>
+          <div>
+            <Label>תאריך מעקב</Label>
+            <Input type="date" value={followUpDate} onChange={(e)=>setFollowUpDate(e.target.value)} />
+          </div>
+          <div>
+            <Label>תאריך ביקורת</Label>
+            <Input type="date" value={inspectionDate} onChange={(e)=>setInspectionDate(e.target.value)} />
+          </div>
+          <div>
+            <Label>תאריך פסק דין</Label>
+            <Input type="date" value={judgmentDate} onChange={(e)=>setJudgmentDate(e.target.value)} />
+          </div>
+          <div>
+            <Label>תאריך סגירה</Label>
+            <Input type="date" value={closureDate} onChange={(e)=>setClosureDate(e.target.value)} />
           </div>
           <div className="md:col-span-2">
             <Label>תמונות</Label>
