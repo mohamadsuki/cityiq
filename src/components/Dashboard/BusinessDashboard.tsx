@@ -421,7 +421,7 @@ export default function BusinessDashboard() {
                   const total = statusData.reduce((sum, s) => sum + s.value, 0);
                   const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
                   return (
-                    <div key={item.name} className="flex items-center justify-between text-xs">
+                    <div key={item.name} className="flex items-center gap-2 text-xs">
                       <div className="flex items-center gap-0.5">
                         <span
                           className="inline-block h-2 w-2 rounded-full"
@@ -430,9 +430,9 @@ export default function BusinessDashboard() {
                         />
                         <span className="text-muted-foreground text-xs">{item.name}</span>
                       </div>
-                      <div className="text-left flex flex-col items-end leading-none">
+                      <div className="flex items-center gap-1 ml-auto">
                         <div className="font-bold text-xs">{item.value}</div>
-                        <div className="text-xs text-muted-foreground">{percentage}%</div>
+                        <div className="text-xs text-muted-foreground">({percentage}%)</div>
                       </div>
                     </div>
                   );
