@@ -331,9 +331,14 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.status = normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
       mapped.department_slug = 'business'; // Always set department_slug for licenses
       
-      // Handle validity date
+      // Handle validity date with proper validation
       if (validityField && validityField.toString().trim() !== '' && validityField.toString() !== '0') {
-        mapped.expires_at = validityField.toString();
+        const dateValue = validityField.toString().trim();
+        // Only set date if it looks like a valid date (contains numbers and date separators)
+        if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(dateValue) || 
+            /^\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}$/.test(dateValue)) {
+          mapped.expires_at = dateValue;
+        }
       }
       
       mapped.reason_no_license = normalizedRow.reason_no_license || normalizedRow['סיבה ללא רישוי'] || '';
