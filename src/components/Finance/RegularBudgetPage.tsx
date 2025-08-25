@@ -284,56 +284,107 @@ export default function RegularBudgetPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">סך הכנסות בפועל</CardTitle>
+            <CardTitle className="text-sm font-medium">הכנסות מאושר</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</div>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalBudgetIncome)}</div>
             <p className="text-xs text-muted-foreground">
-              תקציב: {formatCurrency(totalBudgetIncome)}
+              ביצוע: {formatCurrency(totalIncome)}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">סך הוצאות בפועל</CardTitle>
+            <CardTitle className="text-sm font-medium">הוצאות מאושר</CardTitle>
             <TrendingDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</div>
+            <div className="text-2xl font-bold text-red-600">{formatCurrency(totalBudgetExpenses)}</div>
             <p className="text-xs text-muted-foreground">
-              תקציב: {formatCurrency(totalBudgetExpenses)}
+              ביצוע: {formatCurrency(totalExpenses)}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">יתרה נטו</CardTitle>
+            <CardTitle className="text-sm font-medium">סטייה הכנסות</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${totalIncome - totalExpenses >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(totalIncome - totalExpenses)}
+            <div className={`text-2xl font-bold ${(totalIncome - totalBudgetIncome) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(totalIncome - totalBudgetIncome)}
             </div>
             <p className="text-xs text-muted-foreground">
-              הפרש בין הכנסות להוצאות
+              {totalBudgetIncome > 0 ? (((totalIncome - totalBudgetIncome) / totalBudgetIncome) * 100).toFixed(1) : 0}% מהתקציב
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">אחוז ביצוע כולל</CardTitle>
+            <CardTitle className="text-sm font-medium">סטייה הוצאות</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className={`text-2xl font-bold ${(totalExpenses - totalBudgetExpenses) <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(totalExpenses - totalBudgetExpenses)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {totalBudgetExpenses > 0 ? (((totalExpenses - totalBudgetExpenses) / totalBudgetExpenses) * 100).toFixed(1) : 0}% מהתקציב
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Additional Insights Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">ביצוע מצטבר הכנסות</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
               {totalBudgetIncome > 0 ? ((totalIncome / totalBudgetIncome) * 100).toFixed(1) : 0}%
             </div>
             <p className="text-xs text-muted-foreground">
               מתוך התקציב המתוכנן
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">ביצוע מצטבר הוצאות</CardTitle>
+            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {totalBudgetExpenses > 0 ? ((totalExpenses / totalBudgetExpenses) * 100).toFixed(1) : 0}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              מתוך התקציב המתוכנן
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">יעילות תקציבית</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${
+              (totalIncome / totalBudgetIncome) > (totalExpenses / totalBudgetExpenses) ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {totalBudgetIncome > 0 && totalBudgetExpenses > 0 ? 
+                (((totalIncome / totalBudgetIncome) - (totalExpenses / totalBudgetExpenses)) * 100).toFixed(1) : 0}%
+            </div>
+            <p className="text-xs text-muted-foreground">
+              הפרש ביצוע הכנסות להוצאות
             </p>
           </CardContent>
         </Card>
