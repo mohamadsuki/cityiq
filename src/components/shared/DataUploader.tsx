@@ -323,21 +323,52 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       // Map additional fields if present in Excel
       mapped.phone = normalizedRow['מס טלפון'] || normalizedRow['טלפון'] || '';
       mapped.mobile = normalizedRow['מס פלאפון'] || normalizedRow['נייד'] || '';
-      mapped.email = normalizedRow['כתובת מייל'] || normalizedRow['אימייל'] || '';
-      mapped.validity = normalizedRow['תוקף'] || normalizedRow['תוקף עד'] || '';
-      mapped.business_nature = normalizedRow['מהות עסק'] || normalizedRow['טיב עסק'] || '';
+      mapped.email = normalizedRow['כתובת מייל עסק'] || normalizedRow['כתובת מייל'] || normalizedRow['אימייל'] || '';
+      
+      // Clean validity field - remove leading numbers
+      const validityRaw = normalizedRow['תוקף'] || normalizedRow['תוקף עד'] || '';
+      mapped.validity = validityRaw ? validityRaw.toString().replace(/^\d+/, '') : '';
+      
+      // Clean business nature field - remove leading numbers  
+      const businessNatureRaw = normalizedRow['מהות עסק'] || normalizedRow['טיב עסק'] || '';
+      mapped.business_nature = businessNatureRaw ? businessNatureRaw.toString().replace(/^\d+/, '') : '';
+      
       mapped.request_type = normalizedRow['סוג בקשה'] || normalizedRow['סוג פנייה'] || '';
       mapped.group_category = normalizedRow['קבוצה'] || normalizedRow['קטגוריה'] || '';
       
-      // Handle dates
+      // Handle dates - improve date parsing
       const requestDateField = normalizedRow['תאריך בקשה'] || normalizedRow['תאריך פנייה'] || '';
-      if (requestDateField && isValidDate(requestDateField)) {
-        mapped.request_date = requestDateField;
+      if (requestDateField && requestDateField.toString().trim() !== '') {
+        try {
+          // Try to parse Excel date or string date
+          const dateStr = requestDateField.toString();
+          if (!isNaN(Number(dateStr))) {
+            // Excel serial date
+            const excelDate = new Date((Number(dateStr) - 25569) * 86400 * 1000);
+            mapped.request_date = excelDate.toISOString().split('T')[0];
+          } else if (isValidDate(dateStr)) {
+            mapped.request_date = dateStr;
+          }
+        } catch (e) {
+          console.log('Failed to parse request date:', requestDateField);
+        }
       }
       
       const expiryDateField = normalizedRow['תאריך פקיעה'] || normalizedRow['פוקע ב'] || '';
-      if (expiryDateField && isValidDate(expiryDateField)) {
-        mapped.expiry_date = expiryDateField;
+      if (expiryDateField && expiryDateField.toString().trim() !== '') {
+        try {
+          // Try to parse Excel date or string date
+          const dateStr = expiryDateField.toString();
+          if (!isNaN(Number(dateStr))) {
+            // Excel serial date
+            const excelDate = new Date((Number(dateStr) - 25569) * 86400 * 1000);
+            mapped.expiry_date = excelDate.toISOString().split('T')[0];
+          } else if (isValidDate(dateStr)) {
+            mapped.expiry_date = dateStr;
+          }
+        } catch (e) {
+          console.log('Failed to parse expiry date:', expiryDateField);
+        }
       }
       
       // Handle reported area

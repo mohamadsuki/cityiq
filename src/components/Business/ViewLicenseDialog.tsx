@@ -32,23 +32,39 @@ export function ViewLicenseDialog({ open, onOpenChange, license }: ViewLicenseDi
   };
 
   const fields = [
-    { label: 'מספר רישיון', value: license.license_number },
+    { label: 'רישיון', value: license.license_number },
     { label: 'שם עסק', value: license.business_name },
-    { label: 'בעלים', value: license.owner },
-    { label: 'סוג', value: license.type },
-    { label: 'סטטוס', value: license.status, isBadge: true },
-    { label: 'כתובת', value: license.address },
-    { label: 'טלפון', value: license.phone },
-    { label: 'נייד', value: license.mobile },
-    { label: 'אימייל', value: license.email },
-    { label: 'תוקף עד', value: formatDate(license.expires_at) },
+    { label: 'שם בעל העסק', value: license.owner },
+    { label: 'רחוב', value: license.address },
+    { label: 'מס טלפון', value: license.phone },
+    { label: 'מס פלאפון', value: license.mobile },
+    { label: 'כתובת מייל עסק', value: license.email },
+    { label: 'תוקף', value: license.validity },
+    { label: 'תא.עדכון ק.תוקף', value: formatDate(license.expires_at) },
+    { label: 'חייב במזח', value: license.dock_fee },
     { label: 'מהות עסק', value: license.business_nature },
-    { label: 'תאריך בקשה', value: formatDate(license.request_date) },
     { label: 'תאריך פקיעה', value: formatDate(license.expiry_date) },
+    { label: 'תאריך בקשה', value: formatDate(license.request_date) },
+    { label: 'תאריך מסירה', value: formatDate(license.delivery_date) },
+    { label: 'ימים מתא.בקשה', value: license.days_from_request },
+    { label: 'ימים בהיתר זמני', value: license.days_temporary_permit },
+    { label: 'מפקח', value: license.inspector },
+    { label: 'אזור', value: license.area },
+    { label: 'נכס', value: license.property },
+    { label: 'תיק ישן', value: license.old_file },
+    { label: 'גוש חלקה תת', value: license.block_parcel_sub },
+    { label: 'תאריך מעקב', value: formatDate(license.follow_up_date) },
+    { label: 'תאריך ביקורת', value: formatDate(license.inspection_date) },
     { label: 'סוג בקשה', value: license.request_type },
     { label: 'קבוצה', value: license.group_category },
+    { label: 'ביצוע פס\'ד', value: license.judgment_execution },
+    { label: 'ת. פסק דין', value: formatDate(license.judgment_date) },
+    { label: 'תאריך סגירה', value: formatDate(license.closure_date) },
+    { label: 'תאור מקום', value: license.location_description },
+    { label: 'מספר כיבוי אש', value: license.fire_department_number },
+    { label: 'דרגת סיכון', value: license.risk_level },
+    { label: 'מחזיק בתיק', value: license.file_holder },
     { label: 'שטח מדווח', value: license.reported_area ? `${license.reported_area} מ"ר` : null },
-    { label: 'סיבת ללא רישוי', value: license.reason_no_license },
   ];
 
   const nonEmptyFields = fields.filter(field => 
@@ -68,17 +84,11 @@ export function ViewLicenseDialog({ open, onOpenChange, license }: ViewLicenseDi
               <label className="text-sm font-medium text-muted-foreground">
                 {field.label}
               </label>
-              <div className="text-sm">
-                {field.isBadge ? (
-                  <Badge variant={getStatusBadgeVariant(field.value) as any}>
-                    {field.value}
-                  </Badge>
-                ) : (
-                  <div className="p-2 bg-muted/50 rounded-md">
-                    {field.value}
-                  </div>
-                )}
-              </div>
+               <div className="text-sm">
+                 <div className="p-2 bg-muted/50 rounded-md">
+                   {field.value}
+                 </div>
+               </div>
             </div>
           ))}
         </div>

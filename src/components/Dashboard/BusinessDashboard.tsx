@@ -172,8 +172,6 @@ export default function BusinessDashboard() {
     { accessorKey: "license_number", header: "מספר רישיון" },
     { accessorKey: "business_name", header: "שם עסק" },
     { accessorKey: "owner", header: "בעלים" },
-    { accessorKey: "type", header: "סוג" },
-    { accessorKey: "status", header: "סטטוס" },
     { accessorKey: "validity", header: "תוקף" },
     { accessorKey: "business_nature", header: "מהות עסק" },
     { 
