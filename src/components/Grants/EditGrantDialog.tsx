@@ -165,7 +165,7 @@ export default function EditGrantDialog({ isOpen, onClose, onSuccess, grant }: E
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="name">שם הקול הקורא *</Label>
               <Input
                 id="name"
@@ -214,6 +214,22 @@ export default function EditGrantDialog({ isOpen, onClose, onSuccess, grant }: E
             </div>
             
             <div className="space-y-2">
+              <Label htmlFor="status">סטטוס</Label>
+              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
               <Label htmlFor="amount">תקציב קול קורא</Label>
               <Input
                 id="amount"
@@ -244,22 +260,6 @@ export default function EditGrantDialog({ isOpen, onClose, onSuccess, grant }: E
                 onChange={(e) => setFormData({ ...formData, approved_amount: e.target.value })}
                 placeholder="0"
               />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="status">סטטוס</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {statuses.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
             
             <div className="space-y-2">
