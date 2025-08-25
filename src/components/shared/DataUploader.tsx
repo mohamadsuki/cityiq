@@ -350,28 +350,44 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       
       // Helper function to parse dates safely
       const parseDate = (dateField: any, fieldName: string): string | null => {
-        if (!dateField || dateField.toString().trim() === '') return null;
+        console.log(`🗓️ parseDate called for ${fieldName} with value:`, dateField, typeof dateField);
+        
+        if (!dateField || dateField.toString().trim() === '') {
+          console.log(`❌ ${fieldName}: Empty or null value`);
+          return null;
+        }
         
         try {
-          const dateStr = dateField.toString();
+          const dateStr = dateField.toString().trim();
+          console.log(`🗓️ ${fieldName}: Processing dateStr: "${dateStr}"`);
+          
+          // Handle Excel numeric dates (days since 1900-01-01)
           if (!isNaN(Number(dateStr)) && Number(dateStr) > 40000) {
             const excelDate = new Date((Number(dateStr) - 25569) * 86400 * 1000);
-            return excelDate.toISOString().split('T')[0];
-          } else if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(dateStr)) {
+            const result = excelDate.toISOString().split('T')[0];
+            console.log(`✅ ${fieldName}: Excel numeric date ${dateStr} -> ${result}`);
+            return result;
+          } 
+          // Handle DD/MM/YYYY or similar formats
+          else if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(dateStr)) {
             const parts = dateStr.split(/[\/\-\.]/);
             if (parts.length === 3) {
               const day = parseInt(parts[0]);
-              const month = parseInt(parts[1]) - 1;
+              const month = parseInt(parts[1]) - 1; // JS months are 0-based
               const year = parseInt(parts[2]);
               const fullYear = year < 100 ? (year > 50 ? 1900 + year : 2000 + year) : year;
               const parsedDate = new Date(fullYear, month, day);
-              if (!isNaN(parsedDate.getTime())) {
-                return parsedDate.toISOString().split('T')[0];
+              if (!isNaN(parsedDate.getTime()) && parsedDate.getFullYear() > 1900) {
+                const result = parsedDate.toISOString().split('T')[0];
+                console.log(`✅ ${fieldName}: Parsed DD/MM/YYYY ${dateStr} -> ${result}`);
+                return result;
               }
             }
           }
+          
+          console.log(`❌ ${fieldName}: Could not parse date format: "${dateStr}"`);
         } catch (e) {
-          console.log(`Failed to parse ${fieldName}:`, dateField);
+          console.log(`❌ ${fieldName}: Error parsing date:`, dateField, e);
         }
         return null;
       };
@@ -383,6 +399,15 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.closure_date = parseDate(normalizedRow['תאריך סגירה'], 'closure_date');
       mapped.inspection_date = parseDate(normalizedRow['תאריך ביקורת'], 'inspection_date');
       // Handle expiry dates - check multiple possible columns and prioritize non-empty values
+      console.log(`🔍 All available fields for ${mapped.business_name}:`, Object.keys(normalizedRow));
+      console.log(`🔍 Raw values check:`);
+      console.log(`  - תאריך פקיעה: "${normalizedRow['תאריך פקיעה']}"`);
+      console.log(`  - פוקע ב: "${normalizedRow['פוקע ב']}"`);
+      console.log(`  - תא.עדכון ק.תוקף: "${normalizedRow['תא.עדכון ק.תוקף']}"`);
+      console.log(`  - תאריך עדכון תוקף: "${normalizedRow['תאריך עדכון תוקף']}"`);
+      console.log(`  - תוקף עד: "${normalizedRow['תוקף עד']}"`);
+      console.log(`  - תאריך תפוגה: "${normalizedRow['תאריך תפוגה']}"`);
+      
       const possibleExpiryFields = [
         normalizedRow['תאריך פקיעה'],
         normalizedRow['פוקע ב'],
@@ -390,10 +415,10 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         normalizedRow['תאריך עדכון תוקף'],
         normalizedRow['תוקף עד'],
         normalizedRow['תאריך תפוגה']
-      ].filter(field => field && field.toString().trim() !== '');
+      ].filter(field => field && field.toString().trim() !== '' && field.toString().trim() !== '0');
       
       const expiryDateField = possibleExpiryFields[0]; // Take first non-empty value
-      console.log(`🗓️ Available expiry fields for ${mapped.business_name}:`, possibleExpiryFields);
+      console.log(`🗓️ Non-empty expiry fields for ${mapped.business_name}:`, possibleExpiryFields);
       console.log(`🗓️ Selected expiry field:`, expiryDateField);
       mapped.expires_at = parseDate(expiryDateField, 'expires_at');
       console.log(`🗓️ Final expires_at for ${mapped.business_name}:`, mapped.expires_at);
