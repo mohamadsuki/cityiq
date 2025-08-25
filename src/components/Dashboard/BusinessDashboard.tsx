@@ -324,7 +324,7 @@ export default function BusinessDashboard() {
 
   const businessTypesData = Object.entries(
     filteredLicenses.reduce((acc, l) => {
-      const key = l.type || 'אחר';
+      const key = l.group_category || 'אחר';
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
@@ -373,11 +373,11 @@ export default function BusinessDashboard() {
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">סה"כ עסקים בעיר</p><p className="text-3xl font-bold">{totalBusinessesInCity?.toLocaleString() || 'לא הוגדר'}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">עסקים רשומים</p><p className="text-3xl font-bold">{totalLicenses.toLocaleString()}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">עסקים פעילים</p><p className="text-3xl font-bold">{activeLicenses.toLocaleString()}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">רישיונות פוקעים החודש</p><p className="text-3xl font-bold">{expiringCount}</p></div><Timer className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">בקשות חדשות</p><p className="text-3xl font-bold">{newRequests}</p></div><Bell className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
-        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">סה"כ עסקים בעיר</p><p className="text-3xl font-bold">{totalBusinessesInCity?.toLocaleString() || 'לא הוגדר'}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
       </section>
 
        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
