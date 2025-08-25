@@ -1176,18 +1176,17 @@ export default function BudgetAuthorizationsPage() {
           </CardContent>
         </Card>
 
-        {/* ציר זמן הרשאות - חיצים אופקיים משופרים */}
+        {/* ציר זמן הרשאות - גרף עמודות */}
         <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">ציר זמן תוקף הרשאות</CardTitle>
+            <CardTitle className="text-base font-semibold text-foreground">ציר זמן הרשאות</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-96">
               {(() => {
-                // יצירת נתונים לציר זמן משופר עם חישובי אורך מדויקים
                 const currentDate = new Date();
                 
-                // קיבוץ הרשאות לפי תאריך סיום תוקף
+                // קיבוץ הרשאות לפי תאריך סיום תוקף (לפי חודש)
                 const authsByExpiry = authorizations
                   .filter(auth => auth.valid_until)
                   .reduce((acc, auth) => {
@@ -1197,7 +1196,10 @@ export default function BudgetAuthorizationsPage() {
                     if (!acc[monthYear]) {
                       acc[monthYear] = {
                         date: expiryDate,
-                        dateLabel: monthYear,
+                        dateLabel: new Date(expiryDate.getFullYear(), expiryDate.getMonth()).toLocaleDateString('he-IL', { 
+                          month: 'short', 
+                          year: 'numeric' 
+                        }),
                         authorizations: [],
                         count: 0,
                         totalAmount: 0,
@@ -1212,33 +1214,18 @@ export default function BudgetAuthorizationsPage() {
                     return acc;
                   }, {});
 
-                // המרה למערך וסידור לפי תאריך, הצגת 10 ראשונים
-                const allTimelineData = Object.values(authsByExpiry)
-                  .sort((a: any, b: any) => a.date.getTime() - b.date.getTime());
-                
-                // חישוב אורך מקסימלי לנורמליזציה
-                const maxDays = Math.max(...allTimelineData.map((item: any) => Math.abs(item.daysFromNow)));
-                const maxWidth = 280; // רוחב מקסימלי פיקסל
-                const minWidth = 40;  // רוחב מינימלי
-                
-                const timelineData = allTimelineData
-                  .slice(0, 10)
-                  .map((item: any, index) => {
-                    // חישוב אורך החץ באופן פרופורציונלי למרחק בזמן
-                    const normalizedWidth = Math.abs(item.daysFromNow) / maxDays;
-                    const arrowWidth = Math.max(minWidth, normalizedWidth * maxWidth);
-                    
-                    return {
-                      ...item,
-                      y: index + 1,
-                      width: arrowWidth,
-                      isExpired: item.daysFromNow < 0,
-                      color: item.daysFromNow < 0 ? '#dc2626' : 
-                             item.daysFromNow <= 90 ? '#ea580c' :
-                             item.daysFromNow <= 180 ? '#ca8a04' :
-                             item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
-                    };
-                  });
+                // המרה למערך וסידור לפי תאריך
+                const timelineData = Object.values(authsByExpiry)
+                  .sort((a: any, b: any) => a.date.getTime() - b.date.getTime())
+                  .slice(0, 12) // הצגת 12 תקופות
+                  .map((item: any) => ({
+                    ...item,
+                    isExpired: item.daysFromNow < 0,
+                    color: item.daysFromNow < 0 ? '#dc2626' : 
+                           item.daysFromNow <= 90 ? '#ea580c' :
+                           item.daysFromNow <= 180 ? '#ca8a04' :
+                           item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
+                  }));
 
                 if (timelineData.length === 0) {
                   return (
@@ -1248,114 +1235,57 @@ export default function BudgetAuthorizationsPage() {
                   );
                 }
 
-                // יצירת ציר זמן מובלט
-                const timeScale = timelineData.map(item => ({
-                  date: new Date(item.date),
-                  label: new Date(item.date).toLocaleDateString('he-IL', { month: 'short', year: 'numeric' })
-                }));
-
                 return (
-                  <div className="relative w-full h-full bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 rounded-xl overflow-hidden border border-slate-200 shadow-inner">
-                    {/* כותרת וציר זמן עליון */}
-                    <div className="absolute top-0 left-0 right-0 h-14 bg-white/90 backdrop-blur-sm border-b border-slate-200 shadow-sm">
-                      <div className="flex items-center justify-between h-full px-6">
-                        <div className="text-sm font-semibold text-slate-700 flex items-center gap-3">
-                          <div className="w-4 h-4 bg-blue-600 rounded-full shadow-md"></div>
-                          <span>נקודת התחלה - היום</span>
-                        </div>
-                        <div className="text-sm font-semibold text-slate-700 flex items-center gap-3">
-                          <span>תאריכי פג תוקף</span>
-                          <div className="w-4 h-4 bg-gradient-to-r from-yellow-500 to-red-500 rounded-full shadow-md"></div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* ציר זמן מרכזי אנכי */}
-                    <div className="absolute top-14 right-20 bottom-6 w-1 bg-gradient-to-b from-blue-600 via-emerald-500 via-yellow-500 to-red-500 rounded-full shadow-lg"></div>
-                    
-                    {/* נקודת התחלה - היום */}
-                    <div className="absolute top-14 right-20 w-5 h-5 bg-blue-600 rounded-full border-4 border-white shadow-xl z-30 transform -translate-x-1/2">
-                      <div className="absolute inset-1 bg-blue-300 rounded-full animate-pulse"></div>
-                    </div>
-                    
-                    {/* חיצים אופקיים עם הפרדה ברורה */}
-                    <div className="pt-20 pb-8 px-6 space-y-6 overflow-y-auto max-h-full">
-                      {timelineData.map((item: any, index) => {
-                        return (
-                          <div 
-                            key={index}
-                            className="relative flex items-center animate-fade-in"
-                            style={{ 
-                              height: '40px',
-                              minHeight: '40px'
-                            }}
-                          >
-                            {/* החץ האופקי המשופר - מימין (היום) לשמאל (עתיד) */}
-                            <div 
-                              className="absolute right-20 top-1/2 transform -translate-y-1/2"
-                              style={{ zIndex: 10 }}
-                            >
-                              <div
-                                className="relative h-8 flex items-center cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl group"
-                                style={{
-                                  background: `linear-gradient(135deg, ${item.color}ee, ${item.color}cc)`,
-                                  width: `${item.width}px`,
-                                  clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%)',
-                                  border: `2px solid ${item.color}`,
-                                  boxShadow: `0 6px 20px ${item.color}40, 0 2px 8px ${item.color}20`,
-                                  borderRadius: '4px 0 0 4px'
-                                }}
-                              >
-                                {/* תוכן החץ */}
-                                <div className="px-4 text-white text-sm font-bold truncate flex-1 text-center drop-shadow-sm">
-                                  {item.count} הרשאות
-                                </div>
-                                
-                                {/* נקודת סיום מובלטת */}
-                                <div 
-                                  className="absolute -right-2 top-1/2 w-4 h-4 rounded-full border-3 border-white shadow-lg transform -translate-y-1/2 z-10"
-                                  style={{ backgroundColor: item.color }}
-                                >
-                                  <div className="absolute inset-1 bg-white/30 rounded-full"></div>
-                                </div>
-                                
-                                {/* תווית תאריך פג תוקף */}
-                                <div 
-                                  className="absolute -right-2 -bottom-8 text-xs font-medium text-slate-600 whitespace-nowrap bg-white/90 px-2 py-1 rounded shadow-sm"
-                                  style={{ 
-                                    transform: 'translateX(50%)',
-                                    borderLeft: `3px solid ${item.color}`
-                                  }}
-                                >
-                                  {new Date(item.date).toLocaleDateString('he-IL', { 
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: '2-digit'
-                                  })}
-                                  {item.isExpired && <span className="text-red-600 mr-1">⚠</span>}
-                                </div>
-                                
-                                {/* Tooltip מפורט ומשופר */}
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-4 bg-white/97 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-slate-200 min-w-80 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-40">
+                  <div className="relative w-full h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={timelineData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis 
+                          dataKey="dateLabel"
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                          angle={-45}
+                          textAnchor="end"
+                          height={70}
+                          interval={0}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                          label={{ 
+                            value: 'מספר הרשאות', 
+                            angle: -90, 
+                            position: 'insideLeft',
+                            style: { textAnchor: 'middle', fill: '#64748b' }
+                          }}
+                          domain={[0, 'dataMax + 2']}
+                        />
+                        <Tooltip 
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload[0]) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-white/97 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-slate-200 min-w-80 max-w-96">
                                   <div className="text-center mb-3">
                                     <div className="font-bold text-slate-900 text-lg flex items-center justify-center gap-2">
-                                      {item.isExpired && <span className="text-red-500">⚠️</span>}
-                                      {new Date(item.date).toLocaleDateString('he-IL')}
-                                      {item.isExpired ? ' (פג תוקף)' : ''}
+                                      {data.isExpired && <span className="text-red-500">⚠️</span>}
+                                      {label}
+                                      {data.isExpired ? ' (פג תוקף)' : ''}
                                     </div>
                                     <div className="text-sm text-slate-600">
-                                      {item.isExpired ? 'פג תוקף לפני' : 'פג תוקף בעוד'} {Math.abs(item.daysFromNow)} ימים
+                                      {data.isExpired ? 'פג תוקף לפני' : 'פג תוקף בעוד'} {Math.abs(data.daysFromNow)} ימים
                                     </div>
                                   </div>
                                   
                                   <div className="grid grid-cols-2 gap-4 mb-3">
                                     <div className="text-center p-2 bg-blue-50 rounded-lg">
-                                      <div className="text-2xl font-bold text-blue-600">{item.count}</div>
+                                      <div className="text-2xl font-bold text-blue-600">{data.count}</div>
                                       <div className="text-xs text-gray-600">מספר הרשאות</div>
                                     </div>
                                     <div className="text-center p-2 bg-green-50 rounded-lg">
                                       <div className="text-lg font-bold text-green-600">
-                                        ₪{new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(item.totalAmount)}
+                                        ₪{new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(data.totalAmount)}
                                       </div>
                                       <div className="text-xs text-gray-600">סה"כ תקציב</div>
                                     </div>
@@ -1363,17 +1293,15 @@ export default function BudgetAuthorizationsPage() {
                                   
                                   <div className="border-t pt-3 mb-3">
                                     <div className="text-sm font-medium text-gray-700 mb-2">רשימת הרשאות:</div>
-                                    <div className="max-h-24 overflow-y-auto space-y-1">
-                                      {item.authorizations.slice(0, 3).map((auth: any, i: number) => (
+                                    <div className="max-h-32 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-gray-300">
+                                      {data.authorizations.map((auth: any, i: number) => (
                                         <div key={i} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                                          • {auth.program?.substring(0, 40)}{auth.program?.length > 40 ? '...' : ''}
+                                          <div className="font-medium">• {auth.program?.substring(0, 60)}{auth.program?.length > 60 ? '...' : ''}</div>
+                                          <div className="text-gray-500 mt-1">
+                                            {auth.ministry} | ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}
+                                          </div>
                                         </div>
                                       ))}
-                                      {item.authorizations.length > 3 && (
-                                        <div className="text-xs text-gray-500 italic text-center py-1">
-                                          +{item.authorizations.length - 3} הרשאות נוספות...
-                                        </div>
-                                      )}
                                     </div>
                                   </div>
                                   
@@ -1382,7 +1310,7 @@ export default function BudgetAuthorizationsPage() {
                                       className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
                                       onClick={() => {
                                         const today = new Date();
-                                        const validUntil = new Date(item.date);
+                                        const validUntil = new Date(data.date);
                                         const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
                                         
                                         let category = '';
@@ -1405,43 +1333,21 @@ export default function BudgetAuthorizationsPage() {
                                     </button>
                                   </div>
                                 </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    {/* הודעה על גלילה אם יש יותר מ-10 תקופות */}
-                    {allTimelineData.length > 10 && (
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-sm text-gray-600 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-gray-200">
-                        מציג 10 תקופות ראשונות מתוך {allTimelineData.length} • גלול למעלה לעוד פרטים
-                      </div>
-                    )}
-                    
-                    {/* מקרא צבעים */}
-                    <div className="absolute bottom-2 left-4 flex gap-3 text-xs">
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ef4444' }}></div>
-                        <span>פג תוקף</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#f97316' }}></div>
-                        <span>עד 3 חודשים</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#eab308' }}></div>
-                        <span>עד 6 חודשים</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#22c55e' }}></div>
-                        <span>עד שנה</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-                        <span>מעל שנה</span>
-                      </div>
-                    </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar 
+                          dataKey="count" 
+                          radius={[4, 4, 0, 0]}
+                        >
+                          {timelineData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 );
               })()}
