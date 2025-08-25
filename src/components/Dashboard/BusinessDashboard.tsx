@@ -401,17 +401,17 @@ export default function BusinessDashboard() {
             <ResponsiveContainer width="100%" height={400}>
               <BarChart 
                 data={businessTypesData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
+                margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
                 barCategoryGap="20%"
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="type" 
                   angle={-90}
-                  textAnchor="end"
-                  height={100}
+                  textAnchor="start"
+                  height={120}
                   interval={0}
-                  tick={{ fontSize: 10, fontWeight: 'bold' }}
+                  tick={{ fontSize: 10, fontWeight: 'bold', dy: 5, dx: -5 }}
                 />
                 <YAxis />
                 <Tooltip 
@@ -433,21 +433,6 @@ export default function BusinessDashboard() {
         </Card>
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-        <Card className="shadow-card">
-          <CardHeader><CardTitle className="text-xl">סיבות ללא רישוי</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={reasonData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
-                  {reasonData.map((e,i)=> <Cell key={i} fill={COLORS[i%COLORS.length]} />)}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </section>
 
       <section>
         <Card className="shadow-card">
