@@ -310,16 +310,18 @@ export default function RegularBudgetPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ביצוע כולל</CardTitle>
+            <CardTitle className="text-sm font-medium">סה"כ הכנסות והוצאות</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {((totalBudgetIncome + totalBudgetExpenses) > 0) ? 
-                (((totalIncome + totalExpenses) / (totalBudgetIncome + totalBudgetExpenses)) * 100).toFixed(1) : 0}%
+            <div className="text-lg font-bold text-blue-600">
+              הכנסות: {formatCurrency(totalIncome)}
+            </div>
+            <div className="text-lg font-bold text-red-600">
+              הוצאות: {formatCurrency(totalExpenses)}
             </div>
             <p className="text-xs text-muted-foreground">
-              מתוך סה"כ התקציב המתוכנן
+              ביצוע מצטבר
             </p>
           </CardContent>
         </Card>
@@ -330,13 +332,21 @@ export default function RegularBudgetPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${
-              ((totalIncome + totalExpenses) - (totalBudgetIncome + totalBudgetExpenses)) >= 0 ? 'text-red-600' : 'text-green-600'
-            }`}>
-              {formatCurrency(Math.abs((totalIncome + totalExpenses) - (totalBudgetIncome + totalBudgetExpenses)))}
+            <div className="space-y-1">
+              <div className={`text-lg font-bold ${
+                (totalBudgetIncome - totalIncome) >= 0 ? 'text-red-600' : 'text-green-600'
+              }`}>
+                הכנסות: {formatCurrency(Math.abs(totalBudgetIncome - totalIncome))}
+              </div>
+              <div className={`text-lg font-bold ${
+                (totalBudgetExpenses - totalExpenses) >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                הוצאות: {formatCurrency(Math.abs(totalBudgetExpenses - totalExpenses))}
+              </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              {((totalIncome + totalExpenses) - (totalBudgetIncome + totalBudgetExpenses)) >= 0 ? 'עודף' : 'חיסכון'} בביצוע
+              הכנסות: {totalBudgetIncome > 0 ? (((totalBudgetIncome - totalIncome) / totalBudgetIncome) * 100).toFixed(1) : 0}% | 
+              הוצאות: {totalBudgetExpenses > 0 ? (((totalBudgetExpenses - totalExpenses) / totalBudgetExpenses) * 100).toFixed(1) : 0}%
             </p>
           </CardContent>
         </Card>
