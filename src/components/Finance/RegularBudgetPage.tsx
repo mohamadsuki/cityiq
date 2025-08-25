@@ -1249,90 +1249,185 @@ export default function RegularBudgetPage() {
 
       {/* Advanced Charts Section */}
       {analysis && (
-        <div className="mt-8 space-y-6">
-          <div className="flex items-center gap-3 mb-6">
-            <TrendingUp className="h-6 w-6 text-primary" />
-            <h3 className="text-xl font-semibold text-foreground">גרפים מתקדמים</h3>
-            <p className="text-sm text-muted-foreground">ויזואליזציות מבוססות על המלצות AI</p>
+        <div className="mt-8 space-y-8">
+          <div className="flex items-center gap-3 mb-8">
+            <TrendingUp className="h-7 w-7 text-primary" />
+            <div>
+              <h3 className="text-2xl font-bold text-foreground">ויזואליזציות נתונים מתקדמות</h3>
+              <p className="text-sm text-muted-foreground mt-1">גרפים מבוססי AI לניתוח פיננסי מקצועי</p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Income vs Expenses Comparison */}
-            <Card className="p-6">
-              <h4 className="text-lg font-semibold mb-4 text-foreground">השוואת הכנסות להוצאות</h4>
-              <div className="h-80">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            {/* Enhanced Budget Overview Chart */}
+            <Card className="p-6 shadow-lg border-l-4 border-l-primary">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-xl font-bold text-foreground">סקירת תקציב כוללת</h4>
+                <Badge variant="secondary" className="text-xs">ביצוע לעומת תכנון</Badge>
+              </div>
+              <div className="h-96">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={[
-                    { name: 'תקציב מתוכנן', הכנסות: totalIncome, הוצאות: totalExpenses },
-                    { name: 'ביצוע בפועל', הכנסות: totalIncomeExecution, הוצאות: totalExpenseExecution }
-                  ]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => `${Number(value).toLocaleString('he-IL')} ₪`} />
+                  <BarChart 
+                    data={[
+                      { 
+                        category: 'הכנסות', 
+                        מתוכנן: totalIncome, 
+                        בפועל: totalIncomeExecution,
+                        אחוזביצוע: totalIncome ? (totalIncomeExecution / totalIncome * 100) : 0
+                      },
+                      { 
+                        category: 'הוצאות', 
+                        מתוכנן: totalExpenses, 
+                        בפועל: totalExpenseExecution,
+                        אחוזביצוע: totalExpenses ? (totalExpenseExecution / totalExpenses * 100) : 0
+                      }
+                    ]} 
+                    margin={{ top: 20, right: 30, left: 40, bottom: 20 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                    <XAxis 
+                      dataKey="category" 
+                      tick={{ fill: 'hsl(var(--foreground))' }}
+                      fontSize={14}
+                      fontWeight={600}
+                    />
+                    <YAxis 
+                      tick={{ fill: 'hsl(var(--foreground))' }}
+                      fontSize={12}
+                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
+                    />
+                    <Tooltip 
+                      formatter={(value, name) => [
+                        `${Number(value).toLocaleString('he-IL')} ₪`,
+                        name === 'מתוכנן' ? 'תקציב מתוכנן' : 'ביצוע בפועל'
+                      ]}
+                      labelStyle={{ color: 'hsl(var(--foreground))' }}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
+                    />
                     <Legend />
-                    <Bar dataKey="הכנסות" fill="hsl(var(--primary))" />
-                    <Bar dataKey="הוצאות" fill="hsl(var(--destructive))" />
+                    <Bar 
+                      dataKey="מתוכנן" 
+                      fill="hsl(var(--primary))" 
+                      radius={[4, 4, 0, 0]}
+                      name="תקציב מתוכנן"
+                    />
+                    <Bar 
+                      dataKey="בפועל" 
+                      fill="hsl(var(--secondary))" 
+                      radius={[4, 4, 0, 0]}
+                      name="ביצוע בפועל"
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </Card>
 
-            {/* Budget Performance by Category */}
-            <Card className="p-6">
-              <h4 className="text-lg font-semibold mb-4 text-foreground">ביצועי תקציב לפי קטגורית</h4>
-              <div className="h-80">
+            {/* Performance by Category Chart */}
+            <Card className="p-6 shadow-lg border-l-4 border-l-secondary">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-xl font-bold text-foreground">ביצועי תקציב לפי קטגורית</h4>
+                <Badge variant="outline" className="text-xs">top 6 קטגוריות</Badge>
+              </div>
+              <div className="h-96">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={[
-                    ...budgetData.filter(item => item.category_type === 'income' && isDetailRow(item)).slice(0, 5).map(item => ({
-                      name: item.category_name.length > 12 ? item.category_name.substring(0, 12) + '...' : item.category_name,
-                      תקציב: item.budget_amount || 0,
-                      ביצוע: item.actual_amount || 0,
-                      אחוז_ביצוע: item.budget_amount ? ((item.actual_amount || 0) / item.budget_amount * 100) : 0
-                    }))
-                  ]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} />
-                    <YAxis yAxisId="left" />
-                    <YAxis yAxisId="right" orientation="right" />
+                  <LineChart 
+                    data={budgetData
+                      .filter(item => item.category_type === 'income' && isDetailRow(item))
+                      .slice(0, 6)
+                      .map(item => ({
+                        name: item.category_name.length > 12 ? item.category_name.substring(0, 12) + '...' : item.category_name,
+                        תקציב: item.budget_amount || 0,
+                        ביצוע: item.actual_amount || 0,
+                        אחוזביצוע: item.budget_amount ? ((item.actual_amount || 0) / item.budget_amount * 100) : 0,
+                        יעד: 100
+                      }))
+                    } 
+                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                    <XAxis 
+                      dataKey="name" 
+                      angle={-45} 
+                      textAnchor="end" 
+                      height={100}
+                      tick={{ fill: 'hsl(var(--foreground))', fontSize: 11 }}
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      tick={{ fill: 'hsl(var(--foreground))' }}
+                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
+                    />
+                    <YAxis 
+                      yAxisId="right" 
+                      orientation="right"
+                      tick={{ fill: 'hsl(var(--foreground))' }}
+                      tickFormatter={(value) => `${value}%`}
+                    />
                     <Tooltip 
-                      formatter={(value, name) => 
-                        name === 'אחוז_ביצוע' ? `${Number(value).toFixed(1)}%` : `${Number(value).toLocaleString('he-IL')} ₪`
-                      } 
+                      formatter={(value, name) => {
+                        if (name === 'אחוזביצוע' || name === 'יעד') {
+                          return [`${Number(value).toFixed(1)}%`, name === 'אחוזביצוע' ? 'אחוז ביצוע' : 'יעד'];
+                        }
+                        return [`${Number(value).toLocaleString('he-IL')} ₪`, name === 'תקציב' ? 'תקציב מתוכנן' : 'ביצוע בפועל'];
+                      }}
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '8px'
+                      }}
                     />
                     <Legend />
-                    <Bar yAxisId="left" dataKey="תקציב" fill="hsl(var(--muted))" />
-                    <Bar yAxisId="left" dataKey="ביצוע" fill="hsl(var(--primary))" />
-                    <Line yAxisId="right" type="monotone" dataKey="אחוז_ביצוע" stroke="hsl(var(--accent))" strokeWidth={3} />
+                    <Bar yAxisId="left" dataKey="תקציב" fill="hsl(var(--muted))" name="תקציב מתוכנן" radius={[2, 2, 0, 0]} />
+                    <Bar yAxisId="left" dataKey="ביצוע" fill="hsl(var(--primary))" name="ביצוע בפועל" radius={[2, 2, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="אחוזביצוע" stroke="hsl(var(--destructive))" strokeWidth={3} name="אחוז ביצוע" />
+                    <Line yAxisId="right" type="monotone" dataKey="יעד" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="5 5" name="יעד 100%" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </Card>
 
-            {/* Expense Categories Distribution */}
-            <Card className="p-6">
-              <h4 className="text-lg font-semibold mb-4 text-foreground">התפלגות הוצאות</h4>
-              <div className="h-80">
+            {/* Expense Distribution Pie Chart */}
+            <Card className="p-6 shadow-lg border-l-4 border-l-accent">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-xl font-bold text-foreground">התפלגות הוצאות</h4>
+                <Badge variant="outline" className="text-xs">top 8 הוצאות</Badge>
+              </div>
+              <div className="h-96">
                 <ResponsiveContainer width="100%" height="100%">
-                  <div className="flex flex-col items-center justify-center h-full">
-                    <div className="grid grid-cols-2 gap-4 w-full">
-                      {budgetData.filter(item => item.category_type === 'expense' && isDetailRow(item) && item.actual_amount > 0).slice(0, 6).map((item, index) => (
-                        <div key={index} className="flex items-center gap-2 p-2 rounded border">
-                          <div 
-                            className="w-4 h-4 rounded-full" 
-                            style={{ backgroundColor: `hsl(${index * 60}, 70%, 60%)` }}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">
-                              {item.category_name.length > 20 ? item.category_name.substring(0, 20) + '...' : item.category_name}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {Number(item.actual_amount).toLocaleString('he-IL')} ₪
+                  <div className="grid grid-cols-2 gap-4 h-full">
+                    {budgetData
+                      .filter(item => item.category_type === 'expense' && isDetailRow(item) && item.actual_amount > 0)
+                      .slice(0, 8)
+                      .map((item, index) => {
+                        const total = budgetData
+                          .filter(i => i.category_type === 'expense' && isDetailRow(i) && i.actual_amount > 0)
+                          .reduce((sum, i) => sum + (i.actual_amount || 0), 0);
+                        const percentage = ((item.actual_amount || 0) / total * 100).toFixed(1);
+                        
+                        return (
+                          <div key={index} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                            <div 
+                              className="w-4 h-4 rounded-full shadow-sm" 
+                              style={{ backgroundColor: `hsl(${index * 45 + 200}, 70%, 50%)` }}
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-semibold truncate text-foreground">
+                                {item.category_name.length > 18 ? item.category_name.substring(0, 18) + '...' : item.category_name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {Number(item.actual_amount).toLocaleString('he-IL')} ₪
+                              </div>
+                              <div className="text-xs font-medium text-primary">
+                                {percentage}%
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        );
+                      })}
                   </div>
                 </ResponsiveContainer>
               </div>
