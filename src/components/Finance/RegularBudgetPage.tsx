@@ -612,113 +612,142 @@ export default function RegularBudgetPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Data Table */}
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>פירוט תקציב</CardTitle>
-            <div className="flex items-center gap-4">
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="סנן לפי סוג" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">הכל</SelectItem>
-                  <SelectItem value="income">הכנסות</SelectItem>
-                  <SelectItem value="expense">הוצאות</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Data Tables - Separated by Income and Expenses */}
+      <div className="space-y-6">
+        {/* Income Table */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-xl font-bold text-emerald-700 dark:text-emerald-300">טבלת הכנסות</CardTitle>
               <ExportButtons 
-                data={filteredData} 
-                fileBaseName="regular-budget"
+                data={budgetData.filter(item => 
+                  item.category_type === 'income' && 
+                  !item.category_name.includes('סה"כ') && 
+                  !item.category_name.includes('סך') &&
+                  !item.category_name.includes('סיכום')
+                )} 
+                fileBaseName="income-budget"
               />
             </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {/* Table for detailed items excluding summary rows */}
-            <DataTable 
-              columns={columns} 
-              data={filteredData.filter(item => 
-                !item.category_name.includes('סה"כ') && 
-                !item.category_name.includes('סך') &&
-                !item.category_name.includes('סיכום')
-              )} 
-            />
-            
-            {/* Summary row for total income */}
-            {processedIncomeSummary && (categoryFilter === 'all' || categoryFilter === 'income') && (
-              <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-200 mb-3">סיכום הכנסות</h3>
-                <div className="grid grid-cols-6 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">{processedIncomeSummary.category_name}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold">{formatCurrency(processedIncomeSummary.budget_amount)}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold">{formatCurrency(processedIncomeSummary.actual_amount)}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold">{formatCurrency(processedIncomeSummary.cumulative_execution || 0)}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`font-bold ${
-                      processedIncomeSummary.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
-                    }`}>
-                      {formatCurrency(processedIncomeSummary.budget_deviation)}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`font-bold ${
-                      processedIncomeSummary.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
-                    }`}>
-                      {processedIncomeSummary.budget_deviation_percentage.toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Summary row for total expenses */}
-            {processedExpenseSummary && (categoryFilter === 'all' || categoryFilter === 'expense') && (
-              <div className="mt-6 p-4 bg-gradient-to-r from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 rounded-lg border border-rose-200 dark:border-rose-800">
-                <h3 className="text-lg font-bold text-rose-800 dark:text-rose-200 mb-3">סיכום הוצאות</h3>
-                <div className="grid grid-cols-6 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">{processedExpenseSummary.category_name}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold">{formatCurrency(processedExpenseSummary.budget_amount)}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold">{formatCurrency(processedExpenseSummary.actual_amount)}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold">{formatCurrency(processedExpenseSummary.cumulative_execution || 0)}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`font-bold ${
-                      processedExpenseSummary.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
-                    }`}>
-                      {formatCurrency(processedExpenseSummary.budget_deviation)}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`font-bold ${
-                      processedExpenseSummary.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
-                    }`}>
-                      {processedExpenseSummary.budget_deviation_percentage.toFixed(1)}%
-                    </span>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Income Table Data */}
+              <DataTable 
+                columns={columns} 
+                data={budgetData.filter(item => 
+                  item.category_type === 'income' && 
+                  !item.category_name.includes('סה"כ') && 
+                  !item.category_name.includes('סך') &&
+                  !item.category_name.includes('סיכום')
+                )} 
+              />
+              
+              {/* Income Summary */}
+              {processedIncomeSummary && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                  <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-200 mb-3">סיכום הכנסות</h3>
+                  <div className="grid grid-cols-6 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">{processedIncomeSummary.category_name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold">{formatCurrency(processedIncomeSummary.budget_amount)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold">{formatCurrency(processedIncomeSummary.actual_amount)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold">{formatCurrency(processedIncomeSummary.cumulative_execution || 0)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-bold ${
+                        processedIncomeSummary.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
+                      }`}>
+                        {formatCurrency(processedIncomeSummary.budget_deviation)}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-bold ${
+                        processedIncomeSummary.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
+                      }`}>
+                        {processedIncomeSummary.budget_deviation_percentage.toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Expenses Table */}
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-xl font-bold text-rose-700 dark:text-rose-300">טבלת הוצאות</CardTitle>
+              <ExportButtons 
+                data={budgetData.filter(item => 
+                  item.category_type === 'expense' && 
+                  !item.category_name.includes('סה"כ') && 
+                  !item.category_name.includes('סך') &&
+                  !item.category_name.includes('סיכום')
+                )} 
+                fileBaseName="expenses-budget"
+              />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {/* Expenses Table Data */}
+              <DataTable 
+                columns={columns} 
+                data={budgetData.filter(item => 
+                  item.category_type === 'expense' && 
+                  !item.category_name.includes('סה"כ') && 
+                  !item.category_name.includes('סך') &&
+                  !item.category_name.includes('סיכום')
+                )} 
+              />
+              
+              {/* Expenses Summary */}
+              {processedExpenseSummary && (
+                <div className="mt-6 p-4 bg-gradient-to-r from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 rounded-lg border border-rose-200 dark:border-rose-800">
+                  <h3 className="text-lg font-bold text-rose-800 dark:text-rose-200 mb-3">סיכום הוצאות</h3>
+                  <div className="grid grid-cols-6 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium">{processedExpenseSummary.category_name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold">{formatCurrency(processedExpenseSummary.budget_amount)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold">{formatCurrency(processedExpenseSummary.actual_amount)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold">{formatCurrency(processedExpenseSummary.cumulative_execution || 0)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-bold ${
+                        processedExpenseSummary.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
+                      }`}>
+                        {formatCurrency(processedExpenseSummary.budget_deviation)}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`font-bold ${
+                        processedExpenseSummary.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
+                      }`}>
+                        {processedExpenseSummary.budget_deviation_percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Add Item Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
