@@ -213,6 +213,10 @@ export default function RegularBudgetPage() {
 
       if (!error && existingAnalysis) {
         setAnalysis(existingAnalysis.analysis_text);
+        // Load saved chart data if available
+        if (existingAnalysis.analysis_data && typeof existingAnalysis.analysis_data === 'object') {
+          console.log('Loaded saved chart data:', existingAnalysis.analysis_data);
+        }
         return true;
       }
     } catch (error) {
@@ -273,7 +277,12 @@ export default function RegularBudgetPage() {
           expense_deviation: expenseDeviation,
           analysis_data: {
             timestamp: new Date().toISOString(),
-            summary: 'Budget analysis completed'
+            summary: 'Budget analysis completed',
+            chartData: {
+              incomeCategories: budgetData.filter(item => item.category_type === 'income' && isDetailRow(item)),
+              expenseCategories: budgetData.filter(item => item.category_type === 'expense' && isDetailRow(item)),
+              totalMetrics: { totalIncome, totalExpenses, incomeDeviation, expenseDeviation }
+            }
           } as any
         };
 
@@ -1148,6 +1157,130 @@ export default function RegularBudgetPage() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Advanced Charts Section */}
+      {analysis && (
+        <div className="mt-8 space-y-6">
+          <div className="flex items-center gap-3 mb-6">
+            <TrendingUp className="h-6 w-6 text-primary" />
+            <h3 className="text-xl font-semibold text-foreground">גרפים מתקדמים</h3>
+            <p className="text-sm text-muted-foreground">ויזואליזציות מבוססות על המלצות AI</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Income vs Expenses Comparison */}
+            <Card className="p-6">
+              <h4 className="text-lg font-semibold mb-4 text-foreground">השוואת הכנסות להוצאות</h4>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={[
+                    { name: 'תקציב מתוכנן', הכנסות: totalIncome, הוצאות: totalExpenses },
+                    { name: 'ביצוע בפועל', הכנסות: totalIncomeExecution, הוצאות: totalExpenseExecution }
+                  ]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `${Number(value).toLocaleString('he-IL')} ₪`} />
+                    <Legend />
+                    <Bar dataKey="הכנסות" fill="hsl(var(--primary))" />
+                    <Bar dataKey="הוצאות" fill="hsl(var(--destructive))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            {/* Budget Performance by Category */}
+            <Card className="p-6">
+              <h4 className="text-lg font-semibold mb-4 text-foreground">ביצועי תקציב לפי קטגורית</h4>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={[
+                    ...budgetData.filter(item => item.category_type === 'income' && isDetailRow(item)).slice(0, 5).map(item => ({
+                      name: item.category_name.length > 12 ? item.category_name.substring(0, 12) + '...' : item.category_name,
+                      תקציב: item.budget_amount || 0,
+                      ביצוע: item.actual_amount || 0,
+                      אחוז_ביצוע: item.budget_amount ? ((item.actual_amount || 0) / item.budget_amount * 100) : 0
+                    }))
+                  ]} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
+                    <Tooltip 
+                      formatter={(value, name) => 
+                        name === 'אחוז_ביצוע' ? `${Number(value).toFixed(1)}%` : `${Number(value).toLocaleString('he-IL')} ₪`
+                      } 
+                    />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="תקציב" fill="hsl(var(--muted))" />
+                    <Bar yAxisId="left" dataKey="ביצוע" fill="hsl(var(--primary))" />
+                    <Line yAxisId="right" type="monotone" dataKey="אחוז_ביצוע" stroke="hsl(var(--accent))" strokeWidth={3} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            {/* Expense Categories Distribution */}
+            <Card className="p-6">
+              <h4 className="text-lg font-semibold mb-4 text-foreground">התפלגות הוצאות</h4>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <div className="flex flex-col items-center justify-center h-full">
+                    <div className="grid grid-cols-2 gap-4 w-full">
+                      {budgetData.filter(item => item.category_type === 'expense' && isDetailRow(item) && item.actual_amount > 0).slice(0, 6).map((item, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 rounded border">
+                          <div 
+                            className="w-4 h-4 rounded-full" 
+                            style={{ backgroundColor: `hsl(${index * 60}, 70%, 60%)` }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">
+                              {item.category_name.length > 20 ? item.category_name.substring(0, 20) + '...' : item.category_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {Number(item.actual_amount).toLocaleString('he-IL')} ₪
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+
+            {/* Budget Variance Analysis */}
+            <Card className="p-6">
+              <h4 className="text-lg font-semibold mb-4 text-foreground">ניתוח חריגות תקציביות</h4>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={budgetData.filter(item => isDetailRow(item) && Math.abs((item.actual_amount || 0) - (item.budget_amount || 0)) > 1000).slice(0, 8).map(item => ({
+                      name: item.category_name.length > 10 ? item.category_name.substring(0, 10) + '...' : item.category_name,
+                      חריגה: (item.actual_amount || 0) - (item.budget_amount || 0),
+                      אחוז_חריגה: item.budget_amount ? (((item.actual_amount || 0) - item.budget_amount) / item.budget_amount * 100) : 0
+                    }))}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value, name) => 
+                        name === 'אחוז_חריגה' ? `${Number(value).toFixed(1)}%` : `${Number(value).toLocaleString('he-IL')} ₪`
+                      }
+                    />
+                    <Legend />
+                    <Bar dataKey="חריגה">
+                    <Bar dataKey="חריגה" fill="hsl(var(--primary))" />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
