@@ -62,50 +62,69 @@ export default function CollectionPage() {
   const loadCollectionData = async () => {
     try {
       setLoading(true);
+      console.log('🔍 Starting to load collection data...');
 
       // Load all data without any filtering for now
       const { data, error } = await supabase
         .from('collection_data')
         .select('*')
         .order('property_type');
-      if (error) throw error;
-      console.log('Loaded collection data:', data);
+
+      if (error) {
+        console.error('❌ Error loading collection data:', error);
+        throw error;
+      }
+      
+      console.log('📊 Raw collection data from database:', data);
+      console.log('📊 Number of records:', data?.length || 0);
 
       // Convert to proper format and clean up property types
-      const processedData: CollectionData[] = (data || []).map(item => ({
-        id: item.id,
-        property_type: item.property_type || 'לא מוגדר',
-        annual_budget: Number(item.annual_budget) || 0,
-        relative_budget: Number(item.relative_budget) || 0,
-        actual_collection: Number(item.actual_collection) || 0,
-        surplus_deficit: Number(item.surplus_deficit) || 0,
-        year: item.year,
-        created_at: item.created_at
-      }));
+      const processedData: CollectionData[] = (data || []).map(item => {
+        console.log('🔧 Processing item:', item);
+        return {
+          id: item.id,
+          property_type: item.property_type || 'לא מוגדר',
+          annual_budget: Number(item.annual_budget) || 0,
+          relative_budget: Number(item.relative_budget) || 0,
+          actual_collection: Number(item.actual_collection) || 0,
+          surplus_deficit: Number(item.surplus_deficit) || 0,
+          year: item.year,
+          created_at: item.created_at
+        };
+      });
+
+      console.log('🔧 Processed collection data:', processedData);
 
       // Consolidate duplicate property types by summing their values
       const consolidatedData: Record<string, CollectionData> = {};
       processedData.forEach(item => {
         const standardizedType = PROPERTY_TYPE_LABELS[item.property_type] || item.property_type;
+        console.log(`🏠 Processing property type: ${item.property_type} -> ${standardizedType}`);
+        
         if (consolidatedData[standardizedType]) {
           // Merge with existing entry
           consolidatedData[standardizedType].annual_budget += item.annual_budget;
           consolidatedData[standardizedType].relative_budget += item.relative_budget;
           consolidatedData[standardizedType].actual_collection += item.actual_collection;
           consolidatedData[standardizedType].surplus_deficit += item.surplus_deficit;
+          console.log(`➕ Merged with existing ${standardizedType}`);
         } else {
           // Create new entry
           consolidatedData[standardizedType] = {
             ...item,
             property_type: standardizedType
           };
+          console.log(`✨ Created new entry for ${standardizedType}`);
         }
       });
+      
       const finalData = Object.values(consolidatedData);
-      console.log('Consolidated collection data:', finalData);
+      console.log('✅ Final consolidated collection data:', finalData);
+      console.log('✅ Final data length:', finalData.length);
+      
       setCollectionData(finalData);
     } catch (error) {
-      console.error('Error loading collection data:', error);
+      console.error('💥 Error in loadCollectionData:', error);
       toast({
         title: "שגיאה",
         description: "לא ניתן לטעון את נתוני הגביה",
