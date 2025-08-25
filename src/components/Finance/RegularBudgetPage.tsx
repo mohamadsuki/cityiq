@@ -170,29 +170,72 @@ export default function RegularBudgetPage() {
     {
       accessorKey: "category_name",
       header: "שם הקטגוריה",
+      cell: ({ row }) => {
+        const categoryName = row.getValue("category_name") as string;
+        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
+        
+        return (
+          <span className={isSummaryRow ? "font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent" : ""}>
+            {categoryName}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "budget_amount",
       header: "תקציב מאושר",
-      cell: ({ row }) => formatCurrency(row.getValue("budget_amount")),
+      cell: ({ row }) => {
+        const categoryName = row.getValue("category_name") as string;
+        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
+        const amount = row.getValue("budget_amount");
+        
+        return (
+          <span className={isSummaryRow ? "font-bold text-lg" : ""}>
+            {formatCurrency(amount as number)}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "actual_amount",
       header: "תקציב יחסי לתקופה",
-      cell: ({ row }) => formatCurrency(row.getValue("actual_amount")),
+      cell: ({ row }) => {
+        const categoryName = row.getValue("category_name") as string;
+        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
+        const amount = row.getValue("actual_amount");
+        
+        return (
+          <span className={isSummaryRow ? "font-bold text-lg" : ""}>
+            {formatCurrency(amount as number)}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "cumulative_execution",
       header: "ביצוע מצטבר",
-      cell: ({ row }) => formatCurrency(row.getValue("cumulative_execution")),
+      cell: ({ row }) => {
+        const categoryName = row.getValue("category_name") as string;
+        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
+        const amount = row.getValue("cumulative_execution");
+        
+        return (
+          <span className={isSummaryRow ? "font-bold text-lg" : ""}>
+            {formatCurrency(amount as number)}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "budget_deviation",
       header: "סטיה מהתקציב",
       cell: ({ row }) => {
+        const categoryName = row.getValue("category_name") as string;
+        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
         const deviation = row.getValue("budget_deviation") as number;
+        
         return (
-          <span className={deviation >= 0 ? "text-green-600" : "text-red-600"}>
+          <span className={`${deviation >= 0 ? "text-green-600" : "text-red-600"} ${isSummaryRow ? "font-bold text-lg" : ""}`}>
             {formatCurrency(deviation)}
           </span>
         );
@@ -202,9 +245,12 @@ export default function RegularBudgetPage() {
       accessorKey: "budget_deviation_percentage",
       header: "סטיה מהתקציב ב%",
       cell: ({ row }) => {
+        const categoryName = row.getValue("category_name") as string;
+        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
         const percentage = row.getValue("budget_deviation_percentage") as number;
+        
         return (
-          <span className={percentage >= 0 ? "text-green-600" : "text-red-600"}>
+          <span className={`${percentage >= 0 ? "text-green-600" : "text-red-600"} ${isSummaryRow ? "font-bold text-lg" : ""}`}>
             {percentage.toFixed(1)}%
           </span>
         );
@@ -632,15 +678,10 @@ export default function RegularBudgetPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Income Table Data */}
+              {/* Income Table Data - Include all income rows, including summary rows */}
               <DataTable 
                 columns={columns} 
-                data={budgetData.filter(item => 
-                  item.category_type === 'income' && 
-                  !item.category_name.includes('סה"כ') && 
-                  !item.category_name.includes('סך') &&
-                  !item.category_name.includes('סיכום')
-                )} 
+                data={budgetData.filter(item => item.category_type === 'income')} 
               />
               
               {/* Income Summary */}
@@ -699,15 +740,10 @@ export default function RegularBudgetPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {/* Expenses Table Data */}
+              {/* Expenses Table Data - Include all expense rows, including summary rows */}
               <DataTable 
                 columns={columns} 
-                data={budgetData.filter(item => 
-                  item.category_type === 'expense' && 
-                  !item.category_name.includes('סה"כ') && 
-                  !item.category_name.includes('סך') &&
-                  !item.category_name.includes('סיכום')
-                )} 
+                data={budgetData.filter(item => item.category_type === 'expense')} 
               />
               
               {/* Expenses Summary */}
