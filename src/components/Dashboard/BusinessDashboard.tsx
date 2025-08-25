@@ -416,22 +416,22 @@ export default function BusinessDashboard() {
               </ResponsiveContainer>
               
               {/* Legend */}
-              <div className="flex flex-col justify-center space-y-0.5">
+              <div className="flex flex-col justify-center space-y-0">
                 {statusData.map((item, index) => {
                   const total = statusData.reduce((sum, s) => sum + s.value, 0);
                   const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
                   return (
-                    <div key={item.name} className="flex items-center justify-between text-xs py-1">
-                      <div className="flex items-center gap-1">
+                    <div key={item.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-0.5">
                         <span
-                          className="inline-block h-2.5 w-2.5 rounded-full"
+                          className="inline-block h-2 w-2 rounded-full"
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                           aria-hidden
                         />
                         <span className="text-muted-foreground text-xs">{item.name}</span>
                       </div>
-                      <div className="text-left flex flex-col items-end leading-tight">
-                        <div className="font-bold text-sm">{item.value}</div>
+                      <div className="text-left flex flex-col items-end leading-none">
+                        <div className="font-bold text-xs">{item.value}</div>
                         <div className="text-xs text-muted-foreground">{percentage}%</div>
                       </div>
                     </div>
