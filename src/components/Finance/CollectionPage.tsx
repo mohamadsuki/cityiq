@@ -63,23 +63,11 @@ export default function CollectionPage() {
     try {
       setLoading(true);
 
-      // Build query - filter by selected year(s) and order by property type
-      let query = supabase.from('collection_data').select('*').order('property_type');
-
-      // Apply year filtering
-      if (selectedEndYear && selectedEndYear !== selectedYear) {
-        // Year range selection
-        query = query.gte('year', Math.min(selectedYear, selectedEndYear)).lte('year', Math.max(selectedYear, selectedEndYear));
-      } else {
-        // Single year selection
-        query = query.eq('year', selectedYear);
-      }
-
-      // No user filter needed since RLS is disabled
-      const {
-        data,
-        error
-      } = await query;
+      // Load all data without any filtering for now
+      const { data, error } = await supabase
+        .from('collection_data')
+        .select('*')
+        .order('property_type');
       if (error) throw error;
       console.log('Loaded collection data:', data);
 
