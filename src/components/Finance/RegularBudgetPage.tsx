@@ -781,38 +781,18 @@ export default function RegularBudgetPage() {
       {/* Smart Budget Analysis Section - Enhanced */}
       <Card className="border-2 border-gradient-to-r from-purple-200 to-blue-200 dark:from-purple-800/30 dark:to-blue-800/30 shadow-xl">
         <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
-                <Brain className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                  ניתוח חכם של התקציב
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  הצגה וניתוח נתונים מתקדם באמצעות בינה מלאכותית
-                </p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+              <Brain className="w-6 h-6 text-white" />
             </div>
-            <Button 
-              onClick={() => handleAnalyzeBudget(false)}
-              disabled={isAnalyzing || analysisLoading || !budgetData || budgetData.length === 0}
-              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
-              size="lg"
-            >
-              {isAnalyzing || analysisLoading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  מנתח נתונים...
-                </>
-              ) : (
-                <>
-                  <Brain className="w-5 h-5" />
-                  נתח תקציב
-                </>
-              )}
-            </Button>
+            <div>
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                ניתוח חכם של התקציב
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                ניתוח אוטומטי מתקדם המתבסס על נתוני האקסל שהועלו - נתונים עדכניים לתקופה הנוכחית
+              </p>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-8">
@@ -836,40 +816,166 @@ export default function RegularBudgetPage() {
                 </div>
               </div>
               
-              {/* Enhanced insights section */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-5 h-5 text-blue-600" />
-                    <span className="font-medium text-blue-800 dark:text-blue-200">יעילות הכנסות</span>
+              {/* Enhanced insights section with practical analysis */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-5 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp className="w-6 h-6 text-blue-600" />
+                    <span className="font-semibold text-blue-800 dark:text-blue-200">יעילות הכנסות</span>
                   </div>
-                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                    {((totalIncomeExecution / totalIncome) * 100).toFixed(1)}%
+                  <div className="text-3xl font-bold text-blue-700 dark:text-blue-300 mb-1">
+                    {totalIncome > 0 ? ((totalIncomeExecution / totalIncome) * 100).toFixed(1) : '0.0'}%
                   </div>
-                  <div className="text-xs text-blue-600 dark:text-blue-400">מביצוע ההכנסות</div>
+                  <div className="text-sm text-blue-600 dark:text-blue-400 mb-2">מתקציב התקופה</div>
+                  <div className="text-xs bg-blue-100 dark:bg-blue-900/30 p-2 rounded-md">
+                    <span className="font-medium">תובנה: </span>
+                    {totalIncome > 0 && (totalIncomeExecution / totalIncome) >= 1.05 ? 
+                      "ביצועים מעולים - חריגה חיובית מהתוכנית" :
+                      totalIncome > 0 && (totalIncomeExecution / totalIncome) >= 0.95 ?
+                      "ביצועים בהתאם לתוכנית" :
+                      "נדרש ניטור צמוד לשיפור הגבייה"
+                    }
+                  </div>
                 </div>
                 
-                <div className="bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="w-5 h-5 text-purple-600" />
-                    <span className="font-medium text-purple-800 dark:text-purple-200">מאזן נוכחי</span>
+                <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 p-5 rounded-xl border border-purple-200 dark:border-purple-800 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <DollarSign className="w-6 h-6 text-purple-600" />
+                    <span className="font-semibold text-purple-800 dark:text-purple-200">מאזן תקופתי</span>
                   </div>
-                  <div className={`text-2xl font-bold ${totalIncomeExecution - totalExpenseExecution >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                  <div className={`text-3xl font-bold mb-1 ${totalIncomeExecution - totalExpenseExecution >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                     {formatCurrency(totalIncomeExecution - totalExpenseExecution)}
                   </div>
-                  <div className="text-xs text-purple-600 dark:text-purple-400">עודף/גירעון</div>
+                  <div className="text-sm text-purple-600 dark:text-purple-400 mb-2">
+                    {totalIncomeExecution - totalExpenseExecution >= 0 ? 'עודף' : 'גירעון'} לתקופה
+                  </div>
+                  <div className="text-xs bg-purple-100 dark:bg-purple-900/30 p-2 rounded-md">
+                    <span className="font-medium">מצב: </span>
+                    {totalIncomeExecution - totalExpenseExecution >= 0 ? 
+                      "מצב פיננסי חיובי - ניתן להרחיב פעילות" :
+                      "נדרש צמצום הוצאות או הגדלת הכנסות"
+                    }
+                  </div>
                 </div>
                 
-                <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingDown className="w-5 h-5 text-orange-600" />
-                    <span className="font-medium text-orange-800 dark:text-orange-200">שליטה בהוצאות</span>
+                <div className="bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 p-5 rounded-xl border border-orange-200 dark:border-orange-800 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingDown className="w-6 h-6 text-orange-600" />
+                    <span className="font-semibold text-orange-800 dark:text-orange-200">שליטה בהוצאות</span>
                   </div>
-                  <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
-                    {((totalExpenseExecution / totalExpenses) * 100).toFixed(1)}%
+                  <div className="text-3xl font-bold text-orange-700 dark:text-orange-300 mb-1">
+                    {totalExpenses > 0 ? ((totalExpenseExecution / totalExpenses) * 100).toFixed(1) : '0.0'}%
                   </div>
-                  <div className="text-xs text-orange-600 dark:text-orange-400">מביצוע ההוצאות</div>
+                  <div className="text-sm text-orange-600 dark:text-orange-400 mb-2">מתקציב התקופה</div>
+                  <div className="text-xs bg-orange-100 dark:bg-orange-900/30 p-2 rounded-md">
+                    <span className="font-medium">מצב: </span>
+                    {totalExpenses > 0 && (totalExpenseExecution / totalExpenses) > 1.05 ? 
+                      "חריגה מהתקציב - נדרש בקרת הוצאות" :
+                      totalExpenses > 0 && (totalExpenseExecution / totalExpenses) > 0.95 ?
+                      "ביצוע בהתאם לתוכנית" :
+                      "ביצוע חסכוני - מתחת לתוכנית"
+                    }
+                  </div>
                 </div>
+
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-5 rounded-xl border border-green-200 dark:border-green-800 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BarChart3 className="w-6 h-6 text-green-600" />
+                    <span className="font-semibold text-green-800 dark:text-green-200">מדד יעילות</span>
+                  </div>
+                  <div className="text-3xl font-bold text-green-700 dark:text-green-300 mb-1">
+                    {totalExpenses > 0 && totalIncome > 0 ? ((totalIncomeExecution / totalExpenseExecution) * 100).toFixed(0) : '0'}%
+                  </div>
+                  <div className="text-sm text-green-600 dark:text-green-400 mb-2">יחס הכנסות/הוצאות</div>
+                  <div className="text-xs bg-green-100 dark:bg-green-900/30 p-2 rounded-md">
+                    <span className="font-medium">רמה: </span>
+                    {totalExpenseExecution > 0 && (totalIncomeExecution / totalExpenseExecution) >= 1.1 ? 
+                      "מצוינת - מאזן חיובי משמעותי" :
+                      totalExpenseExecution > 0 && (totalIncomeExecution / totalExpenseExecution) >= 1.0 ?
+                      "טובה - מאזן חיובי" :
+                      "נדרש שיפור במאזן הכספי"
+                    }
+                  </div>
+                </div>
+              </div>
+
+              {/* Period Analysis and Key Figures */}
+              <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-950/20 border-indigo-200 dark:border-indigo-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-bold text-indigo-800 dark:text-indigo-200 flex items-center gap-2">
+                      📊 ניתוח תקופתי מתקדם
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg">
+                        <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400">שנת תקציב</div>
+                        <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200">{new Date().getFullYear()}</div>
+                      </div>
+                      <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg">
+                        <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400">עדכון אחרון</div>
+                        <div className="text-sm font-bold text-indigo-800 dark:text-indigo-200">
+                          {budgetData.length > 0 ? new Date().toLocaleDateString('he-IL') : 'לא זמין'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg">
+                      <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mb-2">סיכום ביצוע התקופה</div>
+                      <div className="text-xs space-y-1">
+                        <div>• קטגוריות הכנסות: {budgetData.filter(item => item.category_type === 'income' && isDetailRow(item)).length}</div>
+                        <div>• קטגוריות הוצאות: {budgetData.filter(item => item.category_type === 'expense' && isDetailRow(item)).length}</div>
+                        <div>• חריגות משמעותיות: {budgetData.filter(item => Math.abs(item.budget_deviation_percentage) > 10 && isDetailRow(item)).length}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20 border-amber-200 dark:border-amber-800">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-bold text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                      💡 המלצות מעשיות
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="text-sm space-y-2">
+                      {(() => {
+                        const recommendations = [];
+                        
+                        // Check income efficiency
+                        if (totalIncome > 0 && (totalIncomeExecution / totalIncome) < 0.9) {
+                          recommendations.push("🔍 בדוק מקורות הכנסה שלא מומשו במלואם");
+                        }
+                        
+                        // Check expense control
+                        if (totalExpenses > 0 && (totalExpenseExecution / totalExpenses) > 1.1) {
+                          recommendations.push("⚠️ הגבלת הוצאות בסעיפים החורגים מהתקציב");
+                        }
+                        
+                        // Check balance
+                        if (totalIncomeExecution - totalExpenseExecution < 0) {
+                          recommendations.push("📈 פיתוח מקורות הכנסה נוספים להקטנת הגירעון");
+                        }
+                        
+                        // Check high deviations
+                        const highDeviations = budgetData.filter(item => Math.abs(item.budget_deviation_percentage) > 15 && isDetailRow(item));
+                        if (highDeviations.length > 0) {
+                          recommendations.push(`🎯 ניטור ${highDeviations.length} סעיפים עם חריגות גבוהות`);
+                        }
+                        
+                        if (recommendations.length === 0) {
+                          recommendations.push("✅ הביצוע תואם לתוכנית - המשיכו בניטור שוטף");
+                        }
+                        
+                        return recommendations.map((rec, index) => (
+                          <div key={index} className="bg-white/60 dark:bg-gray-800/60 p-2 rounded-md text-amber-800 dark:text-amber-200 font-medium">
+                            {rec}
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Smart Data Table */}
@@ -894,15 +1000,31 @@ export default function RegularBudgetPage() {
             <div className="text-center text-muted-foreground py-16">
               <div className="mb-6">
                 <Brain className="w-20 h-20 mx-auto mb-6 opacity-30" />
-                <div className="space-y-3">
-                  <h3 className="text-xl font-semibold">ניתוח חכם מתקדם</h3>
-                  <p className="text-lg">לחץ על "נתח תקציב" כדי לקבל:</p>
-                  <div className="flex flex-wrap justify-center gap-3 mt-4">
-                    <Badge variant="secondary" className="px-3 py-1">📊 הצגת נתונים מובנת</Badge>
-                    <Badge variant="secondary" className="px-3 py-1">📈 ניתוח מגמות</Badge>
-                    <Badge variant="secondary" className="px-3 py-1">⚠️ אזורי תשומת לב</Badge>
-                    <Badge variant="secondary" className="px-3 py-1">💡 המלצות מעשיות</Badge>
-                    <Badge variant="secondary" className="px-3 py-1">🎯 סיכום מנהלים</Badge>
+                <div className="space-y-4">
+                  <h3 className="text-2xl font-semibold">ניתוח אוטומטי מתקדם</h3>
+                  <p className="text-lg">העלה קובץ אקסל כדי לקבל ניתוח מיידי הכולל:</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto mt-6">
+                    <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
+                      <div className="font-semibold text-blue-800 dark:text-blue-200 mb-2">📊 ניתוח נתונים</div>
+                      <div className="text-sm text-blue-600 dark:text-blue-400">
+                        • הצגת נתונים מסודרת לפי תקופות<br/>
+                        • זיהוי מגמות וחריגות<br/>
+                        • סיכום מספרים מרכזיים
+                      </div>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg">
+                      <div className="font-semibold text-green-800 dark:text-green-200 mb-2">💡 המלצות מעשיות</div>
+                      <div className="text-sm text-green-600 dark:text-green-400">
+                        • אזורי תשומת לב דחופים<br/>
+                        • הצעות לשיפור הביצוע<br/>
+                        • תחזיות למגמות עתידיות
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-amber-50 dark:bg-amber-950/20 p-4 rounded-lg max-w-md mx-auto mt-4">
+                    <div className="text-sm text-amber-800 dark:text-amber-200 font-medium">
+                      ⚡ הניתוח מתבצע אוטומטית מיד לאחר העלאת קובץ האקסל ונשמר למעקב עתידי
+                    </div>
                   </div>
                 </div>
               </div>
