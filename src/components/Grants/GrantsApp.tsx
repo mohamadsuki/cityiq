@@ -363,7 +363,7 @@ export default function GrantsApp() {
     const approvedAmount = grants.filter(g => {
       const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
       return hebrewStatus === 'אושר';
-    }).reduce((sum, g) => sum + (g.amount || 0), 0);
+    }).reduce((sum, g) => sum + (g.approved_amount || 0), 0);
     const submittedAmount = grants.filter(g => {
       const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
       return hebrewStatus === 'הוגש';
