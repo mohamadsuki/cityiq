@@ -219,6 +219,47 @@ export default function BudgetAuthorizationsPage() {
     }, 100);
   };
 
+  // Function to filter authorizations by specific month/year
+  const handleFilterByMonth = (targetDate: Date, monthYear: string) => {
+    console.log('🔍 Filtering by specific month:', monthYear, 'Target date:', targetDate);
+    console.log('🔍 Total authorizations:', authorizations.length);
+    
+    const targetMonth = targetDate.getMonth();
+    const targetYear = targetDate.getFullYear();
+    
+    const filtered = authorizations.filter(auth => {
+      if (!auth.valid_until) {
+        console.log('⚠️ Authorization without valid_until date:', auth.authorization_number);
+        return false;
+      }
+      
+      const validUntil = new Date(auth.valid_until);
+      const authMonth = validUntil.getMonth();
+      const authYear = validUntil.getFullYear();
+      
+      const matches = authMonth === targetMonth && authYear === targetYear;
+      if (matches) {
+        console.log('✅ Month match found:', auth.authorization_number, 'Valid until:', auth.valid_until);
+      }
+      
+      return matches;
+    });
+    
+    console.log('🔍 Filtered results for month:', filtered.length, 'authorizations');
+    console.log('🔍 Setting filtered data and month filter:', monthYear);
+    
+    setFilteredAuthorizations(filtered);
+    setFilterCategory(`חודש ${monthYear}`);
+    
+    // Scroll to table after a short delay
+    setTimeout(() => {
+      const tableElement = document.querySelector('[data-testid="authorizations-table"]');
+      if (tableElement) {
+        tableElement.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
   // Function to clear filter
   const clearFilter = () => {
     setFilteredAuthorizations([]);
@@ -1410,18 +1451,24 @@ export default function BudgetAuthorizationsPage() {
                             });
                             setActiveTooltip(data);
                           }}
-                        >
-                          {timelineData.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`} 
-                              fill={`url(#gradient-${index})`}
-                              className="hover:opacity-80 transition-all duration-300 cursor-pointer"
-                              style={{
-                                filter: `drop-shadow(${entry.shadow})`,
-                                animation: `fade-in 0.6s ease-out ${entry.animationDelay} both`
-                              }}
-                            />
-                          ))}
+                         >
+                           {timelineData.map((entry, index) => (
+                             <Cell 
+                               key={`cell-${index}`} 
+                               fill={`url(#gradient-${index})`}
+                               className="hover:opacity-80 transition-all duration-300 cursor-pointer"
+                               style={{
+                                 filter: `drop-shadow(${entry.shadow})`,
+                                 animation: `fade-in 0.6s ease-out ${entry.animationDelay} both`
+                               }}
+                               onClick={() => {
+                                 // Filter by specific month when clicking on bar
+                                 console.log('🖱️ Cell clicked for month:', entry.monthYear, 'Date:', entry.date);
+                                 handleFilterByMonth(entry.date, entry.monthYear);
+                                 setActiveTooltip(null);
+                               }}
+                             />
+                           ))}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
