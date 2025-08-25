@@ -1230,37 +1230,44 @@ export default function BudgetAuthorizationsPage() {
                 if (timelineData.length === 0) {
                   return (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
-                      אין נתונים להצגה
+                      אין נתונים להצגה - {authorizations.length} הרשאות נמצאו
                     </div>
                   );
                 }
 
+                console.log('Timeline data:', timelineData);
+
                 return (
                   <div className="relative w-full h-full">
+                    <div className="mb-2 text-xs text-gray-500">
+                      Debug: {timelineData.length} תקופות, {authorizations.length} הרשאות כולל
+                    </div>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={timelineData}
                         layout="horizontal"
-                        margin={{ top: 20, right: 50, left: 130, bottom: 20 }}
-                        barCategoryGap="20%"
+                        margin={{ top: 20, right: 30, left: 140, bottom: 20 }}
+                        barCategoryGap="15%"
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
                           type="number"
                           tick={{ fontSize: 12, fill: '#64748b' }}
+                          tickLine={false}
+                          axisLine={{ stroke: '#e2e8f0' }}
                           label={{ 
                             value: 'מספר הרשאות', 
                             position: 'insideBottom',
                             offset: -5,
-                            style: { textAnchor: 'middle', fill: '#64748b' }
+                            style: { textAnchor: 'middle', fill: '#64748b', fontSize: '12px' }
                           }}
-                          domain={[0, Math.max(...timelineData.map(d => d.count)) + 1]}
+                          domain={[0, 'dataMax']}
                         />
                         <YAxis 
                           type="category"
                           dataKey="dateLabel"
-                          tick={{ fontSize: 11, fill: '#64748b' }}
-                          width={120}
+                          tick={{ fontSize: 10, fill: '#64748b' }}
+                          width={130}
                           interval={0}
                           axisLine={false}
                           tickLine={false}
@@ -1344,9 +1351,8 @@ export default function BudgetAuthorizationsPage() {
                         />
                         <Bar 
                           dataKey="count" 
-                          fill="#3b82f6"
-                          barSize={12}
-                          radius={[0, 3, 3, 0]}
+                          barSize={10}
+                          radius={[0, 4, 4, 0]}
                         >
                           {timelineData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
