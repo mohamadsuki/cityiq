@@ -71,17 +71,23 @@ export default function RegularBudgetPage() {
 
       console.log("📊 Raw regular budget data from DB:", data);
 
-      const transformedData: RegularBudgetItem[] = (data || []).map(item => ({
-        id: item.id,
-        category_type: item.category_type,
-        category_name: item.category_name,
-        budget_amount: item.budget_amount || 0,
-        actual_amount: item.actual_amount || 0, // תקציב יחסי לתקופה
-        cumulative_execution: item.cumulative_execution || 0, // ביצוע מצטבר
-        year: item.year,
-        budget_deviation: (item.cumulative_execution || 0) - (item.actual_amount || 0), // סטיה מהתקציב
-        budget_deviation_percentage: (item.actual_amount || 0) !== 0 ? (((item.cumulative_execution || 0) - (item.actual_amount || 0)) / (item.actual_amount || 0)) * 100 : 0 // סטיה מהתקציב ב%
-      }));
+      const transformedData: RegularBudgetItem[] = (data || []).map(item => {
+        const budgetDeviation = (item.cumulative_execution || 0) - (item.actual_amount || 0);
+        const budgetDeviationPercentage = (item.actual_amount || 0) !== 0 ? 
+          (budgetDeviation / (item.actual_amount || 0)) * 100 : 0;
+
+        return {
+          id: item.id,
+          category_type: item.category_type,
+          category_name: item.category_name,
+          budget_amount: item.budget_amount || 0,
+          actual_amount: item.actual_amount || 0, // תקציב יחסי לתקופה
+          cumulative_execution: item.cumulative_execution || 0, // ביצוע מצטבר
+          year: item.year,
+          budget_deviation: budgetDeviation, // סטיה מהתקציב
+          budget_deviation_percentage: budgetDeviationPercentage // סטיה מהתקציב ב%
+        };
+      });
 
       console.log("🔧 Transformed regular budget data:", transformedData);
 
@@ -149,9 +155,28 @@ export default function RegularBudgetPage() {
     }
   };
 
+  // Helper functions to identify different types of rows
+  const isMainSummaryRow = (categoryName: string) => {
+    return categoryName === 'סה"כ הכנסות' || categoryName === 'סה"כ הוצאות';
+  };
+
+  const isSubSummaryRow = (categoryName: string) => {
+    return categoryName.includes('סה"כ') && !isMainSummaryRow(categoryName);
+  };
+
+  const isHeaderRow = (categoryName: string) => {
+    return categoryName.includes('לתקופה:') || categoryName === 'הכנסות' || categoryName === 'הוצאות';
+  };
+
+  const isDetailRow = (item: RegularBudgetItem) => {
+    return !isMainSummaryRow(item.category_name) && 
+           !isSubSummaryRow(item.category_name) && 
+           !isHeaderRow(item.category_name);
+  };
+
   // Prepare chart data
   const incomeChartData = budgetData
-    .filter(item => item.category_type === 'income')
+    .filter(item => item.category_type === 'income' && isDetailRow(item))
     .map(item => ({
       name: item.category_name.length > 15 ? item.category_name.substring(0, 15) + '...' : item.category_name,
       budget: item.budget_amount,
@@ -159,7 +184,7 @@ export default function RegularBudgetPage() {
     }));
 
   const expenseChartData = budgetData
-    .filter(item => item.category_type === 'expense')
+    .filter(item => item.category_type === 'expense' && isDetailRow(item))
     .map(item => ({
       name: item.category_name.length > 15 ? item.category_name.substring(0, 15) + '...' : item.category_name,
       budget: item.budget_amount,
@@ -172,10 +197,18 @@ export default function RegularBudgetPage() {
       header: "שם הקטגוריה",
       cell: ({ row }) => {
         const categoryName = row.getValue("category_name") as string;
-        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
+        
+        let className = "";
+        if (isMainSummaryRow(categoryName)) {
+          className = "font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent border-t-2 border-blue-300 pt-2";
+        } else if (isSubSummaryRow(categoryName)) {
+          className = "font-semibold text-lg text-blue-700 dark:text-blue-300";
+        } else if (isHeaderRow(categoryName)) {
+          className = "font-medium text-gray-600 dark:text-gray-400 italic";
+        }
         
         return (
-          <span className={isSummaryRow ? "font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent" : ""}>
+          <span className={className}>
             {categoryName}
           </span>
         );
@@ -186,12 +219,18 @@ export default function RegularBudgetPage() {
       header: "תקציב מאושר",
       cell: ({ row }) => {
         const categoryName = row.getValue("category_name") as string;
-        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
-        const amount = row.getValue("budget_amount");
+        const amount = row.getValue("budget_amount") as number;
+        
+        let className = "";
+        if (isMainSummaryRow(categoryName)) {
+          className = "font-bold text-xl border-t-2 border-blue-300 pt-2";
+        } else if (isSubSummaryRow(categoryName)) {
+          className = "font-semibold text-lg";
+        }
         
         return (
-          <span className={isSummaryRow ? "font-bold text-lg" : ""}>
-            {formatCurrency(amount as number)}
+          <span className={className}>
+            {formatCurrency(amount)}
           </span>
         );
       },
@@ -201,12 +240,18 @@ export default function RegularBudgetPage() {
       header: "תקציב יחסי לתקופה",
       cell: ({ row }) => {
         const categoryName = row.getValue("category_name") as string;
-        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
-        const amount = row.getValue("actual_amount");
+        const amount = row.getValue("actual_amount") as number;
+        
+        let className = "";
+        if (isMainSummaryRow(categoryName)) {
+          className = "font-bold text-xl border-t-2 border-blue-300 pt-2";
+        } else if (isSubSummaryRow(categoryName)) {
+          className = "font-semibold text-lg";
+        }
         
         return (
-          <span className={isSummaryRow ? "font-bold text-lg" : ""}>
-            {formatCurrency(amount as number)}
+          <span className={className}>
+            {formatCurrency(amount)}
           </span>
         );
       },
@@ -216,12 +261,18 @@ export default function RegularBudgetPage() {
       header: "ביצוע מצטבר",
       cell: ({ row }) => {
         const categoryName = row.getValue("category_name") as string;
-        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
-        const amount = row.getValue("cumulative_execution");
+        const amount = row.getValue("cumulative_execution") as number;
+        
+        let className = "";
+        if (isMainSummaryRow(categoryName)) {
+          className = "font-bold text-xl border-t-2 border-blue-300 pt-2";
+        } else if (isSubSummaryRow(categoryName)) {
+          className = "font-semibold text-lg";
+        }
         
         return (
-          <span className={isSummaryRow ? "font-bold text-lg" : ""}>
-            {formatCurrency(amount as number)}
+          <span className={className}>
+            {formatCurrency(amount)}
           </span>
         );
       },
@@ -231,11 +282,17 @@ export default function RegularBudgetPage() {
       header: "סטיה מהתקציב",
       cell: ({ row }) => {
         const categoryName = row.getValue("category_name") as string;
-        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
         const deviation = row.getValue("budget_deviation") as number;
         
+        let className = `${deviation >= 0 ? "text-green-600" : "text-red-600"}`;
+        if (isMainSummaryRow(categoryName)) {
+          className += " font-bold text-xl border-t-2 border-blue-300 pt-2";
+        } else if (isSubSummaryRow(categoryName)) {
+          className += " font-semibold text-lg";
+        }
+        
         return (
-          <span className={`${deviation >= 0 ? "text-green-600" : "text-red-600"} ${isSummaryRow ? "font-bold text-lg" : ""}`}>
+          <span className={className}>
             {formatCurrency(deviation)}
           </span>
         );
@@ -246,11 +303,17 @@ export default function RegularBudgetPage() {
       header: "סטיה מהתקציב ב%",
       cell: ({ row }) => {
         const categoryName = row.getValue("category_name") as string;
-        const isSummaryRow = categoryName.includes('סה"כ') || categoryName.includes('סך') || categoryName.includes('סיכום');
         const percentage = row.getValue("budget_deviation_percentage") as number;
         
+        let className = `${percentage >= 0 ? "text-green-600" : "text-red-600"}`;
+        if (isMainSummaryRow(categoryName)) {
+          className += " font-bold text-xl border-t-2 border-blue-300 pt-2";
+        } else if (isSubSummaryRow(categoryName)) {
+          className += " font-semibold text-lg";
+        }
+        
         return (
-          <span className={`${percentage >= 0 ? "text-green-600" : "text-red-600"} ${isSummaryRow ? "font-bold text-lg" : ""}`}>
+          <span className={className}>
             {percentage.toFixed(1)}%
           </span>
         );
@@ -258,84 +321,54 @@ export default function RegularBudgetPage() {
     },
   ];
 
-  // Calculate totals - Use the summary rows from Excel if they exist, otherwise calculate
-  const incomeSummaryRow = budgetData.find(item => 
+  // Smart mapping of summary rows based on actual Excel structure
+  const mainIncomeSummaryRow = budgetData.find(item => 
     item.category_type === 'income' && 
-    (item.category_name.includes('סה"כ הכנסות') || item.category_name.includes('סך הכנסות'))
+    item.category_name === 'סה"כ הכנסות'
   );
   
-  const expenseSummaryRow = budgetData.find(item => 
+  const mainExpenseSummaryRow = budgetData.find(item => 
     item.category_type === 'expense' && 
-    (item.category_name.includes('סה"כ הוצאות') || item.category_name.includes('סך הוצאות'))
+    item.category_name === 'סה"כ הוצאות'
   );
 
-  // Add calculated fields to summary rows if they exist
-  const processedIncomeSummary = incomeSummaryRow ? {
-    ...incomeSummaryRow,
-    budget_deviation: (incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0),
-    budget_deviation_percentage: (incomeSummaryRow.actual_amount || 0) !== 0 ? (((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) / (incomeSummaryRow.actual_amount || 0)) * 100 : 0
-  } : null;
-
-  const processedExpenseSummary = expenseSummaryRow ? {
-    ...expenseSummaryRow,
-    budget_deviation: (expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0),
-    budget_deviation_percentage: (expenseSummaryRow.actual_amount || 0) !== 0 ? (((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) / (expenseSummaryRow.actual_amount || 0)) * 100 : 0
-  } : null;
-
-  // Filter out summary rows for calculations but keep them for display
-  const isIncomeDetailRow = (item: RegularBudgetItem) => {
-    return item.category_type === 'income' && 
-           !item.category_name.includes('סה"כ') && 
-           !item.category_name.includes('סך') &&
-           !item.category_name.includes('סיכום') &&
-           !item.category_name.toLowerCase().includes('total');
-  };
-
-  const isExpenseDetailRow = (item: RegularBudgetItem) => {
-    return item.category_type === 'expense' && 
-           !item.category_name.includes('סה"כ') && 
-           !item.category_name.includes('סך') &&
-           !item.category_name.includes('סיכום') &&
-           !item.category_name.toLowerCase().includes('total');
-  };
-
-  // Use summary rows if available, otherwise calculate from individual items
-  const totalIncome = processedIncomeSummary 
-    ? processedIncomeSummary.actual_amount 
-    : budgetData.filter(isIncomeDetailRow).reduce((sum, item) => sum + item.actual_amount, 0);
-
-  const totalExpenses = processedExpenseSummary 
-    ? processedExpenseSummary.actual_amount 
-    : budgetData.filter(isExpenseDetailRow).reduce((sum, item) => sum + item.actual_amount, 0);
-
-  const totalBudgetIncome = processedIncomeSummary 
-    ? processedIncomeSummary.budget_amount 
-    : budgetData.filter(isIncomeDetailRow).reduce((sum, item) => sum + item.budget_amount, 0);
-
-  const totalBudgetExpenses = processedExpenseSummary 
-    ? processedExpenseSummary.budget_amount 
-    : budgetData.filter(isExpenseDetailRow).reduce((sum, item) => sum + item.budget_amount, 0);
-
-  const totalIncomeExecution = processedIncomeSummary 
-    ? processedIncomeSummary.cumulative_execution 
-    : budgetData.filter(isIncomeDetailRow).reduce((sum, item) => sum + (item.cumulative_execution || 0), 0);
-
-  const totalExpenseExecution = processedExpenseSummary 
-    ? processedExpenseSummary.cumulative_execution 
-    : budgetData.filter(isExpenseDetailRow).reduce((sum, item) => sum + (item.cumulative_execution || 0), 0);
+  // Use the main summary rows for totals, fallback to calculations if not found
+  const totalIncome = mainIncomeSummaryRow?.actual_amount || 
+    budgetData.filter(item => item.category_type === 'income' && isDetailRow(item))
+      .reduce((sum, item) => sum + item.actual_amount, 0);
+      
+  const totalExpenses = mainExpenseSummaryRow?.actual_amount || 
+    budgetData.filter(item => item.category_type === 'expense' && isDetailRow(item))
+      .reduce((sum, item) => sum + item.actual_amount, 0);
+      
+  const totalBudgetIncome = mainIncomeSummaryRow?.budget_amount || 
+    budgetData.filter(item => item.category_type === 'income' && isDetailRow(item))
+      .reduce((sum, item) => sum + item.budget_amount, 0);
+      
+  const totalBudgetExpenses = mainExpenseSummaryRow?.budget_amount || 
+    budgetData.filter(item => item.category_type === 'expense' && isDetailRow(item))
+      .reduce((sum, item) => sum + item.budget_amount, 0);
+      
+  const totalIncomeExecution = mainIncomeSummaryRow?.cumulative_execution || 
+    budgetData.filter(item => item.category_type === 'income' && isDetailRow(item))
+      .reduce((sum, item) => sum + (item.cumulative_execution || 0), 0);
+      
+  const totalExpenseExecution = mainExpenseSummaryRow?.cumulative_execution || 
+    budgetData.filter(item => item.category_type === 'expense' && isDetailRow(item))
+      .reduce((sum, item) => sum + (item.cumulative_execution || 0), 0);
 
   // Debug log for totals with more detail
   console.log("💰 Total calculations:", {
-    processedIncomeSummary,
-    processedExpenseSummary,
+    mainIncomeSummaryRow,
+    mainExpenseSummaryRow,
     totalIncome,
     totalExpenses,
     totalBudgetIncome,
     totalBudgetExpenses,
     totalIncomeExecution,
     totalExpenseExecution,
-    incomeDetailRowsCount: budgetData.filter(isIncomeDetailRow).length,
-    expenseDetailRowsCount: budgetData.filter(isExpenseDetailRow).length
+    incomeDetailRowsCount: budgetData.filter(item => item.category_type === 'income' && isDetailRow(item)).length,
+    expenseDetailRowsCount: budgetData.filter(item => item.category_type === 'expense' && isDetailRow(item)).length
   });
 
   if (loading) {
@@ -376,7 +409,7 @@ export default function RegularBudgetPage() {
             <div className="p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-emerald-600 dark:text-emerald-400 font-medium mb-1">תקציב יחסי לתקופה</div>
               <div className="text-xl font-bold text-blue-700 dark:text-blue-300">
-                {processedIncomeSummary ? formatCurrency(processedIncomeSummary.actual_amount) : '₪0'}
+                {formatCurrency(totalIncome)}
               </div>
             </div>
           </CardContent>
@@ -398,7 +431,7 @@ export default function RegularBudgetPage() {
             <div className="p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-rose-600 dark:text-rose-400 font-medium mb-1">תקציב יחסי לתקופה</div>
               <div className="text-xl font-bold text-orange-700 dark:text-orange-300">
-                {processedExpenseSummary ? formatCurrency(processedExpenseSummary.actual_amount) : '₪0'}
+                {formatCurrency(totalExpenses)}
               </div>
             </div>
           </CardContent>
@@ -446,135 +479,51 @@ export default function RegularBudgetPage() {
           <CardContent className="space-y-3">
             <div className="space-y-2">
               <div className={`flex justify-between items-center p-2 rounded-lg ${
-                processedIncomeSummary && ((processedIncomeSummary.cumulative_execution || 0) - (processedIncomeSummary.actual_amount || 0)) >= 0 
+                ((totalIncomeExecution || 0) - (totalIncome || 0)) >= 0 
                   ? 'bg-emerald-100/50 dark:bg-emerald-900/20' 
                   : 'bg-rose-100/50 dark:bg-rose-900/20'
               }`}>
                 <span className="text-sm font-medium">הכנסות</span>
                 <div className="text-left">
                   <div className={`text-lg font-bold ${
-                    processedIncomeSummary && ((processedIncomeSummary.cumulative_execution || 0) - (processedIncomeSummary.actual_amount || 0)) >= 0 
+                    ((totalIncomeExecution || 0) - (totalIncome || 0)) >= 0 
                       ? 'text-emerald-700 dark:text-emerald-300' 
                       : 'text-rose-700 dark:text-rose-300'
                   }`}>
-                    {processedIncomeSummary ? formatCurrency(Math.abs((processedIncomeSummary.cumulative_execution || 0) - (processedIncomeSummary.actual_amount || 0))) : '₪0'}
+                    {formatCurrency((totalIncomeExecution || 0) - (totalIncome || 0))}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
-                    ({processedIncomeSummary && (processedIncomeSummary.actual_amount || 0) > 0 ? ((((processedIncomeSummary.cumulative_execution || 0) - (processedIncomeSummary.actual_amount || 0)) / (processedIncomeSummary.actual_amount || 1)) * 100).toFixed(1) : 0}%)
+                  <div className={`text-sm ${
+                    ((totalIncomeExecution || 0) - (totalIncome || 0)) >= 0 
+                      ? 'text-emerald-600 dark:text-emerald-400' 
+                      : 'text-rose-600 dark:text-rose-400'
+                  }`}>
+                    {totalIncome !== 0 ? (((totalIncomeExecution || 0) - (totalIncome || 0)) / (totalIncome || 1) * 100).toFixed(1) : '0.0'}%
                   </div>
                 </div>
               </div>
               <div className={`flex justify-between items-center p-2 rounded-lg ${
-                processedExpenseSummary && ((processedExpenseSummary.cumulative_execution || 0) - (processedExpenseSummary.actual_amount || 0)) <= 0 
+                ((totalExpenseExecution || 0) - (totalExpenses || 0)) >= 0 
                   ? 'bg-emerald-100/50 dark:bg-emerald-900/20' 
                   : 'bg-rose-100/50 dark:bg-rose-900/20'
               }`}>
                 <span className="text-sm font-medium">הוצאות</span>
                 <div className="text-left">
                   <div className={`text-lg font-bold ${
-                    processedExpenseSummary && ((processedExpenseSummary.cumulative_execution || 0) - (processedExpenseSummary.actual_amount || 0)) <= 0 
+                    ((totalExpenseExecution || 0) - (totalExpenses || 0)) >= 0 
                       ? 'text-emerald-700 dark:text-emerald-300' 
                       : 'text-rose-700 dark:text-rose-300'
                   }`}>
-                    {processedExpenseSummary ? formatCurrency(Math.abs((processedExpenseSummary.cumulative_execution || 0) - (processedExpenseSummary.actual_amount || 0))) : '₪0'}
+                    {formatCurrency((totalExpenseExecution || 0) - (totalExpenses || 0))}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">
-                    ({processedExpenseSummary && (processedExpenseSummary.actual_amount || 0) > 0 ? ((((processedExpenseSummary.cumulative_execution || 0) - (processedExpenseSummary.actual_amount || 0)) / (processedExpenseSummary.actual_amount || 1)) * 100).toFixed(1) : 0}%)
+                  <div className={`text-sm ${
+                    ((totalExpenseExecution || 0) - (totalExpenses || 0)) >= 0 
+                      ? 'text-emerald-600 dark:text-emerald-400' 
+                      : 'text-rose-600 dark:text-rose-400'
+                  }`}>
+                    {totalExpenses !== 0 ? (((totalExpenseExecution || 0) - (totalExpenses || 0)) / (totalExpenses || 1) * 100).toFixed(1) : '0.0'}%
                   </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Performance Insights Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-0 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/20 dark:to-indigo-950/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in group">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-sky-800 dark:text-sky-200">ביצוע מצטבר הכנסות</CardTitle>
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                <TrendingUp className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm border border-sky-200/50 dark:border-sky-700/50">
-              <div className="text-4xl font-bold text-sky-700 dark:text-sky-300 mb-2">
-                {incomeSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 ? 
-                  (((incomeSummaryRow.cumulative_execution || 0) / (incomeSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%
-              </div>
-              <div className="text-sm font-medium text-sky-600 dark:text-sky-400">ביצוע בפועל מתוך תקציב יחסי</div>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-100/60 to-green-100/60 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg">
-              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">הפרש הכנסות-הוצאות</span>
-              <span className="text-lg font-bold text-emerald-800 dark:text-emerald-200">
-                {formatCurrency(((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)))}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-orange-950/30 dark:via-red-950/20 dark:to-pink-950/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in group">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-orange-800 dark:text-orange-200">ביצוע מצטבר הוצאות</CardTitle>
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                <TrendingDown className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm border border-orange-200/50 dark:border-orange-700/50">
-              <div className="text-4xl font-bold text-orange-700 dark:text-orange-300 mb-2">
-                {expenseSummaryRow && (expenseSummaryRow.actual_amount || 0) > 0 ? 
-                  (((expenseSummaryRow.cumulative_execution || 0) / (expenseSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%
-              </div>
-              <div className="text-sm font-medium text-orange-600 dark:text-orange-400">ביצוע בפועל מתוך תקציב יחסי</div>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-100/60 to-green-100/60 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg">
-              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">הפרש הכנסות-הוצאות</span>
-              <span className="text-lg font-bold text-emerald-800 dark:text-emerald-200">
-                {formatCurrency(((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)))}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-0 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 dark:from-violet-950/30 dark:via-purple-950/20 dark:to-fuchsia-950/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in group">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-semibold text-violet-800 dark:text-violet-200">עודף/גירעון</CardTitle>
-              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                <DollarSign className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-center p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm border border-violet-200/50 dark:border-violet-700/50">
-              <div className={`text-4xl font-bold mb-2 ${
-                ((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)) >= 0 
-                  ? 'text-emerald-700 dark:text-emerald-300' 
-                  : 'text-rose-700 dark:text-rose-300'
-              }`}>
-                {formatCurrency(Math.abs((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)))}
-              </div>
-              <div className="text-sm font-medium text-violet-600 dark:text-violet-400">
-                {((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)) >= 0 ? 'עודף' : 'גירעון'} בביצוע
-              </div>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-violet-100/60 to-purple-100/60 dark:from-violet-900/20 dark:to-purple-900/20 rounded-lg">
-              <span className="text-sm font-medium text-violet-700 dark:text-violet-300">אחוז הפרש</span>
-              <span className={`text-2xl font-bold ${
-                ((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)) >= 0 
-                  ? 'text-emerald-700 dark:text-emerald-300' 
-                  : 'text-rose-700 dark:text-rose-300'
-              }`}>
-                {incomeSummaryRow && expenseSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 && (expenseSummaryRow.actual_amount || 0) > 0 ? 
-                  ((((incomeSummaryRow.cumulative_execution || 0) / (incomeSummaryRow.actual_amount || 1)) - 
-                    ((expenseSummaryRow.cumulative_execution || 0) / (expenseSummaryRow.actual_amount || 1))) * 100).toFixed(1) : 0}%
-              </span>
             </div>
           </CardContent>
         </Card>
@@ -687,12 +636,7 @@ export default function RegularBudgetPage() {
             <div className="flex justify-between items-center">
               <CardTitle className="text-xl font-bold text-emerald-700 dark:text-emerald-300">טבלת הכנסות</CardTitle>
               <ExportButtons 
-                data={budgetData.filter(item => 
-                  item.category_type === 'income' && 
-                  !item.category_name.includes('סה"כ') && 
-                  !item.category_name.includes('סך') &&
-                  !item.category_name.includes('סיכום')
-                )} 
+                data={budgetData.filter(item => item.category_type === 'income')} 
                 fileBaseName="income-budget"
               />
             </div>
@@ -704,41 +648,6 @@ export default function RegularBudgetPage() {
                 columns={columns} 
                 data={budgetData.filter(item => item.category_type === 'income')} 
               />
-              
-              {/* Income Summary */}
-              {processedIncomeSummary && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                  <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-200 mb-3">סיכום הכנסות</h3>
-                  <div className="grid grid-cols-6 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">{processedIncomeSummary.category_name}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold">{formatCurrency(processedIncomeSummary.budget_amount)}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold">{formatCurrency(processedIncomeSummary.actual_amount)}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold">{formatCurrency(processedIncomeSummary.cumulative_execution || 0)}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className={`font-bold ${
-                        processedIncomeSummary.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
-                      }`}>
-                        {formatCurrency(processedIncomeSummary.budget_deviation)}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className={`font-bold ${
-                        processedIncomeSummary.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
-                      }`}>
-                        {processedIncomeSummary.budget_deviation_percentage.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
@@ -749,12 +658,7 @@ export default function RegularBudgetPage() {
             <div className="flex justify-between items-center">
               <CardTitle className="text-xl font-bold text-rose-700 dark:text-rose-300">טבלת הוצאות</CardTitle>
               <ExportButtons 
-                data={budgetData.filter(item => 
-                  item.category_type === 'expense' && 
-                  !item.category_name.includes('סה"כ') && 
-                  !item.category_name.includes('סך') &&
-                  !item.category_name.includes('סיכום')
-                )} 
+                data={budgetData.filter(item => item.category_type === 'expense')} 
                 fileBaseName="expenses-budget"
               />
             </div>
@@ -766,41 +670,6 @@ export default function RegularBudgetPage() {
                 columns={columns} 
                 data={budgetData.filter(item => item.category_type === 'expense')} 
               />
-              
-              {/* Expenses Summary */}
-              {processedExpenseSummary && (
-                <div className="mt-6 p-4 bg-gradient-to-r from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 rounded-lg border border-rose-200 dark:border-rose-800">
-                  <h3 className="text-lg font-bold text-rose-800 dark:text-rose-200 mb-3">סיכום הוצאות</h3>
-                  <div className="grid grid-cols-6 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium">{processedExpenseSummary.category_name}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold">{formatCurrency(processedExpenseSummary.budget_amount)}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold">{formatCurrency(processedExpenseSummary.actual_amount)}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-bold">{formatCurrency(processedExpenseSummary.cumulative_execution || 0)}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className={`font-bold ${
-                        processedExpenseSummary.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
-                      }`}>
-                        {formatCurrency(processedExpenseSummary.budget_deviation)}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className={`font-bold ${
-                        processedExpenseSummary.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
-                      }`}>
-                        {processedExpenseSummary.budget_deviation_percentage.toFixed(1)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </CardContent>
         </Card>
