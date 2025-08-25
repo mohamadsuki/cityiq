@@ -291,8 +291,11 @@ export default function RegularBudgetPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{formatCurrency(totalBudgetIncome)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-lg font-semibold text-blue-600 mt-1">
               תקציב יחסי: {incomeSummaryRow ? formatCurrency(incomeSummaryRow.actual_amount) : '₪0'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              מתוך התקציב המאושר
             </p>
           </CardContent>
         </Card>
@@ -304,8 +307,11 @@ export default function RegularBudgetPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{formatCurrency(totalBudgetExpenses)}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-lg font-semibold text-orange-600 mt-1">
               תקציב יחסי: {expenseSummaryRow ? formatCurrency(expenseSummaryRow.actual_amount) : '₪0'}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              מתוך התקציב המאושר
             </p>
           </CardContent>
         </Card>
