@@ -141,7 +141,7 @@ ${currentPeriod}
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-nano-2025-08-07',
+        model: 'gpt-4o-mini',
         messages: [
           { 
             role: 'system', 
@@ -149,13 +149,14 @@ ${currentPeriod}
           },
           { role: 'user', content: prompt }
         ],
-        max_completion_tokens: 1500,
+        max_tokens: 1500,
+        temperature: 0.7
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
+      console.error('OpenAI API error:', response.status, errorText);
       return new Response(JSON.stringify({ 
         error: `OpenAI API error: ${response.status}`,
         details: errorText
@@ -166,11 +167,21 @@ ${currentPeriod}
     }
 
     const data = await response.json();
+    console.log('OpenAI response received:', {
+      status: response.status,
+      hasChoices: !!data.choices,
+      choicesLength: data.choices?.length,
+      hasContent: !!data.choices?.[0]?.message?.content,
+      contentLength: data.choices?.[0]?.message?.content?.length
+    });
+    
     const analysis = data.choices?.[0]?.message?.content;
     
-    if (!analysis) {
+    if (!analysis || analysis.trim().length === 0) {
+      console.error('No valid analysis content:', { analysis, data });
       return new Response(JSON.stringify({ 
-        error: 'No analysis content received' 
+        error: 'No analysis content received',
+        debug: { hasData: !!data, hasChoices: !!data.choices, response: data }
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

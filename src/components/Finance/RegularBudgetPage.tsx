@@ -206,6 +206,7 @@ export default function RegularBudgetPage() {
     }
 
     setIsAnalyzing(true);
+    console.log('🚀 Starting manual budget analysis...');
     try {
       const incomeDeviation = totalIncomeExecution - totalIncome;
       const expenseDeviation = totalExpenseExecution - totalExpenses;
