@@ -79,21 +79,33 @@ export default function CollectionPage() {
       console.log('📊 Number of records:', data?.length || 0);
 
       // Convert to proper format and clean up property types
-      const processedData: CollectionData[] = (data || []).map(item => {
-        console.log('🔧 Processing item:', item);
-        return {
-          id: item.id,
-          property_type: item.property_type || 'לא מוגדר',
-          annual_budget: Number(item.annual_budget) || 0,
-          relative_budget: Number(item.relative_budget) || 0,
-          actual_collection: Number(item.actual_collection) || 0,
-          surplus_deficit: Number(item.surplus_deficit) || 0,
-          year: item.year,
-          created_at: item.created_at
-        };
-      });
+      const processedData: CollectionData[] = (data || [])
+        .filter(item => {
+          // Filter out empty records (records with no property type and all values are 0)
+          const hasPropertyType = item.property_type && item.property_type.trim() !== '';
+          const hasValues = (item.annual_budget > 0 || item.relative_budget > 0 || item.actual_collection > 0);
+          const isValid = hasPropertyType || hasValues;
+          
+          if (!isValid) {
+            console.log('🚫 Filtering out empty record:', item);
+          }
+          return isValid;
+        })
+        .map(item => {
+          console.log('🔧 Processing valid item:', item);
+          return {
+            id: item.id,
+            property_type: item.property_type || 'לא מוגדר',
+            annual_budget: Number(item.annual_budget) || 0,
+            relative_budget: Number(item.relative_budget) || 0,
+            actual_collection: Number(item.actual_collection) || 0,
+            surplus_deficit: Number(item.surplus_deficit) || 0,
+            year: item.year,
+            created_at: item.created_at
+          };
+        });
 
-      console.log('🔧 Processed collection data:', processedData);
+      console.log('🔧 Processed collection data (after filtering):', processedData);
 
       // Consolidate duplicate property types by summing their values
       const consolidatedData: Record<string, CollectionData> = {};
