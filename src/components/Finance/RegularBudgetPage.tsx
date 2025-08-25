@@ -282,39 +282,60 @@ export default function RegularBudgetPage() {
     budget_deviation_percentage: (expenseSummaryRow.actual_amount || 0) !== 0 ? (((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) / (expenseSummaryRow.actual_amount || 0)) * 100 : 0
   } : null;
 
+  // Filter out summary rows for calculations but keep them for display
+  const isIncomeDetailRow = (item: RegularBudgetItem) => {
+    return item.category_type === 'income' && 
+           !item.category_name.includes('סה"כ') && 
+           !item.category_name.includes('סך') &&
+           !item.category_name.includes('סיכום') &&
+           !item.category_name.toLowerCase().includes('total');
+  };
+
+  const isExpenseDetailRow = (item: RegularBudgetItem) => {
+    return item.category_type === 'expense' && 
+           !item.category_name.includes('סה"כ') && 
+           !item.category_name.includes('סך') &&
+           !item.category_name.includes('סיכום') &&
+           !item.category_name.toLowerCase().includes('total');
+  };
+
   // Use summary rows if available, otherwise calculate from individual items
   const totalIncome = processedIncomeSummary 
     ? processedIncomeSummary.actual_amount 
-    : budgetData
-        .filter(item => item.category_type === 'income' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
-        .reduce((sum, item) => sum + item.actual_amount, 0);
+    : budgetData.filter(isIncomeDetailRow).reduce((sum, item) => sum + item.actual_amount, 0);
 
   const totalExpenses = processedExpenseSummary 
     ? processedExpenseSummary.actual_amount 
-    : budgetData
-        .filter(item => item.category_type === 'expense' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
-        .reduce((sum, item) => sum + item.actual_amount, 0);
+    : budgetData.filter(isExpenseDetailRow).reduce((sum, item) => sum + item.actual_amount, 0);
 
   const totalBudgetIncome = processedIncomeSummary 
     ? processedIncomeSummary.budget_amount 
-    : budgetData
-        .filter(item => item.category_type === 'income' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
-        .reduce((sum, item) => sum + item.budget_amount, 0);
+    : budgetData.filter(isIncomeDetailRow).reduce((sum, item) => sum + item.budget_amount, 0);
 
   const totalBudgetExpenses = processedExpenseSummary 
     ? processedExpenseSummary.budget_amount 
-    : budgetData
-        .filter(item => item.category_type === 'expense' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
-        .reduce((sum, item) => sum + item.budget_amount, 0);
+    : budgetData.filter(isExpenseDetailRow).reduce((sum, item) => sum + item.budget_amount, 0);
 
-  // Debug log for totals
+  const totalIncomeExecution = processedIncomeSummary 
+    ? processedIncomeSummary.cumulative_execution 
+    : budgetData.filter(isIncomeDetailRow).reduce((sum, item) => sum + (item.cumulative_execution || 0), 0);
+
+  const totalExpenseExecution = processedExpenseSummary 
+    ? processedExpenseSummary.cumulative_execution 
+    : budgetData.filter(isExpenseDetailRow).reduce((sum, item) => sum + (item.cumulative_execution || 0), 0);
+
+  // Debug log for totals with more detail
   console.log("💰 Total calculations:", {
     processedIncomeSummary,
     processedExpenseSummary,
     totalIncome,
     totalExpenses,
     totalBudgetIncome,
-    totalBudgetExpenses
+    totalBudgetExpenses,
+    totalIncomeExecution,
+    totalExpenseExecution,
+    incomeDetailRowsCount: budgetData.filter(isIncomeDetailRow).length,
+    expenseDetailRowsCount: budgetData.filter(isExpenseDetailRow).length
   });
 
   if (loading) {
@@ -397,13 +418,13 @@ export default function RegularBudgetPage() {
               <div className="flex justify-between items-center p-2 bg-emerald-100/50 dark:bg-emerald-900/20 rounded-lg">
                 <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">הכנסות</span>
                 <span className="text-lg font-bold text-emerald-800 dark:text-emerald-200">
-                  {processedIncomeSummary ? formatCurrency(processedIncomeSummary.cumulative_execution || 0) : '₪0'}
+                  {formatCurrency(totalIncomeExecution)}
                 </span>
               </div>
               <div className="flex justify-between items-center p-2 bg-rose-100/50 dark:bg-rose-900/20 rounded-lg">
                 <span className="text-sm font-medium text-rose-700 dark:text-rose-300">הוצאות</span>
                 <span className="text-lg font-bold text-rose-800 dark:text-rose-200">
-                  {processedExpenseSummary ? formatCurrency(processedExpenseSummary.cumulative_execution || 0) : '₪0'}
+                  {formatCurrency(totalExpenseExecution)}
                 </span>
               </div>
             </div>
