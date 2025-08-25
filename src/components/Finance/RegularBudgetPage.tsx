@@ -214,31 +214,50 @@ export default function RegularBudgetPage() {
     },
   ];
 
-  // Calculate totals
-  const totalIncome = budgetData
-    .filter(item => item.category_type === 'income')
-    .reduce((sum, item) => sum + item.actual_amount, 0);
+  // Calculate totals - Use the summary rows from Excel if they exist, otherwise calculate
+  const incomeSummaryRow = budgetData.find(item => 
+    item.category_type === 'income' && 
+    (item.category_name.includes('סה"כ הכנסות') || item.category_name.includes('סך הכנסות'))
+  );
+  
+  const expenseSummaryRow = budgetData.find(item => 
+    item.category_type === 'expense' && 
+    (item.category_name.includes('סה"כ הוצאות') || item.category_name.includes('סך הוצאות'))
+  );
 
-  const totalExpenses = budgetData
-    .filter(item => item.category_type === 'expense')
-    .reduce((sum, item) => sum + item.actual_amount, 0);
+  // Use summary rows if available, otherwise calculate from individual items
+  const totalIncome = incomeSummaryRow 
+    ? incomeSummaryRow.actual_amount 
+    : budgetData
+        .filter(item => item.category_type === 'income' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
+        .reduce((sum, item) => sum + item.actual_amount, 0);
 
-  const totalBudgetIncome = budgetData
-    .filter(item => item.category_type === 'income')
-    .reduce((sum, item) => sum + item.budget_amount, 0);
+  const totalExpenses = expenseSummaryRow 
+    ? expenseSummaryRow.actual_amount 
+    : budgetData
+        .filter(item => item.category_type === 'expense' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
+        .reduce((sum, item) => sum + item.actual_amount, 0);
 
-  const totalBudgetExpenses = budgetData
-    .filter(item => item.category_type === 'expense')
-    .reduce((sum, item) => sum + item.budget_amount, 0);
+  const totalBudgetIncome = incomeSummaryRow 
+    ? incomeSummaryRow.budget_amount 
+    : budgetData
+        .filter(item => item.category_type === 'income' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
+        .reduce((sum, item) => sum + item.budget_amount, 0);
+
+  const totalBudgetExpenses = expenseSummaryRow 
+    ? expenseSummaryRow.budget_amount 
+    : budgetData
+        .filter(item => item.category_type === 'expense' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
+        .reduce((sum, item) => sum + item.budget_amount, 0);
 
   // Debug log for totals
   console.log("💰 Total calculations:", {
+    incomeSummaryRow,
+    expenseSummaryRow,
     totalIncome,
     totalExpenses,
     totalBudgetIncome,
-    totalBudgetExpenses,
-    incomeItems: budgetData.filter(item => item.category_type === 'income'),
-    expenseItems: budgetData.filter(item => item.category_type === 'expense')
+    totalBudgetExpenses
   });
 
   if (loading) {
