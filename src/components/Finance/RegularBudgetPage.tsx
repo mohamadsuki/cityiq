@@ -25,8 +25,8 @@ interface RegularBudgetItem {
   actual_amount: number; // תקציב יחסי לתקופה
   cumulative_execution: number; // ביצוע מצטבר
   year: number;
-  difference: number;
-  percentage: number;
+  budget_deviation: number; // סטיה מהתקציב
+  budget_deviation_percentage: number; // סטיה מהתקציב ב%
 }
 
 export default function RegularBudgetPage() {
@@ -79,8 +79,8 @@ export default function RegularBudgetPage() {
         actual_amount: item.actual_amount || 0, // תקציב יחסי לתקופה
         cumulative_execution: item.cumulative_execution || 0, // ביצוע מצטבר
         year: item.year,
-        difference: (item.cumulative_execution || 0) - (item.budget_amount || 0),
-        percentage: item.budget_amount ? ((item.cumulative_execution || 0) / item.budget_amount) * 100 : 0
+        budget_deviation: (item.cumulative_execution || 0) - (item.actual_amount || 0), // סטיה מהתקציב
+        budget_deviation_percentage: (item.actual_amount || 0) !== 0 ? (((item.cumulative_execution || 0) - (item.actual_amount || 0)) / (item.actual_amount || 0)) * 100 : 0 // סטיה מהתקציב ב%
       }));
 
       console.log("🔧 Transformed regular budget data:", transformedData);
@@ -187,12 +187,24 @@ export default function RegularBudgetPage() {
       cell: ({ row }) => formatCurrency(row.getValue("cumulative_execution")),
     },
     {
-      accessorKey: "percentage",
-      header: "אחוז ביצוע",
+      accessorKey: "budget_deviation",
+      header: "סטיה מהתקציב",
       cell: ({ row }) => {
-        const percentage = row.getValue("percentage") as number;
+        const deviation = row.getValue("budget_deviation") as number;
         return (
-          <span className={percentage >= 100 ? "text-green-600" : "text-red-600"}>
+          <span className={deviation >= 0 ? "text-green-600" : "text-red-600"}>
+            {formatCurrency(deviation)}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "budget_deviation_percentage",
+      header: "סטיה מהתקציב ב%",
+      cell: ({ row }) => {
+        const percentage = row.getValue("budget_deviation_percentage") as number;
+        return (
+          <span className={percentage >= 0 ? "text-green-600" : "text-red-600"}>
             {percentage.toFixed(1)}%
           </span>
         );
@@ -626,7 +638,7 @@ export default function RegularBudgetPage() {
             {incomeSummaryRow && (categoryFilter === 'all' || categoryFilter === 'income') && (
               <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
                 <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-200 mb-3">סיכום הכנסות</h3>
-                <div className="grid grid-cols-5 gap-4 text-sm">
+                <div className="grid grid-cols-6 gap-4 text-sm">
                   <div>
                     <span className="font-medium">{incomeSummaryRow.category_name}</span>
                   </div>
@@ -641,9 +653,16 @@ export default function RegularBudgetPage() {
                   </div>
                   <div className="text-right">
                     <span className={`font-bold ${
-                      incomeSummaryRow.percentage >= 100 ? "text-green-600" : "text-red-600"
+                      incomeSummaryRow.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
                     }`}>
-                      {incomeSummaryRow.percentage.toFixed(1)}%
+                      {formatCurrency(incomeSummaryRow.budget_deviation)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className={`font-bold ${
+                      incomeSummaryRow.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {incomeSummaryRow.budget_deviation_percentage.toFixed(1)}%
                     </span>
                   </div>
                 </div>
@@ -654,7 +673,7 @@ export default function RegularBudgetPage() {
             {expenseSummaryRow && (categoryFilter === 'all' || categoryFilter === 'expense') && (
               <div className="mt-6 p-4 bg-gradient-to-r from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 rounded-lg border border-rose-200 dark:border-rose-800">
                 <h3 className="text-lg font-bold text-rose-800 dark:text-rose-200 mb-3">סיכום הוצאות</h3>
-                <div className="grid grid-cols-5 gap-4 text-sm">
+                <div className="grid grid-cols-6 gap-4 text-sm">
                   <div>
                     <span className="font-medium">{expenseSummaryRow.category_name}</span>
                   </div>
@@ -669,9 +688,16 @@ export default function RegularBudgetPage() {
                   </div>
                   <div className="text-right">
                     <span className={`font-bold ${
-                      expenseSummaryRow.percentage >= 100 ? "text-green-600" : "text-red-600"
+                      expenseSummaryRow.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
                     }`}>
-                      {expenseSummaryRow.percentage.toFixed(1)}%
+                      {formatCurrency(expenseSummaryRow.budget_deviation)}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className={`font-bold ${
+                      expenseSummaryRow.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {expenseSummaryRow.budget_deviation_percentage.toFixed(1)}%
                     </span>
                   </div>
                 </div>
