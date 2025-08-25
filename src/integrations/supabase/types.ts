@@ -439,26 +439,44 @@ export type Database = {
       licenses: {
         Row: {
           address: string | null
+          area: string | null
+          block_parcel_sub: string | null
           business_name: string | null
           business_nature: string | null
+          closure_date: string | null
           created_at: string
+          days_from_request: string | null
+          days_temporary_permit: string | null
+          delivery_date: string | null
           department_slug: Database["public"]["Enums"]["department_slug"] | null
+          dock_fee: string | null
           email: string | null
           expires_at: string | null
           expiry_date: string | null
+          file_holder: string | null
+          fire_department_number: string | null
+          follow_up_date: string | null
           group_category: string | null
           id: string
           image_urls: string[] | null
+          inspection_date: string | null
+          inspector: string | null
+          judgment_date: string | null
+          judgment_execution: string | null
           lat: number | null
           license_number: string | null
           lng: number | null
+          location_description: string | null
           mobile: string | null
+          old_file: string | null
           owner: string | null
           phone: string | null
+          property: string | null
           reason_no_license: string | null
           reported_area: number | null
           request_date: string | null
           request_type: string | null
+          risk_level: string | null
           status: string | null
           type: string | null
           updated_at: string
@@ -467,28 +485,46 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          area?: string | null
+          block_parcel_sub?: string | null
           business_name?: string | null
           business_nature?: string | null
+          closure_date?: string | null
           created_at?: string
+          days_from_request?: string | null
+          days_temporary_permit?: string | null
+          delivery_date?: string | null
           department_slug?:
             | Database["public"]["Enums"]["department_slug"]
             | null
+          dock_fee?: string | null
           email?: string | null
           expires_at?: string | null
           expiry_date?: string | null
+          file_holder?: string | null
+          fire_department_number?: string | null
+          follow_up_date?: string | null
           group_category?: string | null
           id?: string
           image_urls?: string[] | null
+          inspection_date?: string | null
+          inspector?: string | null
+          judgment_date?: string | null
+          judgment_execution?: string | null
           lat?: number | null
           license_number?: string | null
           lng?: number | null
+          location_description?: string | null
           mobile?: string | null
+          old_file?: string | null
           owner?: string | null
           phone?: string | null
+          property?: string | null
           reason_no_license?: string | null
           reported_area?: number | null
           request_date?: string | null
           request_type?: string | null
+          risk_level?: string | null
           status?: string | null
           type?: string | null
           updated_at?: string
@@ -497,28 +533,46 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          area?: string | null
+          block_parcel_sub?: string | null
           business_name?: string | null
           business_nature?: string | null
+          closure_date?: string | null
           created_at?: string
+          days_from_request?: string | null
+          days_temporary_permit?: string | null
+          delivery_date?: string | null
           department_slug?:
             | Database["public"]["Enums"]["department_slug"]
             | null
+          dock_fee?: string | null
           email?: string | null
           expires_at?: string | null
           expiry_date?: string | null
+          file_holder?: string | null
+          fire_department_number?: string | null
+          follow_up_date?: string | null
           group_category?: string | null
           id?: string
           image_urls?: string[] | null
+          inspection_date?: string | null
+          inspector?: string | null
+          judgment_date?: string | null
+          judgment_execution?: string | null
           lat?: number | null
           license_number?: string | null
           lng?: number | null
+          location_description?: string | null
           mobile?: string | null
+          old_file?: string | null
           owner?: string | null
           phone?: string | null
+          property?: string | null
           reason_no_license?: string | null
           reported_area?: number | null
           request_date?: string | null
           request_type?: string | null
+          risk_level?: string | null
           status?: string | null
           type?: string | null
           updated_at?: string

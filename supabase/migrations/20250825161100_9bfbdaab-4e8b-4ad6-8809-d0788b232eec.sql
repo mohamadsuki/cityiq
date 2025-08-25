@@ -1,0 +1,20 @@
+-- Add missing columns to licenses table
+ALTER TABLE public.licenses 
+ADD COLUMN IF NOT EXISTS dock_fee text,
+ADD COLUMN IF NOT EXISTS delivery_date date,
+ADD COLUMN IF NOT EXISTS days_from_request text,
+ADD COLUMN IF NOT EXISTS days_temporary_permit text,
+ADD COLUMN IF NOT EXISTS inspector text,
+ADD COLUMN IF NOT EXISTS area text,
+ADD COLUMN IF NOT EXISTS property text,
+ADD COLUMN IF NOT EXISTS old_file text,
+ADD COLUMN IF NOT EXISTS block_parcel_sub text,
+ADD COLUMN IF NOT EXISTS follow_up_date date,
+ADD COLUMN IF NOT EXISTS judgment_execution text,
+ADD COLUMN IF NOT EXISTS judgment_date date,
+ADD COLUMN IF NOT EXISTS closure_date date,
+ADD COLUMN IF NOT EXISTS location_description text,
+ADD COLUMN IF NOT EXISTS fire_department_number text,
+ADD COLUMN IF NOT EXISTS risk_level text,
+ADD COLUMN IF NOT EXISTS file_holder text,
+ADD COLUMN IF NOT EXISTS inspection_date date;
