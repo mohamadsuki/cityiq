@@ -172,7 +172,15 @@ export default function BusinessDashboard() {
     { accessorKey: "license_number", header: "מספר רישיון" },
     { accessorKey: "business_name", header: "שם עסק" },
     { accessorKey: "owner", header: "בעלים" },
-    { accessorKey: "validity", header: "סטטוס" },
+    { 
+      accessorKey: "validity", 
+      header: "סטטוס",
+      cell: ({ getValue }) => {
+        const value = getValue() as string;
+        // Remove leading numbers from the status
+        return value ? value.toString().replace(/^\d+/, '').trim() : '';
+      }
+    },
     { accessorKey: "business_nature", header: "מהות עסק" },
     { 
       accessorKey: "request_date", 
@@ -248,7 +256,9 @@ export default function BusinessDashboard() {
   };
 
   const filteredLicenses = licenses.filter((l) => {
-    const sOk = statusFilter === 'all' || l.validity === statusFilter;
+    // Clean validity field for filtering comparison
+    const cleanStatus = (l.validity || '').toString().replace(/^\d+/, '').trim();
+    const sOk = statusFilter === 'all' || cleanStatus === statusFilter;
     const tOk = typeFilter === 'all' || l.type === typeFilter;
     const soonOk = soonFilter === 0 || (() => { const d = daysUntil(l.expires_at); return d >= 0 && d <= soonFilter; })();
     return sOk && tOk && soonOk;
@@ -257,8 +267,9 @@ export default function BusinessDashboard() {
   // Create status chart data based on cleaned validity field
   const statusData = Object.entries(
     filteredLicenses.reduce((acc, l) => {
-      const key = l.validity || 'לא צוין';
-      acc[key] = (acc[key] || 0) + 1;
+      // Clean the validity field by removing leading numbers
+      const cleanStatus = (l.validity || 'לא צוין').toString().replace(/^\d+/, '').trim() || 'לא צוין';
+      acc[cleanStatus] = (acc[cleanStatus] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
   ).map(([name, value]) => ({ name, value }));
