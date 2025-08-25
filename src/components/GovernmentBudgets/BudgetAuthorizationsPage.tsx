@@ -1241,7 +1241,7 @@ export default function BudgetAuthorizationsPage() {
                       <BarChart
                         data={timelineData}
                         layout="horizontal"
-                        margin={{ top: 20, right: 50, left: 100, bottom: 20 }}
+                        margin={{ top: 20, right: 50, left: 120, bottom: 20 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
@@ -1250,17 +1250,19 @@ export default function BudgetAuthorizationsPage() {
                           label={{ 
                             value: 'מספר הרשאות', 
                             position: 'insideBottom',
-                            offset: -10,
+                            offset: -5,
                             style: { textAnchor: 'middle', fill: '#64748b' }
                           }}
-                          domain={[0, 'dataMax + 1']}
+                          domain={[0, Math.max(...timelineData.map(d => d.count)) + 1]}
                         />
                         <YAxis 
                           type="category"
                           dataKey="dateLabel"
-                          tick={{ fontSize: 12, fill: '#64748b' }}
-                          width={90}
+                          tick={{ fontSize: 11, fill: '#64748b' }}
+                          width={110}
                           interval={0}
+                          axisLine={false}
+                          tickLine={false}
                         />
                         <Tooltip 
                           content={({ active, payload, label }) => {
@@ -1341,10 +1343,9 @@ export default function BudgetAuthorizationsPage() {
                         />
                         <Bar 
                           dataKey="count" 
-                          barSize={16}
-                          radius={[0, 4, 4, 0]}
-                          stroke="#fff"
-                          strokeWidth={1}
+                          fill="#3b82f6"
+                          barSize={20}
+                          radius={[0, 6, 6, 0]}
                         >
                           {timelineData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -1358,6 +1359,11 @@ export default function BudgetAuthorizationsPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Debug info - נסיר אחר כך */}
+      <div className="text-xs text-gray-500 p-4 bg-gray-50 rounded mb-4">
+        Debug: {authorizations.length} הרשאות כולל, {authorizations.filter(a => a.valid_until).length} עם תאריך תוקף
       </div>
 
       {/* טבלת הרשאות */}
