@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { DataTable } from '@/components/shared/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, TrendingUp, TrendingDown, DollarSign, Upload } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, Upload, Brain, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ColumnDef } from "@tanstack/react-table";
@@ -37,6 +37,8 @@ export default function RegularBudgetPage() {
   const [loading, setLoading] = useState(true);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [analysis, setAnalysis] = useState<string>("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [newItem, setNewItem] = useState({
     category_type: 'income' as 'income' | 'expense',
     category_name: '',
@@ -152,6 +154,43 @@ export default function RegularBudgetPage() {
     } catch (error) {
       console.error('Error adding budget item:', error);
       toast.error('שגיאה בהוספת פריט לתקציב');
+    }
+  };
+
+  const handleAnalyzeBudget = async () => {
+    if (!budgetData || budgetData.length === 0) {
+      toast.error("אין נתוני תקציב לניתוח");
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const incomeDeviation = totalIncomeExecution - totalIncome;
+      const expenseDeviation = totalExpenseExecution - totalExpenses;
+      
+      const { data, error } = await supabase.functions.invoke('analyze-budget', {
+        body: {
+          budgetData: budgetData.filter(item => isDetailRow(item)),
+          totalIncome: totalIncome,
+          totalExpenses: totalExpenses,
+          incomeDeviation: incomeDeviation,
+          expenseDeviation: expenseDeviation
+        }
+      });
+
+      if (error) {
+        console.error("Error analyzing budget:", error);
+        toast.error("שגיאה בניתוח התקציב");
+        return;
+      }
+
+      setAnalysis(data.analysis);
+      toast.success("ניתוח התקציב הושלם בהצלחה");
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("שגיאה בניתוח התקציב");
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -674,6 +713,47 @@ export default function RegularBudgetPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Analysis Section */}
+      <Card className="mb-6">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold flex items-center gap-2">
+              <Brain className="w-5 h-5 text-primary" />
+              ניתוח חכם של התקציב
+            </CardTitle>
+            <Button 
+              onClick={handleAnalyzeBudget}
+              disabled={isAnalyzing || !budgetData || budgetData.length === 0}
+              className="flex items-center gap-2"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  מנתח...
+                </>
+              ) : (
+                <>
+                  <Brain className="w-4 h-4" />
+                  נתח תקציב
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {analysis ? (
+            <div className="bg-muted/50 p-4 rounded-lg whitespace-pre-wrap text-sm leading-relaxed">
+              {analysis}
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-8">
+              <Brain className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>לחץ על "נתח תקציב" כדי לקבל תובנות חכמות על נתוני התקציב</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Add Item Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
