@@ -879,6 +879,7 @@ export type Database = {
           category_name: string
           category_type: Database["public"]["Enums"]["budget_category_type"]
           created_at: string
+          cumulative_execution: number | null
           excel_cell_ref: string | null
           id: string
           updated_at: string
@@ -891,6 +892,7 @@ export type Database = {
           category_name: string
           category_type: Database["public"]["Enums"]["budget_category_type"]
           created_at?: string
+          cumulative_execution?: number | null
           excel_cell_ref?: string | null
           id?: string
           updated_at?: string
@@ -903,6 +905,7 @@ export type Database = {
           category_name?: string
           category_type?: Database["public"]["Enums"]["budget_category_type"]
           created_at?: string
+          cumulative_execution?: number | null
           excel_cell_ref?: string | null
           id?: string
           updated_at?: string
