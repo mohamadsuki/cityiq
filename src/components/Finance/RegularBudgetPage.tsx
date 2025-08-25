@@ -168,6 +168,14 @@ export default function RegularBudgetPage() {
       const incomeDeviation = totalIncomeExecution - totalIncome;
       const expenseDeviation = totalExpenseExecution - totalExpenses;
       
+      console.log('Calling analyze-budget function with data:', {
+        budgetDataLength: budgetData.filter(item => isDetailRow(item)).length,
+        totalIncome,
+        totalExpenses,
+        incomeDeviation,
+        expenseDeviation
+      });
+      
       const { data, error } = await supabase.functions.invoke('analyze-budget', {
         body: {
           budgetData: budgetData.filter(item => isDetailRow(item)),
@@ -180,7 +188,13 @@ export default function RegularBudgetPage() {
 
       if (error) {
         console.error("Error analyzing budget:", error);
-        toast.error("שגיאה בניתוח התקציב");
+        toast.error(`שגיאה בניתוח התקציב: ${error.message || 'שגיאה לא ידועה'}`);
+        return;
+      }
+
+      if (data?.error) {
+        console.error("OpenAI API error:", data.error);
+        toast.error(`שגיאה ב-OpenAI: ${data.error}`);
         return;
       }
 
@@ -188,7 +202,7 @@ export default function RegularBudgetPage() {
       toast.success("ניתוח התקציב הושלם בהצלחה");
     } catch (error) {
       console.error("Error:", error);
-      toast.error("שגיאה בניתוח התקציב");
+      toast.error(`שגיאה בניתוח התקציב: ${error.message || 'שגיאה לא ידועה'}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -714,42 +728,110 @@ export default function RegularBudgetPage() {
         </Card>
       </div>
 
-      {/* AI Analysis Section */}
-      <Card className="mb-6">
-        <CardHeader>
+      {/* Smart Budget Analysis Section - Enhanced */}
+      <Card className="border-2 border-gradient-to-r from-purple-200 to-blue-200 dark:from-purple-800/30 dark:to-blue-800/30 shadow-xl">
+        <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-xl font-bold flex items-center gap-2">
-              <Brain className="w-5 h-5 text-primary" />
-              ניתוח חכם של התקציב
-            </CardTitle>
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
+                <Brain className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  ניתוח חכם של התקציב
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  הצגה וניתוח נתונים מתקדם באמצעות בינה מלאכותית
+                </p>
+              </div>
+            </div>
             <Button 
               onClick={handleAnalyzeBudget}
               disabled={isAnalyzing || !budgetData || budgetData.length === 0}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
+              size="lg"
             >
               {isAnalyzing ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  מנתח...
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  מנתח נתונים...
                 </>
               ) : (
                 <>
-                  <Brain className="w-4 h-4" />
+                  <Brain className="w-5 h-5" />
                   נתח תקציב
                 </>
               )}
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-8">
           {analysis ? (
-            <div className="bg-muted/50 p-4 rounded-lg whitespace-pre-wrap text-sm leading-relaxed">
-              {analysis}
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 p-6 rounded-xl border-l-4 border-gradient-to-b from-green-500 to-blue-500">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300">ניתוח הושלם</span>
+                </div>
+                <div className="prose prose-lg max-w-none text-right">
+                  <div className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-relaxed">
+                    {analysis}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Additional insights section */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium text-blue-800 dark:text-blue-200">יעילות תקציבית</span>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                    {((totalIncomeExecution / totalIncome) * 100).toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-400">מביצוע ההכנסות</div>
+                </div>
+                
+                <div className="bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="w-4 h-4 text-purple-600" />
+                    <span className="font-medium text-purple-800 dark:text-purple-200">מאזן</span>
+                  </div>
+                  <div className={`text-2xl font-bold ${totalIncomeExecution - totalExpenseExecution >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                    {formatCurrency(totalIncomeExecution - totalExpenseExecution)}
+                  </div>
+                  <div className="text-xs text-purple-600 dark:text-purple-400">עודף/גירעון</div>
+                </div>
+                
+                <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingDown className="w-4 h-4 text-orange-600" />
+                    <span className="font-medium text-orange-800 dark:text-orange-200">שליטה בהוצאות</span>
+                  </div>
+                  <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
+                    {((totalExpenseExecution / totalExpenses) * 100).toFixed(1)}%
+                  </div>
+                  <div className="text-xs text-orange-600 dark:text-orange-400">מביצוע ההוצאות</div>
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="text-center text-muted-foreground py-8">
-              <Brain className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>לחץ על "נתח תקציב" כדי לקבל תובנות חכמות על נתוני התקציב</p>
+            <div className="text-center text-muted-foreground py-16">
+              <div className="mb-6">
+                <Brain className="w-20 h-20 mx-auto mb-6 opacity-30" />
+                <div className="space-y-3">
+                  <h3 className="text-xl font-semibold">ניתוח חכם מתקדם</h3>
+                  <p className="text-lg">לחץ על "נתח תקציב" כדי לקבל:</p>
+                  <div className="flex flex-wrap justify-center gap-3 mt-4">
+                    <Badge variant="secondary" className="px-3 py-1">📊 הצגת נתונים מובנת</Badge>
+                    <Badge variant="secondary" className="px-3 py-1">📈 ניתוח מגמות</Badge>
+                    <Badge variant="secondary" className="px-3 py-1">⚠️ אזורי תשומת לב</Badge>
+                    <Badge variant="secondary" className="px-3 py-1">💡 המלצות מעשיות</Badge>
+                    <Badge variant="secondary" className="px-3 py-1">🎯 סיכום מנהלים</Badge>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
