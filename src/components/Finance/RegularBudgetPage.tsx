@@ -199,25 +199,45 @@ export default function RegularBudgetPage() {
     }
   };
 
+  // Load existing analysis from database
+  const loadExistingAnalysis = async () => {
+    try {
+      const { data: existingAnalysis, error } = await supabase
+        .from('budget_analysis')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('year', new Date().getFullYear())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!error && existingAnalysis) {
+        setAnalysis(existingAnalysis.analysis_text);
+        return true;
+      }
+    } catch (error) {
+      console.log('No existing analysis found');
+    }
+    return false;
+  };
+
   const handleAnalyzeBudget = async (silent = false) => {
     if (!budgetData || budgetData.length === 0) {
       if (!silent) toast.error("אין נתוני תקציב לניתוח");
       return;
     }
 
+    // Check if analysis already exists
+    const hasExisting = await loadExistingAnalysis();
+    if (hasExisting && !silent) {
+      return;
+    }
+
     setIsAnalyzing(true);
-    console.log('🚀 Starting manual budget analysis...');
+    console.log('🚀 Starting budget analysis...');
     try {
       const incomeDeviation = totalIncomeExecution - totalIncome;
       const expenseDeviation = totalExpenseExecution - totalExpenses;
-      
-      console.log('Calling analyze-budget function with data:', {
-        budgetDataLength: budgetData.filter(item => isDetailRow(item)).length,
-        totalIncome,
-        totalExpenses,
-        incomeDeviation,
-        expenseDeviation
-      });
       
       const { data, error } = await supabase.functions.invoke('analyze-budget', {
         body: {
@@ -240,11 +260,31 @@ export default function RegularBudgetPage() {
         if (!silent) toast.error(`שגיאה ב-OpenAI: ${data.error}`);
         return;
       }
-
-      console.log('Full response from Edge Function:', { data, error });
-      console.log('Analysis content:', data?.analysis);
       
       if (data?.analysis && data.analysis.trim()) {
+        // Save analysis to database
+        const analysisData = {
+          user_id: user?.id,
+          year: new Date().getFullYear(),
+          analysis_text: data.analysis,
+          total_income: totalIncome,
+          total_expenses: totalExpenses,
+          income_deviation: incomeDeviation,
+          expense_deviation: expenseDeviation,
+          analysis_data: {
+            timestamp: new Date().toISOString(),
+            summary: 'Budget analysis completed'
+          } as any
+        };
+
+        const { error: saveError } = await supabase
+          .from('budget_analysis')
+          .insert(analysisData);
+
+        if (saveError) {
+          console.error("Error saving analysis:", saveError);
+        }
+
         setAnalysis(data.analysis);
         if (!silent) toast.success("ניתוח התקציב הושלם בהצלחה");
       } else {
@@ -779,19 +819,17 @@ export default function RegularBudgetPage() {
         </Card>
       </div>
 
-      {/* Smart Budget Analysis Section - Enhanced */}
-      <Card className="border-2 border-gradient-to-r from-purple-200 to-blue-200 dark:from-purple-800/30 dark:to-blue-800/30 shadow-xl">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20">
+      {/* Smart Budget Analysis Section */}
+      <Card className="border border-border bg-card shadow-sm">
+        <CardHeader className="border-b border-border">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center">
-              <Brain className="w-6 h-6 text-white" />
-            </div>
+            <Brain className="h-6 w-6 text-primary" />
             <div>
-              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <CardTitle className="text-xl font-semibold text-foreground">
                 ניתוח חכם של התקציב
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                ניתוח אוטומטי מתקדם המתבסס על נתוני האקסל שהועלו - נתונים עדכניים לתקופה הנוכחית
+                ניתוח אוטומטי מתקדם המתבסס על נתוני האקסל שהועלו
               </p>
             </div>
           </div>
@@ -811,8 +849,8 @@ export default function RegularBudgetPage() {
                   <span className="text-sm font-medium text-green-700 dark:text-green-300">ניתוח זמין</span>
                 </div>
                 <div className="prose prose-lg max-w-none text-right">
-                  <div className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-relaxed">
-                    {analysis}
+                  <div className="whitespace-pre-wrap text-muted-foreground leading-relaxed">
+                    {analysis.replace(/[📊💰📈📉⚠️✅❌🎯💡]/g, '').replace(/[\u{1F300}-\u{1F5FF}|\u{1F600}-\u{1F64F}|\u{1F680}-\u{1F6FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}]/gu, '')}
                   </div>
                 </div>
               </div>
