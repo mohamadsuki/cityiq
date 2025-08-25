@@ -1369,11 +1369,23 @@ export default function BudgetAuthorizationsPage() {
                         />
                         
                         <Tooltip 
+                          cursor={false}
+                          allowEscapeViewBox={{ x: false, y: false }}
+                          wrapperStyle={{ outline: 'none' }}
                           content={({ active, payload, label }) => {
                             if (active && payload && payload[0]) {
                               const data = payload[0].payload;
                               return (
-                                <div className="bg-white/98 dark:bg-slate-900/98 backdrop-blur-md p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 min-w-80 max-w-96 animate-scale-in">
+                                <div 
+                                  className="bg-white/98 dark:bg-slate-900/98 backdrop-blur-md p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 min-w-80 max-w-96 animate-scale-in relative z-50"
+                                  onMouseEnter={(e) => e.stopPropagation()}
+                                  onMouseLeave={(e) => e.stopPropagation()}
+                                  style={{ 
+                                    pointerEvents: 'auto',
+                                    position: 'relative',
+                                    zIndex: 9999
+                                  }}
+                                >
                                   <div className="text-center mb-4">
                                     <div className="flex items-center justify-center gap-3 mb-2">
                                       {data.isExpired && <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />}
@@ -1410,7 +1422,10 @@ export default function BudgetAuthorizationsPage() {
                                       <FileCheck className="h-4 w-4" />
                                       רשימת הרשאות:
                                     </div>
-                                    <div className="max-h-32 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
+                                    <div 
+                                      className="max-h-32 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 pr-2"
+                                      style={{ pointerEvents: 'auto' }}
+                                    >
                                       {data.authorizations.map((auth: any, i: number) => (
                                         <div key={i} className="text-xs text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200">
                                           <div className="font-semibold mb-1">• {auth.program?.substring(0, 60)}{auth.program?.length > 60 ? '...' : ''}</div>
@@ -1426,7 +1441,9 @@ export default function BudgetAuthorizationsPage() {
                                   <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
                                     <button
                                       className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 text-white px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                                      onClick={() => {
+                                      style={{ pointerEvents: 'auto' }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         const today = new Date();
                                         const validUntil = new Date(data.date);
                                         const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
