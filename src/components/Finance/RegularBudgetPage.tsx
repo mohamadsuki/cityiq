@@ -315,10 +315,10 @@ export default function RegularBudgetPage() {
           </CardHeader>
           <CardContent>
             <div className="text-lg font-bold text-blue-600">
-              הכנסות: {formatCurrency(totalIncome)}
+              הכנסות: {incomeSummaryRow ? formatCurrency(incomeSummaryRow.actual_amount) : '₪0'}
             </div>
             <div className="text-lg font-bold text-red-600">
-              הוצאות: {formatCurrency(totalExpenses)}
+              הוצאות: {expenseSummaryRow ? formatCurrency(expenseSummaryRow.actual_amount) : '₪0'}
             </div>
             <p className="text-xs text-muted-foreground">
               ביצוע מצטבר
