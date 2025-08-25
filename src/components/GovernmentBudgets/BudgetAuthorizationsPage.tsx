@@ -84,6 +84,8 @@ export default function BudgetAuthorizationsPage() {
   const [editingAuth, setEditingAuth] = useState<any>(null);
   const [filteredAuthorizations, setFilteredAuthorizations] = useState<any[]>([]);
   const [filterCategory, setFilterCategory] = useState<string>('');
+  const [activeTooltip, setActiveTooltip] = useState<any>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [newAuthData, setNewAuthData] = useState({
     authorization_number: '',
     ministry: '',
@@ -1320,6 +1322,7 @@ export default function BudgetAuthorizationsPage() {
                         data={timelineData}
                         margin={{ top: 40, right: 30, left: 20, bottom: 60 }}
                         className="animate-fade-in"
+                        onMouseLeave={() => setActiveTooltip(null)}
                       >
                         <defs>
                           {timelineData.map((entry, index) => (
@@ -1369,116 +1372,22 @@ export default function BudgetAuthorizationsPage() {
                         />
                         
                         <Tooltip 
+                          content={() => null}
                           cursor={false}
-                          allowEscapeViewBox={{ x: false, y: false }}
-                          wrapperStyle={{ outline: 'none' }}
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload[0]) {
-                              const data = payload[0].payload;
-                              return (
-                                <div 
-                                  className="bg-white/98 dark:bg-slate-900/98 backdrop-blur-md p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 min-w-80 max-w-96 animate-scale-in relative z-50"
-                                  onMouseEnter={(e) => e.stopPropagation()}
-                                  onMouseLeave={(e) => e.stopPropagation()}
-                                  style={{ 
-                                    pointerEvents: 'auto',
-                                    position: 'relative',
-                                    zIndex: 9999
-                                  }}
-                                >
-                                  <div className="text-center mb-4">
-                                    <div className="flex items-center justify-center gap-3 mb-2">
-                                      {data.isExpired && <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />}
-                                      {data.isUrgent && !data.isExpired && <div className="w-3 h-3 rounded-full bg-orange-500 animate-pulse" />}
-                                      <div className="font-bold text-slate-900 dark:text-slate-100 text-xl">
-                                        {data.monthYear}
-                                      </div>
-                                    </div>
-                                    <div className={`text-sm font-medium px-3 py-1 rounded-full inline-block ${
-                                      data.isExpired ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
-                                      data.isUrgent ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
-                                      data.isWarning ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
-                                      'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                                    }`}>
-                                      {data.isExpired ? '⚠️ פג תוקף לפני' : '⏰ פג תוקף בעוד'} {Math.abs(data.daysFromNow)} ימים
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="grid grid-cols-2 gap-4 mb-4">
-                                    <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 rounded-xl">
-                                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{data.count}</div>
-                                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">מספר הרשאות</div>
-                                    </div>
-                                    <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 rounded-xl">
-                                      <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                                        ₪{new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(data.totalAmount)}
-                                      </div>
-                                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">סה"כ תקציב</div>
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mb-4">
-                                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
-                                      <FileCheck className="h-4 w-4" />
-                                      רשימת הרשאות:
-                                    </div>
-                                    <div 
-                                      className="max-h-32 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 pr-2"
-                                      style={{ pointerEvents: 'auto' }}
-                                    >
-                                      {data.authorizations.map((auth: any, i: number) => (
-                                        <div key={i} className="text-xs text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200">
-                                          <div className="font-semibold mb-1">• {auth.program?.substring(0, 60)}{auth.program?.length > 60 ? '...' : ''}</div>
-                                          <div className="text-gray-500 dark:text-gray-400 flex items-center justify-between">
-                                            <span>{auth.ministry}</span>
-                                            <span className="font-semibold">₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}</span>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
-                                    <button
-                                      className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 text-white px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                                      style={{ pointerEvents: 'auto' }}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const today = new Date();
-                                        const validUntil = new Date(data.date);
-                                        const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
-                                        
-                                        let category = '';
-                                        if (monthsDiff < 0) {
-                                          category = 'פג תוקף';
-                                        } else if (monthsDiff <= 3) {
-                                          category = 'פג תוקף עד 3 חודשים';
-                                        } else if (monthsDiff <= 6) {
-                                          category = 'פג תוקף עד 6 חודשים';
-                                        } else if (monthsDiff <= 12) {
-                                          category = 'פג תוקף עד שנה';
-                                        } else {
-                                          category = 'תקף למעלה משנה';
-                                        }
-                                        
-                                        handleFilterByCategory(category);
-                                      }}
-                                    >
-                                      <FileCheck className="h-4 w-4" />
-                                      הצג בטבלה
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
                         />
                         
                         <Bar 
                           dataKey="count" 
                           barSize={14}
                           radius={[4, 4, 0, 0]}
+                          onMouseEnter={(data, index, e: any) => {
+                            const rect = e.target.getBoundingClientRect();
+                            setTooltipPosition({
+                              x: rect.left + rect.width / 2,
+                              y: rect.top - 10
+                            });
+                            setActiveTooltip(data);
+                          }}
                         >
                           {timelineData.map((entry, index) => (
                             <Cell 
@@ -1494,6 +1403,103 @@ export default function BudgetAuthorizationsPage() {
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
+                    
+                    {/* Custom Tooltip */}
+                    {activeTooltip && (
+                      <div 
+                        className="fixed bg-white/98 dark:bg-slate-900/98 backdrop-blur-md p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 min-w-80 max-w-96 animate-scale-in z-[9999]"
+                        style={{
+                          left: tooltipPosition.x - 160,
+                          top: tooltipPosition.y - 300,
+                          pointerEvents: 'auto'
+                        }}
+                        onMouseEnter={() => {}}
+                        onMouseLeave={() => setActiveTooltip(null)}
+                      >
+                        <div className="text-center mb-4">
+                          <div className="flex items-center justify-center gap-3 mb-2">
+                            {activeTooltip.isExpired && <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />}
+                            {activeTooltip.isUrgent && !activeTooltip.isExpired && <div className="w-3 h-3 rounded-full bg-orange-500 animate-pulse" />}
+                            <div className="font-bold text-slate-900 dark:text-slate-100 text-xl">
+                              {activeTooltip.monthYear}
+                            </div>
+                          </div>
+                          <div className={`text-sm font-medium px-3 py-1 rounded-full inline-block ${
+                            activeTooltip.isExpired ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                            activeTooltip.isUrgent ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
+                            activeTooltip.isWarning ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
+                            'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                          }`}>
+                            {activeTooltip.isExpired ? '⚠️ פג תוקף לפני' : '⏰ פג תוקף בעוד'} {Math.abs(activeTooltip.daysFromNow)} ימים
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 rounded-xl">
+                            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{activeTooltip.count}</div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">מספר הרשאות</div>
+                          </div>
+                          <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 rounded-xl">
+                            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                              ₪{new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(activeTooltip.totalAmount)}
+                            </div>
+                            <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">סה"כ תקציב</div>
+                          </div>
+                        </div>
+                        
+                        <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mb-4">
+                          <div className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                            <FileCheck className="h-4 w-4" />
+                            רשימת הרשאות:
+                          </div>
+                          <div 
+                            className="max-h-32 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 pr-2"
+                            style={{ pointerEvents: 'auto' }}
+                          >
+                            {activeTooltip.authorizations?.map((auth: any, i: number) => (
+                              <div key={i} className="text-xs text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200">
+                                <div className="font-semibold mb-1">• {auth.program?.substring(0, 60)}{auth.program?.length > 60 ? '...' : ''}</div>
+                                <div className="text-gray-500 dark:text-gray-400 flex items-center justify-between">
+                                  <span>{auth.ministry}</span>
+                                  <span className="font-semibold">₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+                          <button
+                            className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 text-white px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const today = new Date();
+                              const validUntil = new Date(activeTooltip.date);
+                              const monthsDiff = Math.ceil((validUntil.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 30));
+                              
+                              let category = '';
+                              if (monthsDiff < 0) {
+                                category = 'פג תוקף';
+                              } else if (monthsDiff <= 3) {
+                                category = 'פג תוקף עד 3 חודשים';
+                              } else if (monthsDiff <= 6) {
+                                category = 'פג תוקף עד 6 חודשים';
+                              } else if (monthsDiff <= 12) {
+                                category = 'פג תוקף עד שנה';
+                              } else {
+                                category = 'תקף למעלה משנה';
+                              }
+                              
+                              handleFilterByCategory(category);
+                              setActiveTooltip(null);
+                            }}
+                          >
+                            <FileCheck className="h-4 w-4" />
+                            הצג בטבלה
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
