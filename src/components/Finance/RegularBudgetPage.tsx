@@ -223,7 +223,7 @@ export default function RegularBudgetPage() {
       }
 
       if (existingAnalysis) {
-        console.log('Found existing analysis:', existingAnalysis.id);
+        console.log('Found existing analysis:', existingAnalysis.id, 'Created at:', existingAnalysis.created_at);
         setAnalysis(existingAnalysis.analysis_text);
         // Load saved chart data if available
         if (existingAnalysis.analysis_data && typeof existingAnalysis.analysis_data === 'object') {
@@ -231,7 +231,7 @@ export default function RegularBudgetPage() {
         }
         return true;
       } else {
-        console.log('No existing analysis found, will generate new one');
+        console.log('No existing analysis found in database');
         return false;
       }
     } catch (error) {
@@ -881,10 +881,13 @@ export default function RegularBudgetPage() {
             <div className="space-y-6">
               <div className="bg-gradient-to-r from-card to-muted/20 p-8 rounded-lg border border-border shadow-sm">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="h-3 w-3 rounded-full bg-primary animate-pulse"></div>
+                  <div className="h-3 w-3 rounded-full bg-primary"></div>
                   <span className="text-lg font-semibold text-foreground">ניתוח זמין</span>
                   <Badge variant="outline" className="text-xs">
                     נוצר אוטומטי מנתוני האקסל
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs">
+                    נשמר במערכת
                   </Badge>
                 </div>
                 <div className="prose prose-lg max-w-none">
@@ -892,21 +895,32 @@ export default function RegularBudgetPage() {
                     {analysis.split('\n').map((paragraph, index) => {
                       if (!paragraph.trim()) return null;
                       
+                      // Clean the paragraph from symbols
+                      const cleanParagraph = paragraph
+                        .replace(/\*\*/g, '') // Remove bold markdown
+                        .replace(/\*/g, '') // Remove asterisks
+                        .replace(/##+\s*/g, '') // Remove markdown headers
+                        .replace(/^##\s*/g, '') // Remove ## at start
+                        .replace(/[\u{1F300}-\u{1F5FF}|\u{1F600}-\u{1F64F}|\u{1F680}-\u{1F6FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}]/gu, '') // Remove emojis
+                        .trim();
+                      
+                      if (!cleanParagraph) return null;
+                      
                       // Handle headers (lines that end with colons or are clearly headers)
-                      if (paragraph.match(/^[א-ת\s]+:$/) || paragraph.match(/^## /)) {
+                      if (cleanParagraph.match(/^[א-ת\s]+:$/) || cleanParagraph.includes('ניתוח') || cleanParagraph.includes('המלצות') || cleanParagraph.includes('סיכום')) {
                         return (
                           <h3 key={index} className="text-xl font-bold text-primary mt-6 mb-3 border-b border-border pb-2">
-                            {paragraph.replace(/^## /, '').replace(/:$/, '')}
+                            {cleanParagraph.replace(/:$/, '')}
                           </h3>
                         );
                       }
                       
                       // Handle bullet points
-                      if (paragraph.startsWith('- ')) {
+                      if (cleanParagraph.startsWith('- ')) {
                         return (
                           <div key={index} className="flex items-start gap-3 my-2">
                             <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
-                            <span className="text-muted-foreground">{paragraph.substring(2)}</span>
+                            <span className="text-muted-foreground">{cleanParagraph.substring(2)}</span>
                           </div>
                         );
                       }
@@ -914,7 +928,7 @@ export default function RegularBudgetPage() {
                       // Regular paragraphs
                       return (
                         <p key={index} className="text-muted-foreground leading-relaxed">
-                          {paragraph}
+                          {cleanParagraph}
                         </p>
                       );
                     })}
