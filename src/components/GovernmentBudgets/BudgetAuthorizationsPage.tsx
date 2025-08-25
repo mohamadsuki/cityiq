@@ -1312,9 +1312,7 @@ export default function BudgetAuthorizationsPage() {
                   .slice(0, 12)
                   .map((item: any, index) => {
                     const isExpired = item.daysFromNow < 0;
-                    const isUrgent = item.daysFromNow <= 90;
-                    const isWarning = item.daysFromNow <= 180;
-                    const isOK = item.daysFromNow <= 365;
+                    const isUrgent = item.daysFromNow <= 90 && item.daysFromNow >= 0;
                     
                     return {
                       ...item,
@@ -1325,19 +1323,13 @@ export default function BudgetAuthorizationsPage() {
                       }).replace('.', '/'),
                       isExpired,
                       isUrgent,
-                      isWarning,
-                      isOK,
-                      // גרדיאנטים מתקדמים לפי מצב
+                      // גרדיאנטים מתקדמים לפי מצב - 3 קטגוריות בלבד
                       gradient: isExpired ? 'linear-gradient(135deg, #ef4444, #dc2626)' :
                                isUrgent ? 'linear-gradient(135deg, #f97316, #ea580c)' :
-                               isWarning ? 'linear-gradient(135deg, #eab308, #ca8a04)' :
-                               isOK ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 
                                'linear-gradient(135deg, #3b82f6, #2563eb)',
                       // צללים דינמיים
                       shadow: isExpired ? '0 8px 25px -5px rgba(239, 68, 68, 0.4)' :
                              isUrgent ? '0 8px 25px -5px rgba(249, 115, 22, 0.4)' :
-                             isWarning ? '0 8px 25px -5px rgba(234, 179, 8, 0.4)' :
-                             isOK ? '0 8px 25px -5px rgba(34, 197, 94, 0.4)' :
                              '0 8px 25px -5px rgba(59, 130, 246, 0.4)',
                       // הוספת אנימציות
                       animationDelay: `${index * 0.1}s`
@@ -1372,11 +1364,11 @@ export default function BudgetAuthorizationsPage() {
                       </div>
                       <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border shadow-sm">
                         <div className="w-2 h-2 rounded-full bg-orange-500" />
-                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">דחוף</span>
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">עומד להסתיים</span>
                       </div>
                       <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border shadow-sm">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">תקין</span>
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">יש זמן</span>
                       </div>
                     </div>
 
@@ -1390,8 +1382,8 @@ export default function BudgetAuthorizationsPage() {
                         <defs>
                           {timelineData.map((entry, index) => (
                             <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={entry.isExpired ? '#ef4444' : entry.isUrgent ? '#f97316' : entry.isWarning ? '#eab308' : entry.isOK ? '#22c55e' : '#3b82f6'} stopOpacity={0.9} />
-                              <stop offset="100%" stopColor={entry.isExpired ? '#dc2626' : entry.isUrgent ? '#ea580c' : entry.isWarning ? '#ca8a04' : entry.isOK ? '#16a34a' : '#2563eb'} stopOpacity={0.7} />
+                              <stop offset="0%" stopColor={entry.isExpired ? '#ef4444' : entry.isUrgent ? '#f97316' : '#3b82f6'} stopOpacity={0.9} />
+                              <stop offset="100%" stopColor={entry.isExpired ? '#dc2626' : entry.isUrgent ? '#ea580c' : '#2563eb'} stopOpacity={0.7} />
                             </linearGradient>
                           ))}
                         </defs>
@@ -1496,10 +1488,11 @@ export default function BudgetAuthorizationsPage() {
                           <div className={`text-sm font-medium px-3 py-1 rounded-full inline-block ${
                             activeTooltip.isExpired ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
                             activeTooltip.isUrgent ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
-                            activeTooltip.isWarning ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
-                            'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                            'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                           }`}>
-                            {activeTooltip.isExpired ? '⚠️ פג תוקף לפני' : '⏰ פג תוקף בעוד'} {Math.abs(activeTooltip.daysFromNow)} ימים
+                            {activeTooltip.isExpired ? '⚠️ פג תוקף לפני' : 
+                             activeTooltip.isUrgent ? '⏰ עומד להסתיים בעוד' : 
+                             '✅ יש זמן עד'} {Math.abs(activeTooltip.daysFromNow)} ימים
                           </div>
                         </div>
                         
@@ -1562,10 +1555,6 @@ export default function BudgetAuthorizationsPage() {
         </Card>
       </div>
 
-      {/* Debug info - נסיר אחר כך */}
-      <div className="text-xs text-gray-500 p-4 bg-gray-50 rounded mb-4">
-        Debug: {authorizations.length} הרשאות כולל, {authorizations.filter(a => a.valid_until).length} עם תאריך תוקף
-      </div>
 
       {/* טבלת הרשאות */}
       <Card className="border-0 shadow-elevated bg-card">
