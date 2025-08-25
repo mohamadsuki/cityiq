@@ -363,7 +363,7 @@ export default function GrantsApp() {
     const approvedAmount = grants.filter(g => {
       const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
       return hebrewStatus === 'אושר';
-    }).reduce((sum, g) => sum + (g.approved_amount || 0), 0);
+    }).reduce((sum, g) => sum + (g.amount || 0), 0);
     const submittedAmount = grants.filter(g => {
       const hebrewStatus = g.status ? STATUS_LABELS[g.status] || g.status : null;
       return hebrewStatus === 'הוגש';
@@ -398,7 +398,7 @@ export default function GrantsApp() {
     grants.forEach(g => {
       const ministry = g.ministry || 'לא צוין';
       ministryCounts[ministry] = (ministryCounts[ministry] || 0) + 1;
-      ministryAmounts[ministry] = (ministryAmounts[ministry] || 0) + (g.approved_amount || 0);
+      ministryAmounts[ministry] = (ministryAmounts[ministry] || 0) + (g.approved_amount || g.amount || 0);
     });
 
     return Object.keys(ministryCounts).map(ministry => ({
@@ -416,7 +416,7 @@ export default function GrantsApp() {
     grants.forEach(g => {
       const dept = g.department_slug || 'אחר';
       deptCounts[dept] = (deptCounts[dept] || 0) + 1;
-      deptAmounts[dept] = (deptAmounts[dept] || 0) + (g.approved_amount || 0);
+      deptAmounts[dept] = (deptAmounts[dept] || 0) + (g.approved_amount || g.amount || 0);
     });
 
     return Object.keys(deptCounts).map(dept => ({
