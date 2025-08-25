@@ -198,15 +198,15 @@ export default function RegularBudgetPage() {
         return;
       }
 
-      console.log('Analysis response data:', data);
+      console.log('Full response from Edge Function:', { data, error });
       console.log('Analysis content:', data?.analysis);
       
-      if (data?.analysis) {
+      if (data?.analysis && data.analysis.trim()) {
         setAnalysis(data.analysis);
         toast.success("ניתוח התקציב הושלם בהצלחה");
       } else {
-        console.error("No analysis in response:", data);
-        toast.error("לא התקבל ניתוח מהשרת");
+        console.error("No valid analysis in response:", data);
+        toast.error("לא התקבל ניתוח תקין מהשרת");
       }
     } catch (error) {
       console.error("Error:", error);

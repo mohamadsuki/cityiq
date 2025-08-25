@@ -109,11 +109,22 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const analysis = data.choices[0].message.content;
+    console.log('OpenAI response data:', data);
+    
+    const analysis = data.choices?.[0]?.message?.content;
+    console.log('Extracted analysis:', analysis);
+
+    if (!analysis) {
+      console.error('No analysis content in OpenAI response');
+      throw new Error('No analysis content received from OpenAI');
+    }
 
     console.log('Budget analysis completed successfully');
 
-    return new Response(JSON.stringify({ analysis }), {
+    return new Response(JSON.stringify({ 
+      success: true,
+      analysis: analysis 
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
