@@ -88,7 +88,7 @@ export default function GrantsDashboard() {
 
       <div className="flex justify-end">
         <Button asChild>
-          <a href="/finance" aria-label="נווט אל מחלקת פיננסים">לצפייה בתקציבים קשורים</a>
+          <a href="/grants" aria-label="נווט אל דף הקולות הקוראים">לניהול קולות קוראים</a>
         </Button>
       </div>
     </div>
