@@ -1245,32 +1245,30 @@ export default function BudgetAuthorizationsPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={timelineData}
-                        layout="horizontal"
-                        margin={{ top: 20, right: 30, left: 140, bottom: 20 }}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
                         barCategoryGap="15%"
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
-                          type="number"
+                          dataKey="dateLabel"
+                          tick={{ fontSize: 11, fill: '#64748b' }}
+                          angle={-45}
+                          textAnchor="end"
+                          height={70}
+                          interval={0}
+                          axisLine={{ stroke: '#e2e8f0' }}
+                        />
+                        <YAxis 
                           tick={{ fontSize: 12, fill: '#64748b' }}
                           tickLine={false}
                           axisLine={{ stroke: '#e2e8f0' }}
                           label={{ 
                             value: 'מספר הרשאות', 
-                            position: 'insideBottom',
-                            offset: -5,
+                            angle: -90, 
+                            position: 'insideLeft',
                             style: { textAnchor: 'middle', fill: '#64748b', fontSize: '12px' }
                           }}
                           domain={[0, 'dataMax']}
-                        />
-                        <YAxis 
-                          type="category"
-                          dataKey="dateLabel"
-                          tick={{ fontSize: 10, fill: '#64748b' }}
-                          width={130}
-                          interval={0}
-                          axisLine={false}
-                          tickLine={false}
                         />
                         <Tooltip 
                           content={({ active, payload, label }) => {
@@ -1351,8 +1349,8 @@ export default function BudgetAuthorizationsPage() {
                         />
                         <Bar 
                           dataKey="count" 
-                          barSize={10}
-                          radius={[0, 4, 4, 0]}
+                          barSize={30}
+                          radius={[4, 4, 0, 0]}
                         >
                           {timelineData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
