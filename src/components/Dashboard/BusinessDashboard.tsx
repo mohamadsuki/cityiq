@@ -384,37 +384,32 @@ export default function BusinessDashboard() {
          <Card className="shadow-card">
            <CardHeader><CardTitle className="text-xl">סטטוס עסקים</CardTitle></CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col space-y-2">
-                {statusData.map((item, index) => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div 
-                      className="w-4 h-4 rounded" 
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    />
-                    <span className="text-sm">{item.name}: {item.value}</span>
-                  </div>
-                ))}
-              </div>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie 
-                    data={statusData} 
-                    dataKey="value" 
-                    nameKey="name" 
-                    cx="50%" 
-                    cy="50%" 
-                    outerRadius={80}
-                    paddingAngle={2}
-                  >
-                    {statusData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer width="100%" height={350}>
+              <PieChart>
+                <Pie 
+                  data={statusData} 
+                  dataKey="value" 
+                  nameKey="name" 
+                  cx="50%" 
+                  cy="50%" 
+                  outerRadius={130}
+                  innerRadius={0}
+                  paddingAngle={5}
+                  label={({ name, value, percent }) => 
+                    `${name}: ${value} (${(percent * 100).toFixed(1)}%)`
+                  }
+                  labelLine={true}
+                >
+                  {statusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value) => [value, 'מספר עסקים']}
+                  labelFormatter={(label) => `סטטוס: ${label}`}
+                />
+              </PieChart>
+            </ResponsiveContainer>
            </CardContent>
          </Card>
 
