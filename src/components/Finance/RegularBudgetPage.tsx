@@ -334,19 +334,19 @@ export default function RegularBudgetPage() {
           <CardContent>
             <div className="space-y-1">
               <div className={`text-lg font-bold ${
-                (totalBudgetIncome - totalIncome) >= 0 ? 'text-red-600' : 'text-green-600'
+                incomeSummaryRow && (incomeSummaryRow.actual_amount - incomeSummaryRow.budget_amount) >= 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                הכנסות: {formatCurrency(Math.abs(totalBudgetIncome - totalIncome))}
+                הכנסות: {incomeSummaryRow ? formatCurrency(Math.abs(incomeSummaryRow.actual_amount - incomeSummaryRow.budget_amount)) : '₪0'}
               </div>
               <div className={`text-lg font-bold ${
-                (totalBudgetExpenses - totalExpenses) >= 0 ? 'text-green-600' : 'text-red-600'
+                expenseSummaryRow && (expenseSummaryRow.actual_amount - expenseSummaryRow.budget_amount) >= 0 ? 'text-red-600' : 'text-green-600'
               }`}>
-                הוצאות: {formatCurrency(Math.abs(totalBudgetExpenses - totalExpenses))}
+                הוצאות: {expenseSummaryRow ? formatCurrency(Math.abs(expenseSummaryRow.actual_amount - expenseSummaryRow.budget_amount)) : '₪0'}
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              הכנסות: {totalBudgetIncome > 0 ? (((totalBudgetIncome - totalIncome) / totalBudgetIncome) * 100).toFixed(1) : 0}% | 
-              הוצאות: {totalBudgetExpenses > 0 ? (((totalBudgetExpenses - totalExpenses) / totalBudgetExpenses) * 100).toFixed(1) : 0}%
+              הכנסות: {incomeSummaryRow && incomeSummaryRow.budget_amount > 0 ? (((incomeSummaryRow.actual_amount - incomeSummaryRow.budget_amount) / incomeSummaryRow.budget_amount) * 100).toFixed(1) : 0}% | 
+              הוצאות: {expenseSummaryRow && expenseSummaryRow.budget_amount > 0 ? (((expenseSummaryRow.actual_amount - expenseSummaryRow.budget_amount) / expenseSummaryRow.budget_amount) * 100).toFixed(1) : 0}%
             </p>
           </CardContent>
         </Card>
