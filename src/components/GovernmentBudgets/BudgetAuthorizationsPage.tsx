@@ -1176,27 +1176,54 @@ export default function BudgetAuthorizationsPage() {
           </CardContent>
         </Card>
 
-        {/* ציר זמן הרשאות - גרף עמודות */}
-        <Card className="border-0 shadow-elevated bg-card overflow-hidden lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-semibold text-foreground">ציר זמן הרשאות</CardTitle>
+        {/* ציר זמן הרשאות משופר - גרף עמודות אינטראקטיבי */}
+        <Card className="border-0 shadow-elevated bg-gradient-to-br from-slate-50 via-white to-blue-50/30 dark:from-slate-900 dark:via-slate-800 dark:to-blue-950/30 overflow-hidden lg:col-span-2">
+          <div className="absolute inset-0 bg-gradient-to-br from-transparent via-blue-50/20 to-purple-50/20 dark:from-transparent dark:via-blue-950/20 dark:to-purple-950/20 pointer-events-none" />
+          <CardHeader className="pb-4 relative z-10">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
+                <Clock className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+                  ציר זמן הרשאות
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  התפלגות הרשאות לפי תאריכי תפוגה • מיון לפי דחיפות
+                </p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             <div className="h-96">
               {(() => {
+                console.log('📊 Building enhanced timeline chart with', authorizations.length, 'authorizations');
+                
+                if (authorizations.length === 0) {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 flex items-center justify-center mb-4 animate-pulse">
+                        <Clock className="h-8 w-8 text-blue-500" />
+                      </div>
+                      <p className="text-muted-foreground text-center">טוען נתונים...</p>
+                    </div>
+                  );
+                }
+
                 const currentDate = new Date();
                 
-                // קיבוץ הרשאות לפי תאריך סיום תוקף (לפי חודש)
+                // קיבוץ הרשאות לפי חודש ושנה של תפוגה
                 const authsByExpiry = authorizations
                   .filter(auth => auth.valid_until)
-                  .reduce((acc, auth) => {
+                  .reduce((acc: any, auth) => {
                     const expiryDate = new Date(auth.valid_until);
                     const monthYear = `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, '0')}`;
                     
                     if (!acc[monthYear]) {
                       acc[monthYear] = {
-                        date: expiryDate,
-                        dateLabel: new Date(expiryDate.getFullYear(), expiryDate.getMonth()).toLocaleDateString('he-IL', { 
+                        date: new Date(expiryDate.getFullYear(), expiryDate.getMonth(), 1),
+                        monthYear: expiryDate.toLocaleDateString('he-IL', { 
                           month: 'short', 
                           year: 'numeric' 
                         }),
@@ -1214,55 +1241,110 @@ export default function BudgetAuthorizationsPage() {
                     return acc;
                   }, {});
 
-                // המרה למערך וסידור לפי תאריך
+                // המרה למערך וסידור לפי תאריך עם שיפורים ויזואליים
                 const timelineData = Object.values(authsByExpiry)
                   .sort((a: any, b: any) => a.date.getTime() - b.date.getTime())
-                  .slice(0, 12) // הצגת 12 תקופות
-                  .map((item: any) => ({
-                    ...item,
-                    // המרת התאריך למספר עבור ציר זמן רציף
-                    dateValue: item.date.getTime(),
-                    // תווית קצרה יותר לתצוגה
-                    shortLabel: new Date(item.date.getFullYear(), item.date.getMonth()).toLocaleDateString('he-IL', { 
-                      month: '2-digit', 
-                      year: '2-digit' 
-                    }).replace('.', '/'),
-                    isExpired: item.daysFromNow < 0,
-                    color: item.daysFromNow < 0 ? '#dc2626' : 
-                           item.daysFromNow <= 90 ? '#ea580c' :
-                           item.daysFromNow <= 180 ? '#ca8a04' :
-                           item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
-                  }));
+                  .slice(0, 12)
+                  .map((item: any, index) => {
+                    const isExpired = item.daysFromNow < 0;
+                    const isUrgent = item.daysFromNow <= 90;
+                    const isWarning = item.daysFromNow <= 180;
+                    const isOK = item.daysFromNow <= 365;
+                    
+                    return {
+                      ...item,
+                      dateValue: item.date.getTime(),
+                      shortLabel: new Date(item.date.getFullYear(), item.date.getMonth()).toLocaleDateString('he-IL', { 
+                        month: '2-digit', 
+                        year: '2-digit' 
+                      }).replace('.', '/'),
+                      isExpired,
+                      isUrgent,
+                      isWarning,
+                      isOK,
+                      // גרדיאנטים מתקדמים לפי מצב
+                      gradient: isExpired ? 'linear-gradient(135deg, #ef4444, #dc2626)' :
+                               isUrgent ? 'linear-gradient(135deg, #f97316, #ea580c)' :
+                               isWarning ? 'linear-gradient(135deg, #eab308, #ca8a04)' :
+                               isOK ? 'linear-gradient(135deg, #22c55e, #16a34a)' : 
+                               'linear-gradient(135deg, #3b82f6, #2563eb)',
+                      // צללים דינמיים
+                      shadow: isExpired ? '0 8px 25px -5px rgba(239, 68, 68, 0.4)' :
+                             isUrgent ? '0 8px 25px -5px rgba(249, 115, 22, 0.4)' :
+                             isWarning ? '0 8px 25px -5px rgba(234, 179, 8, 0.4)' :
+                             isOK ? '0 8px 25px -5px rgba(34, 197, 94, 0.4)' :
+                             '0 8px 25px -5px rgba(59, 130, 246, 0.4)',
+                      // הוספת אנימציות
+                      animationDelay: `${index * 0.1}s`
+                    };
+                  });
 
                 if (timelineData.length === 0) {
                   return (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                      אין נתונים להצגה - {authorizations.length} הרשאות נמצאו
+                    <div className="flex flex-col items-center justify-center h-full">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex items-center justify-center mb-4">
+                        <AlertCircle className="h-8 w-8 text-amber-500" />
+                      </div>
+                      <p className="text-muted-foreground text-center">אין נתונים להצגה</p>
+                      <p className="text-xs text-muted-foreground mt-1">{authorizations.length} הרשאות נמצאו ללא תאריכי תוקף</p>
                     </div>
                   );
                 }
 
-                console.log('Timeline data:', timelineData);
-
                 return (
                   <div className="relative w-full h-full">
-                    <div className="mb-2 text-xs text-gray-500">
-                      Debug: {timelineData.length} תקופות, {authorizations.length} הרשאות כולל
+                    {/* אלמנטי רקע דקורטיביים */}
+                    <div className="absolute inset-0 opacity-30">
+                      <div className="absolute top-4 left-4 w-20 h-20 bg-gradient-to-br from-blue-200 to-purple-200 dark:from-blue-800/30 dark:to-purple-800/30 rounded-full blur-xl" />
+                      <div className="absolute bottom-4 right-4 w-16 h-16 bg-gradient-to-br from-emerald-200 to-cyan-200 dark:from-emerald-800/30 dark:to-cyan-800/30 rounded-full blur-xl" />
                     </div>
+                    
+                    {/* אינדיקטור סטטוס */}
+                    <div className="absolute top-2 right-2 flex gap-2 z-20">
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border shadow-sm">
+                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">פג תוקף</span>
+                      </div>
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border shadow-sm">
+                        <div className="w-2 h-2 rounded-full bg-orange-500" />
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">דחוף</span>
+                      </div>
+                      <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border shadow-sm">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300">תקין</span>
+                      </div>
+                    </div>
+
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={timelineData}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                        margin={{ top: 40, right: 30, left: 20, bottom: 60 }}
+                        className="animate-fade-in"
                       >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <defs>
+                          {timelineData.map((entry, index) => (
+                            <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={entry.isExpired ? '#ef4444' : entry.isUrgent ? '#f97316' : entry.isWarning ? '#eab308' : entry.isOK ? '#22c55e' : '#3b82f6'} stopOpacity={0.9} />
+                              <stop offset="100%" stopColor={entry.isExpired ? '#dc2626' : entry.isUrgent ? '#ea580c' : entry.isWarning ? '#ca8a04' : entry.isOK ? '#16a34a' : '#2563eb'} stopOpacity={0.7} />
+                            </linearGradient>
+                          ))}
+                        </defs>
+                        
+                        <CartesianGrid 
+                          strokeDasharray="3 3" 
+                          stroke="hsl(var(--border))" 
+                          strokeOpacity={0.3}
+                          className="animate-fade-in"
+                        />
+                        
                         <XAxis 
                           type="number"
                           dataKey="dateValue"
                           scale="time"
                           domain={['dataMin', 'dataMax']}
-                          tick={{ fontSize: 11, fill: '#64748b' }}
+                          tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                           tickLine={false}
-                          axisLine={{ stroke: '#e2e8f0' }}
+                          axisLine={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
                           height={50}
                           tickFormatter={(value) => {
                             const date = new Date(value);
@@ -1272,65 +1354,78 @@ export default function BudgetAuthorizationsPage() {
                             }).replace('.', '/');
                           }}
                         />
+                        
                         <YAxis 
-                          tick={{ fontSize: 12, fill: '#64748b' }}
+                          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
                           tickLine={false}
-                          axisLine={{ stroke: '#e2e8f0' }}
+                          axisLine={{ stroke: 'hsl(var(--border))', strokeWidth: 1 }}
                           label={{ 
                             value: 'מספר הרשאות', 
                             angle: -90, 
                             position: 'insideLeft',
-                            style: { textAnchor: 'middle', fill: '#64748b', fontSize: '12px' }
+                            style: { textAnchor: 'middle', fill: 'hsl(var(--muted-foreground))', fontSize: '12px' }
                           }}
                           domain={[0, 'dataMax']}
                         />
+                        
                         <Tooltip 
                           content={({ active, payload, label }) => {
                             if (active && payload && payload[0]) {
                               const data = payload[0].payload;
                               return (
-                                <div className="bg-white/97 backdrop-blur-sm p-4 rounded-xl shadow-2xl border border-slate-200 min-w-80 max-w-96">
-                                  <div className="text-center mb-3">
-                                    <div className="font-bold text-slate-900 text-lg flex items-center justify-center gap-2">
-                                      {data.isExpired && <span className="text-red-500">⚠️</span>}
-                                      {label}
-                                      {data.isExpired ? ' (פג תוקף)' : ''}
+                                <div className="bg-white/98 dark:bg-slate-900/98 backdrop-blur-md p-5 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 min-w-80 max-w-96 animate-scale-in">
+                                  <div className="text-center mb-4">
+                                    <div className="flex items-center justify-center gap-3 mb-2">
+                                      {data.isExpired && <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />}
+                                      {data.isUrgent && !data.isExpired && <div className="w-3 h-3 rounded-full bg-orange-500 animate-pulse" />}
+                                      <div className="font-bold text-slate-900 dark:text-slate-100 text-xl">
+                                        {data.monthYear}
+                                      </div>
                                     </div>
-                                    <div className="text-sm text-slate-600">
-                                      {data.isExpired ? 'פג תוקף לפני' : 'פג תוקף בעוד'} {Math.abs(data.daysFromNow)} ימים
+                                    <div className={`text-sm font-medium px-3 py-1 rounded-full inline-block ${
+                                      data.isExpired ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300' :
+                                      data.isUrgent ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' :
+                                      data.isWarning ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300' :
+                                      'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                                    }`}>
+                                      {data.isExpired ? '⚠️ פג תוקף לפני' : '⏰ פג תוקף בעוד'} {Math.abs(data.daysFromNow)} ימים
                                     </div>
                                   </div>
                                   
-                                  <div className="grid grid-cols-2 gap-4 mb-3">
-                                    <div className="text-center p-2 bg-blue-50 rounded-lg">
-                                      <div className="text-2xl font-bold text-blue-600">{data.count}</div>
-                                      <div className="text-xs text-gray-600">מספר הרשאות</div>
+                                  <div className="grid grid-cols-2 gap-4 mb-4">
+                                    <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 rounded-xl">
+                                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{data.count}</div>
+                                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">מספר הרשאות</div>
                                     </div>
-                                    <div className="text-center p-2 bg-green-50 rounded-lg">
-                                      <div className="text-lg font-bold text-green-600">
+                                    <div className="text-center p-3 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 rounded-xl">
+                                      <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
                                         ₪{new Intl.NumberFormat('he-IL', { notation: 'compact' }).format(data.totalAmount)}
                                       </div>
-                                      <div className="text-xs text-gray-600">סה"כ תקציב</div>
+                                      <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">סה"כ תקציב</div>
                                     </div>
                                   </div>
                                   
-                                  <div className="border-t pt-3 mb-3">
-                                    <div className="text-sm font-medium text-gray-700 mb-2">רשימת הרשאות:</div>
-                                    <div className="max-h-32 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-gray-300">
+                                  <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mb-4">
+                                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-2">
+                                      <FileCheck className="h-4 w-4" />
+                                      רשימת הרשאות:
+                                    </div>
+                                    <div className="max-h-32 overflow-y-auto space-y-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600">
                                       {data.authorizations.map((auth: any, i: number) => (
-                                        <div key={i} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                                          <div className="font-medium">• {auth.program?.substring(0, 60)}{auth.program?.length > 60 ? '...' : ''}</div>
-                                          <div className="text-gray-500 mt-1">
-                                            {auth.ministry} | ₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}
+                                        <div key={i} className="text-xs text-gray-700 dark:text-gray-300 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:shadow-md transition-all duration-200">
+                                          <div className="font-semibold mb-1">• {auth.program?.substring(0, 60)}{auth.program?.length > 60 ? '...' : ''}</div>
+                                          <div className="text-gray-500 dark:text-gray-400 flex items-center justify-between">
+                                            <span>{auth.ministry}</span>
+                                            <span className="font-semibold">₪{new Intl.NumberFormat('he-IL').format(auth.amount || 0)}</span>
                                           </div>
                                         </div>
                                       ))}
                                     </div>
                                   </div>
                                   
-                                  <div className="border-t pt-3">
+                                  <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
                                     <button
-                                      className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                                      className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 hover:from-blue-600 hover:via-purple-600 hover:to-blue-700 text-white px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                                       onClick={() => {
                                         const today = new Date();
                                         const validUntil = new Date(data.date);
@@ -1352,6 +1447,7 @@ export default function BudgetAuthorizationsPage() {
                                         handleFilterByCategory(category);
                                       }}
                                     >
+                                      <FileCheck className="h-4 w-4" />
                                       הצג בטבלה
                                     </button>
                                   </div>
@@ -1361,13 +1457,22 @@ export default function BudgetAuthorizationsPage() {
                             return null;
                           }}
                         />
+                        
                         <Bar 
                           dataKey="count" 
-                          barSize={12}
-                          radius={[2, 2, 0, 0]}
+                          barSize={14}
+                          radius={[4, 4, 0, 0]}
                         >
                           {timelineData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={`url(#gradient-${index})`}
+                              className="hover:opacity-80 transition-all duration-300 cursor-pointer"
+                              style={{
+                                filter: `drop-shadow(${entry.shadow})`,
+                                animation: `fade-in 0.6s ease-out ${entry.animationDelay} both`
+                              }}
+                            />
                           ))}
                         </Bar>
                       </BarChart>
