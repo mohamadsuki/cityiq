@@ -384,7 +384,7 @@ export default function BusinessDashboard() {
          <Card className="shadow-card">
            <CardHeader><CardTitle className="text-xl">סטטוס עסקים</CardTitle></CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col gap-4">
               <ResponsiveContainer width="100%" height={350}>
                 <PieChart>
                   <Pie 
@@ -416,13 +416,13 @@ export default function BusinessDashboard() {
               </ResponsiveContainer>
               
               {/* Legend */}
-              <div className="flex flex-col justify-center space-y-0">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 justify-center">
                 {statusData.map((item, index) => {
                   const total = statusData.reduce((sum, s) => sum + s.value, 0);
                   const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
                   return (
                     <div key={item.name} className="flex items-center gap-2 text-xs">
-                      <div className="flex items-center gap-0.5">
+                      <div className="flex items-center gap-1">
                         <span
                           className="inline-block h-2 w-2 rounded-full"
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
@@ -430,7 +430,7 @@ export default function BusinessDashboard() {
                         />
                         <span className="text-muted-foreground text-xs">{item.name}</span>
                       </div>
-                      <div className="flex items-center gap-1 ml-auto">
+                      <div className="flex items-center gap-1">
                         <div className="font-bold text-xs">{item.value}</div>
                         <div className="text-xs text-muted-foreground">({percentage}%)</div>
                       </div>
