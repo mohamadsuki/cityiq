@@ -333,21 +333,37 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       const businessNatureRaw = normalizedRow['מהות עסק'] || normalizedRow['טיב עסק'] || '';
       mapped.business_nature = businessNatureRaw ? businessNatureRaw.toString().replace(/^\d+/, '') : '';
       
-      mapped.request_type = normalizedRow['סוג בקשה'] || normalizedRow['סוג פנייה'] || '';
-      mapped.group_category = normalizedRow['קבוצה'] || normalizedRow['קטגוריה'] || '';
+      // Clean request type field - remove leading numbers
+      const requestTypeRaw = normalizedRow['סוג בקשה'] || normalizedRow['סוג פנייה'] || '';
+      mapped.request_type = requestTypeRaw ? requestTypeRaw.toString().replace(/^\d+/, '') : '';
       
-      // Handle dates - improve date parsing
+      // Clean group category field - remove leading numbers
+      const groupCategoryRaw = normalizedRow['קבוצה'] || normalizedRow['קטגוריה'] || '';
+      mapped.group_category = groupCategoryRaw ? groupCategoryRaw.toString().replace(/^\d+/, '') : '';
+      
+      // Handle dates - improve date parsing for Israeli format
       const requestDateField = normalizedRow['תאריך בקשה'] || normalizedRow['תאריך פנייה'] || '';
       if (requestDateField && requestDateField.toString().trim() !== '') {
         try {
           // Try to parse Excel date or string date
           const dateStr = requestDateField.toString();
-          if (!isNaN(Number(dateStr))) {
+          if (!isNaN(Number(dateStr)) && Number(dateStr) > 40000) {
             // Excel serial date
             const excelDate = new Date((Number(dateStr) - 25569) * 86400 * 1000);
             mapped.request_date = excelDate.toISOString().split('T')[0];
-          } else if (isValidDate(dateStr)) {
-            mapped.request_date = dateStr;
+          } else if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(dateStr)) {
+            // Parse DD/MM/YYYY or similar format
+            const parts = dateStr.split(/[\/\-\.]/);
+            if (parts.length === 3) {
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+              const year = parseInt(parts[2]);
+              const fullYear = year < 100 ? (year > 50 ? 1900 + year : 2000 + year) : year;
+              const parsedDate = new Date(fullYear, month, day);
+              if (!isNaN(parsedDate.getTime())) {
+                mapped.request_date = parsedDate.toISOString().split('T')[0];
+              }
+            }
           }
         } catch (e) {
           console.log('Failed to parse request date:', requestDateField);
@@ -359,12 +375,23 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
         try {
           // Try to parse Excel date or string date
           const dateStr = expiryDateField.toString();
-          if (!isNaN(Number(dateStr))) {
+          if (!isNaN(Number(dateStr)) && Number(dateStr) > 40000) {
             // Excel serial date
             const excelDate = new Date((Number(dateStr) - 25569) * 86400 * 1000);
             mapped.expiry_date = excelDate.toISOString().split('T')[0];
-          } else if (isValidDate(dateStr)) {
-            mapped.expiry_date = dateStr;
+          } else if (/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(dateStr)) {
+            // Parse DD/MM/YYYY or similar format
+            const parts = dateStr.split(/[\/\-\.]/);
+            if (parts.length === 3) {
+              const day = parseInt(parts[0]);
+              const month = parseInt(parts[1]) - 1; // Month is 0-indexed
+              const year = parseInt(parts[2]);
+              const fullYear = year < 100 ? (year > 50 ? 1900 + year : 2000 + year) : year;
+              const parsedDate = new Date(fullYear, month, day);
+              if (!isNaN(parsedDate.getTime())) {
+                mapped.expiry_date = parsedDate.toISOString().split('T')[0];
+              }
+            }
           }
         } catch (e) {
           console.log('Failed to parse expiry date:', expiryDateField);
