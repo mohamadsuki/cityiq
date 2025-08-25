@@ -16,8 +16,10 @@ import { MapboxTokenField } from "@/components/shared/Map/MapboxTokenField";
 import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 import { supabase } from "@/integrations/supabase/client";
 import AddLicenseDialog from "@/components/Business/AddLicenseDialog";
+import { EditLicenseDialog } from "@/components/Business/EditLicenseDialog";
 import { useAuth } from "@/context/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Edit, Eye } from "lucide-react";
 
 
 const kpi = {
@@ -41,6 +43,12 @@ type LicenseRow = {
   expires_at: string | null;
   address: string | null;
   reason_no_license: string | null;
+  phone: string | null;
+  mobile: string | null;
+  email: string | null;
+  validity: string | null;
+  lat: number | null;
+  lng: number | null;
 };
 
 export default function BusinessDashboard() {
@@ -48,6 +56,9 @@ export default function BusinessDashboard() {
   const { user, session } = useAuth();
   const isUuid = (v?: string | null) => !!v && /^[0-9a-fA-F-]{36}$/.test(v);
   
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedLicense, setSelectedLicense] = useState<any>(null);
 
   // Licenses list (DB for auth users, localStorage for demo)
   const [licenses, setLicenses] = useState<LicenseRow[]>([]);
@@ -65,6 +76,12 @@ export default function BusinessDashboard() {
           expires_at: r.expires_at ?? null,
           address: r.address ?? null,
           reason_no_license: r.reason_no_license ?? null,
+          phone: (r as any).phone ?? null,
+          mobile: (r as any).mobile ?? null,
+          email: (r as any).email ?? null,
+          validity: (r as any).validity ?? null,
+          lat: r.lat ?? null,
+          lng: r.lng ?? null,
         })));
     } catch {}
   };
@@ -105,14 +122,37 @@ export default function BusinessDashboard() {
     return () => { cancelled = true; };
   }, []);
 
-const licenseColumns: ColumnDef<LicenseRow>[] = [
+  const handleEditLicense = (license: any) => {
+    setSelectedLicense(license);
+    setEditDialogOpen(true);
+  };
+
+  const licenseColumns: ColumnDef<LicenseRow>[] = [
     { accessorKey: "license_number", header: "מספר רישיון" },
     { accessorKey: "business_name", header: "שם עסק" },
     { accessorKey: "owner", header: "בעלים" },
     { accessorKey: "type", header: "סוג" },
     { accessorKey: "status", header: "סטטוס" },
+    { accessorKey: "phone", header: "טלפון" },
+    { accessorKey: "mobile", header: "נייד" },
+    { accessorKey: "email", header: "אימייל" },
     { accessorKey: "expires_at", header: "תוקף עד" },
     { accessorKey: "address", header: "כתובת" },
+    {
+      id: "actions",
+      header: "פעולות",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleEditLicense(row.original)}
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
   ];
 
   // Filters and derived datasets
@@ -150,10 +190,20 @@ const licenseColumns: ColumnDef<LicenseRow>[] = [
     }, {} as Record<string, number>)
   ).map(([type, count]) => ({ type, count }));
 
-  const expiredCount = licenses.reduce((acc, l) => acc + (l.status === 'פג תוקף' ? 1 : 0), 0);
+  // Calculate KPIs from actual data
+  const totalLicenses = licenses.length;
+  const activeLicenses = licenses.filter(l => l.status === 'פעיל').length;
+  const expiredCount = licenses.filter(l => l.status === 'פג תוקף').length;
+  const expiringCount = licenses.filter(l => {
+    if (!l.expires_at) return false;
+    const days = daysUntil(l.expires_at);
+    return days >= 0 && days <= 30;
+  }).length;
+  const newRequests = licenses.filter(l => l.status === 'חדש' || l.status === 'בקשה').length;
+
   const alerts = [
-    { id: "AL-001", title: "רישיונות שפוקעים בחודש הקרוב", count: kpi.expiringThisMonth, severity: "warning" as const, icon: Timer },
-    { id: "AL-002", title: "בקשות הממתינות לטיפול", count: 12, severity: "default" as const, icon: Bell },
+    { id: "AL-001", title: "רישיונות שפוקעים בחודש הקרוב", count: expiringCount, severity: "warning" as const, icon: Timer },
+    { id: "AL-002", title: "בקשות הממתינות לטיפול", count: newRequests, severity: "default" as const, icon: Bell },
     { id: "AL-003", title: "עסקים ללא רישיון תקף", count: expiredCount, severity: "destructive" as const, icon: AlertTriangle },
   ];
 
@@ -183,10 +233,10 @@ const licenseColumns: ColumnDef<LicenseRow>[] = [
       </header>
 
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">עסקים רשומים</p><p className="text-3xl font-bold">{kpi.registered.toLocaleString()}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
-        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">עסקים פעילים</p><p className="text-3xl font-bold">{kpi.active.toLocaleString()}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
-        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">רישיונות פוקעים החודש</p><p className="text-3xl font-bold">{kpi.expiringThisMonth}</p></div><Timer className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
-        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">בקשות חדשות</p><p className="text-3xl font-bold">{kpi.newRequests}</p></div><Bell className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
+        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">עסקים רשומים</p><p className="text-3xl font-bold">{totalLicenses.toLocaleString()}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
+        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">עסקים פעילים</p><p className="text-3xl font-bold">{activeLicenses.toLocaleString()}</p></div><Store className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
+        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">רישיונות פוקעים החודש</p><p className="text-3xl font-bold">{expiringCount}</p></div><Timer className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
+        <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">בקשות חדשות</p><p className="text-3xl font-bold">{newRequests}</p></div><Bell className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -334,6 +384,13 @@ const licenseColumns: ColumnDef<LicenseRow>[] = [
           </CardContent>
         </Card>
       </section>
+
+      <EditLicenseDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSuccess={reloadLicenses}
+        license={selectedLicense}
+      />
     </div>
   );
 }

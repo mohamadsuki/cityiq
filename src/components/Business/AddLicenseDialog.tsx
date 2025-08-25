@@ -29,6 +29,10 @@ export default function AddLicenseDialog({ onSaved }: { onSaved?: () => void }) 
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [images, setImages] = useState<FileList | null>(null);
+  const [phone, setPhone] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [email, setEmail] = useState("");
+  const [validity, setValidity] = useState("");
 
   
 
@@ -49,7 +53,11 @@ export default function AddLicenseDialog({ onSaved }: { onSaved?: () => void }) 
         reason_no_license: reasonNoLicense || null,
         address: address || null,
         lat: lat ? parseFloat(lat) : null,
-        lng: lng ? parseFloat(lng) : null
+        lng: lng ? parseFloat(lng) : null,
+        phone: phone || null,
+        mobile: mobile || null,
+        email: email || null,
+        validity: validity || null
       }]).select('id').single();
       if (create.error) throw create.error;
       const licId = create.data.id as string;
@@ -129,9 +137,25 @@ export default function AddLicenseDialog({ onSaved }: { onSaved?: () => void }) 
             <Label>קו אורך (Longitude)</Label>
             <Input value={lng} onChange={(e)=>setLng(e.target.value)} placeholder="34.7818" />
           </div>
+          <div>
+            <Label>טלפון</Label>
+            <Input value={phone} onChange={(e)=>setPhone(e.target.value)} placeholder="מספר טלפון" />
+          </div>
+          <div>
+            <Label>נייד</Label>
+            <Input value={mobile} onChange={(e)=>setMobile(e.target.value)} placeholder="מספר נייד" />
+          </div>
+          <div className="md:col-span-2">
+            <Label>אימייל</Label>
+            <Input value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="כתובת אימייל" type="email" />
+          </div>
           <div className="md:col-span-2">
             <Label>סיבת אי-רישוי (אם רלוונטי)</Label>
             <Input value={reasonNoLicense} onChange={(e)=>setReasonNoLicense(e.target.value)} placeholder="נדחה / ממתין להשלמות / אחר" />
+          </div>
+          <div className="md:col-span-2">
+            <Label>תוקף/הערות</Label>
+            <Input value={validity} onChange={(e)=>setValidity(e.target.value)} placeholder="הערות נוספות על תוקף הרישיון" />
           </div>
           <div className="md:col-span-2">
             <Label>תמונות</Label>
