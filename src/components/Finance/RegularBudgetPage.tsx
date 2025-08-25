@@ -63,7 +63,6 @@ export default function RegularBudgetPage() {
       const { data, error } = await supabase
         .from('regular_budget')
         .select('*')
-        .eq('user_id', user.id)
         .order('category_type', { ascending: true })
         .order('category_name', { ascending: true });
 
