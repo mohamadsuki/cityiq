@@ -403,7 +403,8 @@ export default function BusinessDashboard() {
                       <Cell 
                         key={`cell-${index}`} 
                         fill={COLORS[index % COLORS.length]}
-                        className="hover:opacity-80 transition-opacity duration-200 cursor-pointer"
+                        className="hover:opacity-90 transition-all duration-200 cursor-pointer hover:drop-shadow-lg hover:scale-105"
+                        style={{ transformOrigin: 'center' }}
                       />
                     ))}
                   </Pie>
@@ -415,21 +416,21 @@ export default function BusinessDashboard() {
               </ResponsiveContainer>
               
               {/* Legend */}
-              <div className="flex flex-col justify-center space-y-1">
+              <div className="flex flex-col justify-center space-y-0.5">
                 {statusData.map((item, index) => {
                   const total = statusData.reduce((sum, s) => sum + s.value, 0);
                   const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
                   return (
-                    <div key={item.name} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5">
+                    <div key={item.name} className="flex items-center justify-between text-xs py-1">
+                      <div className="flex items-center gap-1">
                         <span
                           className="inline-block h-2.5 w-2.5 rounded-full"
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
                           aria-hidden
                         />
-                        <span className="text-muted-foreground text-xs">{item.name}:</span>
+                        <span className="text-muted-foreground text-xs">{item.name}</span>
                       </div>
-                      <div className="text-left">
+                      <div className="text-left flex flex-col items-end leading-tight">
                         <div className="font-bold text-sm">{item.value}</div>
                         <div className="text-xs text-muted-foreground">{percentage}%</div>
                       </div>
