@@ -19,6 +19,7 @@ type ImportOption = {
 type DataUploaderProps = {
   context?: string;
   onUploadSuccess?: () => void;
+  onAnalysisTriggered?: () => void;
 };
 
 type DebugLog = {
@@ -972,7 +973,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
   return mapped;
 };
 
-export function DataUploader({ context = 'global', onUploadSuccess }: DataUploaderProps) {
+export function DataUploader({ context = 'global', onUploadSuccess, onAnalysisTriggered }: DataUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<any[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -1227,19 +1228,27 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
         addLog('success', `הושלם בהצלחה: ${insertedCount} שורות הוכנסו, ${skippedCount} שורות דולגו`);
 
         // Call success callback
-      if (onUploadSuccess) {
-        console.log('🎯 Calling onUploadSuccess callback');
-        onUploadSuccess();
-      }
-      
-      // Auto-hide after successful upload (like tabarim)
-      setTimeout(() => {
-        setFile(null);
-        setRows([]);
-        setHeaders([]);
-        setDetected({ table: null, reason: '' });
-        setDebugLogs([]);
-      }, 2000);
+        if (onUploadSuccess) {
+          console.log('🎯 Calling onUploadSuccess callback');
+          onUploadSuccess();
+        }
+        
+        // Trigger analysis for regular budget data
+        if (detected.table === 'regular_budget' && onAnalysisTriggered) {
+          console.log('🧠 Triggering automatic analysis for budget data');
+          setTimeout(() => {
+            onAnalysisTriggered();
+          }, 1500); // Small delay to ensure data is loaded
+        }
+        
+        // Auto-hide after successful upload (like tabarim)
+        setTimeout(() => {
+          setFile(null);
+          setRows([]);
+          setHeaders([]);
+          setDetected({ table: null, reason: '' });
+          setDebugLogs([]);
+        }, 3000); // Increased time to allow for analysis
 
         // Verification step
         try {
@@ -1282,7 +1291,7 @@ export function DataUploader({ context = 'global', onUploadSuccess }: DataUpload
       setIsUploading(false);
       setImportOption({ mode: 'replace', confirmed: false }); // Reset for next time
     }
-  }, [file, detected.table, rows, debugLogs, importOption, onUploadSuccess, toast]);
+  }, [file, detected.table, rows, debugLogs, importOption, onUploadSuccess, onAnalysisTriggered, toast]);
 
   const renderPreview = () => {
     if (rows.length === 0) return null;

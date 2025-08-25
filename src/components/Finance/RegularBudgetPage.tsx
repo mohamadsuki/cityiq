@@ -983,6 +983,7 @@ export default function RegularBudgetPage() {
               setImportDialogOpen(false);
               loadBudgetData();
             }}
+            onAnalysisTriggered={() => handleAnalyzeBudget(true)}
           />
         </DialogContent>
       </Dialog>
