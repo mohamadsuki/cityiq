@@ -10,12 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { DataTable } from '@/components/shared/DataTable';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Plus, TrendingUp, TrendingDown, DollarSign, Upload, Brain, Loader2 } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, Upload, Brain, Loader2, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ColumnDef } from "@tanstack/react-table";
 import { DataUploader } from '@/components/shared/DataUploader';
 import { ExportButtons } from '@/components/shared/ExportButtons';
+import SmartBudgetTable from './SmartBudgetTable';
 
 interface RegularBudgetItem {
   id: string;
@@ -39,6 +40,7 @@ export default function RegularBudgetPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [analysis, setAnalysis] = useState<string>("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
   const [newItem, setNewItem] = useState({
     category_type: 'income' as 'income' | 'expense',
     category_name: '',
@@ -107,6 +109,46 @@ export default function RegularBudgetPage() {
     loadBudgetData();
   }, [user]);
 
+  // Load saved analysis when budget data is loaded
+  useEffect(() => {
+    if (budgetData.length > 0 && user && !analysis) {
+      loadSavedAnalysis();
+    }
+  }, [budgetData, user]);
+
+  const loadSavedAnalysis = async () => {
+    if (!user) return;
+    
+    setAnalysisLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('budget_analysis')
+        .select('analysis_text, created_at')
+        .eq('user_id', user.id)
+        .eq('year', new Date().getFullYear())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data && !error) {
+        setAnalysis(data.analysis_text);
+        console.log('Loaded saved analysis from:', data.created_at);
+      } else if (budgetData.length > 0) {
+        // If no saved analysis, generate new one automatically
+        console.log('No saved analysis found, generating new one...');
+        handleAnalyzeBudget(true); // silent generation
+      }
+    } catch (error) {
+      console.error('Error loading saved analysis:', error);
+      // Try to generate new analysis
+      if (budgetData.length > 0) {
+        handleAnalyzeBudget(true);
+      }
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (categoryFilter === "all") {
       setFilteredData(budgetData);
@@ -157,9 +199,9 @@ export default function RegularBudgetPage() {
     }
   };
 
-  const handleAnalyzeBudget = async () => {
+  const handleAnalyzeBudget = async (silent = false) => {
     if (!budgetData || budgetData.length === 0) {
-      toast.error("אין נתוני תקציב לניתוח");
+      if (!silent) toast.error("אין נתוני תקציב לניתוח");
       return;
     }
 
@@ -188,13 +230,13 @@ export default function RegularBudgetPage() {
 
       if (error) {
         console.error("Error analyzing budget:", error);
-        toast.error(`שגיאה בניתוח התקציב: ${error.message || 'שגיאה לא ידועה'}`);
+        if (!silent) toast.error(`שגיאה בניתוח התקציב: ${error.message || 'שגיאה לא ידועה'}`);
         return;
       }
 
       if (data?.error) {
         console.error("OpenAI API error:", data.error);
-        toast.error(`שגיאה ב-OpenAI: ${data.error}`);
+        if (!silent) toast.error(`שגיאה ב-OpenAI: ${data.error}`);
         return;
       }
 
@@ -203,14 +245,14 @@ export default function RegularBudgetPage() {
       
       if (data?.analysis && data.analysis.trim()) {
         setAnalysis(data.analysis);
-        toast.success("ניתוח התקציב הושלם בהצלחה");
+        if (!silent) toast.success("ניתוח התקציב הושלם בהצלחה");
       } else {
         console.error("No valid analysis in response:", data);
-        toast.error("לא התקבל ניתוח תקין מהשרת");
+        if (!silent) toast.error("לא התקבל ניתוח תקין מהשרת");
       }
     } catch (error) {
       console.error("Error:", error);
-      toast.error(`שגיאה בניתוח התקציב: ${error.message || 'שגיאה לא ידועה'}`);
+      if (!silent) toast.error(`שגיאה בניתוח התקציב: ${error.message || 'שגיאה לא ידועה'}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -754,12 +796,12 @@ export default function RegularBudgetPage() {
               </div>
             </div>
             <Button 
-              onClick={handleAnalyzeBudget}
-              disabled={isAnalyzing || !budgetData || budgetData.length === 0}
+              onClick={() => handleAnalyzeBudget(false)}
+              disabled={isAnalyzing || analysisLoading || !budgetData || budgetData.length === 0}
               className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 py-3 rounded-lg transition-all duration-300 transform hover:scale-105"
               size="lg"
             >
-              {isAnalyzing ? (
+              {isAnalyzing || analysisLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   מנתח נתונים...
@@ -774,12 +816,18 @@ export default function RegularBudgetPage() {
           </div>
         </CardHeader>
         <CardContent className="p-8">
-          {analysis ? (
+          {(analysisLoading && !analysis) ? (
+            <div className="text-center py-16">
+              <Loader2 className="w-12 h-12 mx-auto mb-4 animate-spin text-purple-600" />
+              <p className="text-lg font-medium mb-2">טוען ניתוח קודם...</p>
+              <p className="text-sm text-muted-foreground">בודק אם יש ניתוח שמור מהיום</p>
+            </div>
+          ) : analysis ? (
             <div className="space-y-6">
               <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 p-6 rounded-xl border-l-4 border-gradient-to-b from-green-500 to-blue-500">
                 <div className="flex items-center gap-2 mb-4">
                   <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-sm font-medium text-green-700 dark:text-green-300">ניתוח הושלם</span>
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300">ניתוח זמין</span>
                 </div>
                 <div className="prose prose-lg max-w-none text-right">
                   <div className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-relaxed">
@@ -788,12 +836,12 @@ export default function RegularBudgetPage() {
                 </div>
               </div>
               
-              {/* Additional insights section */}
+              {/* Enhanced insights section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
+                <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                   <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium text-blue-800 dark:text-blue-200">יעילות תקציבית</span>
+                    <TrendingUp className="w-5 h-5 text-blue-600" />
+                    <span className="font-medium text-blue-800 dark:text-blue-200">יעילות הכנסות</span>
                   </div>
                   <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                     {((totalIncomeExecution / totalIncome) * 100).toFixed(1)}%
@@ -801,10 +849,10 @@ export default function RegularBudgetPage() {
                   <div className="text-xs text-blue-600 dark:text-blue-400">מביצוע ההכנסות</div>
                 </div>
                 
-                <div className="bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg">
+                <div className="bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
                   <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="w-4 h-4 text-purple-600" />
-                    <span className="font-medium text-purple-800 dark:text-purple-200">מאזן</span>
+                    <DollarSign className="w-5 h-5 text-purple-600" />
+                    <span className="font-medium text-purple-800 dark:text-purple-200">מאזן נוכחי</span>
                   </div>
                   <div className={`text-2xl font-bold ${totalIncomeExecution - totalExpenseExecution >= 0 ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
                     {formatCurrency(totalIncomeExecution - totalExpenseExecution)}
@@ -812,9 +860,9 @@ export default function RegularBudgetPage() {
                   <div className="text-xs text-purple-600 dark:text-purple-400">עודף/גירעון</div>
                 </div>
                 
-                <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-lg">
+                <div className="bg-orange-50 dark:bg-orange-950/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
                   <div className="flex items-center gap-2 mb-2">
-                    <TrendingDown className="w-4 h-4 text-orange-600" />
+                    <TrendingDown className="w-5 h-5 text-orange-600" />
                     <span className="font-medium text-orange-800 dark:text-orange-200">שליטה בהוצאות</span>
                   </div>
                   <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
@@ -823,6 +871,24 @@ export default function RegularBudgetPage() {
                   <div className="text-xs text-orange-600 dark:text-orange-400">מביצוע ההוצאות</div>
                 </div>
               </div>
+
+              {/* Smart Data Table */}
+              {budgetData.length > 0 && (
+                <Card className="mt-6 border-2 border-blue-200 dark:border-blue-800">
+                  <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+                    <CardTitle className="text-xl font-bold text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5" />
+                      טבלת נתונים חכמה - ניתוח מפורט
+                    </CardTitle>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      הצגת הנתונים בצורה מסודרת ומובנת עם הבנת מבנה קובץ האקסל
+                    </p>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <SmartBudgetTable budgetData={budgetData} />
+                  </CardContent>
+                </Card>
+              )}
             </div>
           ) : (
             <div className="text-center text-muted-foreground py-16">

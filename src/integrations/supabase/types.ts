@@ -84,6 +84,48 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_analysis: {
+        Row: {
+          analysis_data: Json | null
+          analysis_text: string
+          created_at: string
+          expense_deviation: number | null
+          id: string
+          income_deviation: number | null
+          total_expenses: number | null
+          total_income: number | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          analysis_data?: Json | null
+          analysis_text: string
+          created_at?: string
+          expense_deviation?: number | null
+          id?: string
+          income_deviation?: number | null
+          total_expenses?: number | null
+          total_income?: number | null
+          updated_at?: string
+          user_id: string
+          year?: number
+        }
+        Update: {
+          analysis_data?: Json | null
+          analysis_text?: string
+          created_at?: string
+          expense_deviation?: number | null
+          id?: string
+          income_deviation?: number | null
+          total_expenses?: number | null
+          total_income?: number | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       budget_authorizations: {
         Row: {
           amount: number | null
