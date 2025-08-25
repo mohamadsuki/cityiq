@@ -312,6 +312,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.type = normalizedRow['__empty_7'] || normalizedRow.type || normalizedRow['סוג הרישיון'] || normalizedRow['סוג'] || 'כללי';
       mapped.address = normalizedRow['__empty_3'] || normalizedRow.address || normalizedRow['כתובת'] || '';
       mapped.status = normalizedRow['__empty_1'] || normalizedRow['__empty_6'] || normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
+      mapped.department_slug = 'business'; // Always set department_slug for licenses
       
       // Handle dates with validation
       const possibleDateValues = [

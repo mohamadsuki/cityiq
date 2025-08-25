@@ -169,7 +169,7 @@ const licenseColumns: ColumnDef<LicenseRow>[] = [
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
-                <FileSpreadsheet className="h-4 w-4 ml-2" /> ייבוא נתונים
+                <FileSpreadsheet className="h-4 w-4 ml-2" /> העלה קובץ אקסל
               </Button>
             </DialogTrigger>
             <DialogContent>
