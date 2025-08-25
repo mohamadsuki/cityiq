@@ -292,7 +292,7 @@ export default function RegularBudgetPage() {
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{formatCurrency(totalBudgetIncome)}</div>
             <p className="text-xs text-muted-foreground">
-              ביצוע: {formatCurrency(totalIncome)}
+              תקציב יחסי: {incomeSummaryRow ? formatCurrency(incomeSummaryRow.actual_amount) : '₪0'}
             </p>
           </CardContent>
         </Card>
