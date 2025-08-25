@@ -400,23 +400,24 @@ export default function BusinessDashboard() {
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart 
-                data={businessTypesData} 
-                layout="horizontal"
-                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                data={businessTypesData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis 
-                  type="category" 
+                <XAxis 
                   dataKey="type" 
-                  width={90}
-                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  interval={0}
+                  tick={{ fontSize: 11 }}
                 />
+                <YAxis />
                 <Tooltip 
                   formatter={(value) => [value, 'מספר עסקים']}
                   labelFormatter={(label) => `קבוצה: ${label}`}
                 />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                   {businessTypesData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
