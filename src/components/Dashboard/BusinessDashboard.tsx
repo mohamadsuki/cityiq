@@ -396,16 +396,32 @@ export default function BusinessDashboard() {
         </Card>
 
         <Card className="shadow-card">
-          <CardHeader><CardTitle className="text-xl">סוגי עסקים</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-xl">התפלגות קבוצות עסקים</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={businessTypesData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="type" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="hsl(var(--primary))" />
-              </BarChart>
+              <PieChart>
+                <Pie 
+                  data={businessTypesData} 
+                  dataKey="count" 
+                  nameKey="type" 
+                  cx="50%" 
+                  cy="50%" 
+                  outerRadius={100}
+                  innerRadius={40}
+                  label={({ type, count, percent }) => 
+                    `${type}: ${count} (${(percent * 100).toFixed(1)}%)`
+                  }
+                  labelLine={false}
+                >
+                  {businessTypesData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value, name) => [value, 'מספר עסקים']}
+                  labelFormatter={(label) => `קבוצה: ${label}`}
+                />
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
