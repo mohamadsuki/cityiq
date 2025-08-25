@@ -536,7 +536,16 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       // Looking for the correct columns based on Excel structure
       const budgetValue = row['__EMPTY_1'] || normalizedRow.budget_amount || normalizedRow['תקציב מאושר'] || normalizedRow['תקציב'] || '0';
       const relativeValue = row['__EMPTY_3'] || normalizedRow.actual_amount || normalizedRow['תקציב יחסי'] || '0';
-      const cumulativeValue = row['__EMPTY_5'] || normalizedRow.cumulative_execution || normalizedRow['ביצוע מצטבר'] || '0';
+      // Try different columns for cumulative execution
+      const cumulativeValue = row['__EMPTY_2'] || row['__EMPTY_4'] || row['__EMPTY_5'] || normalizedRow.cumulative_execution || normalizedRow['ביצוע מצטבר'] || '0';
+      
+      console.log('🔍 Excel column mapping for:', mapped.category_name, {
+        __EMPTY_1: row['__EMPTY_1'],
+        __EMPTY_2: row['__EMPTY_2'], 
+        __EMPTY_3: row['__EMPTY_3'],
+        __EMPTY_4: row['__EMPTY_4'],
+        __EMPTY_5: row['__EMPTY_5']
+      });
       
       // Clean and parse numeric values (remove commas)
       mapped.budget_amount = parseFloat(String(budgetValue).replace(/,/g, '')) || 0;
