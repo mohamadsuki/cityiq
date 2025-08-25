@@ -325,9 +325,9 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.mobile = normalizedRow['מס פלאפון'] || normalizedRow['נייד'] || '';
       mapped.email = normalizedRow['כתובת מייל עסק'] || normalizedRow['כתובת מייל'] || normalizedRow['אימייל'] || '';
       
-      // Clean validity field - remove leading numbers
+      // Clean validity field - remove leading numbers and extract only the text part
       const validityRaw = normalizedRow['תוקף'] || normalizedRow['תוקף עד'] || '';
-      mapped.validity = validityRaw ? validityRaw.toString().replace(/^\d+/, '') : '';
+      mapped.validity = validityRaw ? validityRaw.toString().replace(/^\d+/, '').trim() : '';
       
       // Clean business nature field - remove leading numbers  
       const businessNatureRaw = normalizedRow['מהות עסק'] || normalizedRow['טיב עסק'] || '';
@@ -410,7 +410,6 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       );
       console.log(`🔍 Date-related fields found:`, dateRelatedFields);
       
-      console.log(`🔍 Raw values check:`);
       console.log(`🔍 Raw values check:`);
       console.log(`  - תאריך פקיעה: "${normalizedRow['תאריך פקיעה']}"`);
       console.log(`  - פוקע ב: "${normalizedRow['פוקע ב']}"`);

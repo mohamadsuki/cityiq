@@ -172,7 +172,7 @@ export default function BusinessDashboard() {
     { accessorKey: "license_number", header: "מספר רישיון" },
     { accessorKey: "business_name", header: "שם עסק" },
     { accessorKey: "owner", header: "בעלים" },
-    { accessorKey: "validity", header: "תוקף" },
+    { accessorKey: "validity", header: "סטטוס" },
     { accessorKey: "business_nature", header: "מהות עסק" },
     { 
       accessorKey: "request_date", 
@@ -183,7 +183,7 @@ export default function BusinessDashboard() {
       }
     },
     { 
-      accessorKey: "expiry_date", 
+      accessorKey: "expires_at", 
       header: "תאריך פקיעה",
       cell: ({ getValue }) => {
         const date = getValue() as string;
@@ -248,15 +248,16 @@ export default function BusinessDashboard() {
   };
 
   const filteredLicenses = licenses.filter((l) => {
-    const sOk = statusFilter === 'all' || l.status === statusFilter;
+    const sOk = statusFilter === 'all' || l.validity === statusFilter;
     const tOk = typeFilter === 'all' || l.type === typeFilter;
     const soonOk = soonFilter === 0 || (() => { const d = daysUntil(l.expires_at); return d >= 0 && d <= soonFilter; })();
     return sOk && tOk && soonOk;
   });
 
-  const licenseStatusData = Object.entries(
+  // Create status chart data based on cleaned validity field
+  const statusData = Object.entries(
     filteredLicenses.reduce((acc, l) => {
-      const key = l.status || 'לא צוין';
+      const key = l.validity || 'לא צוין';
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
@@ -319,14 +320,14 @@ export default function BusinessDashboard() {
         <Card className="shadow-card"><CardContent className="p-6 flex items-center justify-between"><div><p className="text-sm text-muted-foreground">בקשות חדשות</p><p className="text-3xl font-bold">{newRequests}</p></div><Bell className="h-6 w-6 text-muted-foreground"/></CardContent></Card>
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-card">
-          <CardHeader><CardTitle className="text-xl">סטטוס רישיונות</CardTitle></CardHeader>
+       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+         <Card className="shadow-card">
+           <CardHeader><CardTitle className="text-xl">סטטוס עסקים</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie data={licenseStatusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
-                  {licenseStatusData.map((e,i)=> <Cell key={i} fill={COLORS[i%COLORS.length]} />)}
+               <PieChart>
+                 <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={110}>
+                   {statusData.map((e,i)=> <Cell key={i} fill={COLORS[i%COLORS.length]} />)}
                 </Pie>
                 <Tooltip />
               </PieChart>
@@ -422,10 +423,10 @@ export default function BusinessDashboard() {
                 <SelectContent className="z-50 bg-popover text-popover-foreground shadow-md">
                   <SelectItem value="all">כל הסטטוסים</SelectItem>
                   <SelectItem value="פעיל">פעיל</SelectItem>
+                  <SelectItem value="מתחדש">מתחדש</SelectItem>
+                  <SelectItem value="בתהליך רישוי">בתהליך רישוי</SelectItem>
                   <SelectItem value="מבוטל">מבוטל</SelectItem>
                   <SelectItem value="זמני">זמני</SelectItem>
-                  <SelectItem value="מתחדש">מתחדש</SelectItem>
-                  <SelectItem value="פג תוקף">פג תוקף</SelectItem>
                   <SelectItem value="ללא רישוי">ללא רישוי</SelectItem>
                 </SelectContent>
               </Select>
