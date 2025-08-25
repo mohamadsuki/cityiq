@@ -1363,8 +1363,8 @@ export default function BudgetAuthorizationsPage() {
                         />
                         <Bar 
                           dataKey="count" 
-                          barSize={30}
-                          radius={[4, 4, 0, 0]}
+                          barSize={12}
+                          radius={[2, 2, 0, 0]}
                         >
                           {timelineData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
