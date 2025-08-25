@@ -305,18 +305,23 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       break;
       
     case 'licenses':
-      // Special mapping for business licenses Excel format
-      mapped.business_name = normalizedRow['__empty_9'] || normalizedRow['__empty_10'] || normalizedRow.business_name || normalizedRow['שם העסק'] || '';
-      mapped.owner = normalizedRow['__empty_12'] || normalizedRow.owner || normalizedRow['בעל הרישיון'] || normalizedRow['בעל'] || '';
-      mapped.license_number = normalizedRow['__empty_11'] || normalizedRow.license_number || normalizedRow['מספר רישיון'] || '';
-      mapped.type = normalizedRow['__empty_7'] || normalizedRow.type || normalizedRow['סוג הרישיון'] || normalizedRow['סוג'] || 'כללי';
-      mapped.address = normalizedRow['__empty_3'] || normalizedRow.address || normalizedRow['כתובת'] || '';
-      mapped.status = normalizedRow['__empty_1'] || normalizedRow['__empty_6'] || normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
+      // Updated mapping for new Hebrew-columned Excel format
+      mapped.license_number = normalizedRow['רישיון'] || normalizedRow.license_number || normalizedRow['מספר רישיון'] || '';
+      mapped.business_name = normalizedRow['שם עסק'] || normalizedRow.business_name || normalizedRow['שם העסק'] || '';
+      mapped.owner = normalizedRow['שם בעל העסק'] || normalizedRow.owner || normalizedRow['בעל הרישיון'] || normalizedRow['בעל'] || '';
+      
+      // Combine address fields
+      const street = normalizedRow['רחוב'] || '';
+      const houseNumber = normalizedRow['בית'] || '';
+      mapped.address = [street, houseNumber].filter(part => part && part.toString().trim() !== '' && part.toString() !== '0').join(' ');
+      
+      // Set defaults for other fields if not present in new format
+      mapped.type = normalizedRow.type || normalizedRow['סוג הרישיון'] || normalizedRow['סוג'] || 'כללי';
+      mapped.status = normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
       mapped.department_slug = 'business'; // Always set department_slug for licenses
       
       // Handle dates with validation
       const possibleDateValues = [
-        normalizedRow['__empty_4'], 
         normalizedRow.expires_at, 
         normalizedRow['תאריך תפוגה'], 
         normalizedRow['תוקף עד']
@@ -330,6 +335,18 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       }
       
       mapped.reason_no_license = normalizedRow.reason_no_license || normalizedRow['סיבה ללא רישוי'] || '';
+      
+      // Skip empty rows - check if all main fields are empty or just zeros
+      const hasContent = mapped.business_name.trim() || 
+                        mapped.owner.trim() || 
+                        mapped.license_number.trim() ||
+                        mapped.address.trim();
+      
+      if (!hasContent) {
+        console.log('🚫 Skipping empty licenses row');
+        return null;
+      }
+      
       // user_id יוגדר למטה בשורה 900+
       break;
       
