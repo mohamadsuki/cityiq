@@ -398,26 +398,31 @@ export default function BusinessDashboard() {
         <Card className="shadow-card">
           <CardHeader><CardTitle className="text-xl">התפלגות קבוצות עסקים</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={350}>
               <BarChart 
                 data={businessTypesData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                barCategoryGap="20%"
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="type" 
                   angle={-45}
                   textAnchor="end"
-                  height={80}
+                  height={100}
                   interval={0}
-                  tick={{ fontSize: 11 }}
+                  tick={{ fontSize: 10, fontWeight: 'bold' }}
                 />
                 <YAxis />
                 <Tooltip 
                   formatter={(value) => [value, 'מספר עסקים']}
                   labelFormatter={(label) => `קבוצה: ${label}`}
                 />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                <Bar 
+                  dataKey="count" 
+                  radius={[2, 2, 0, 0]}
+                  maxBarSize={40}
+                >
                   {businessTypesData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
