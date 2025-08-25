@@ -401,17 +401,17 @@ export default function BusinessDashboard() {
             <ResponsiveContainer width="100%" height={400}>
               <BarChart 
                 data={businessTypesData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
+                margin={{ top: 20, right: 30, left: 20, bottom: 100 }}
                 barCategoryGap="20%"
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="type" 
-                  angle={-45}
+                  angle={-90}
                   textAnchor="end"
-                  height={120}
+                  height={100}
                   interval={0}
-                  tick={{ fontSize: 10, fontWeight: 'bold', dy: 10 }}
+                  tick={{ fontSize: 10, fontWeight: 'bold' }}
                 />
                 <YAxis />
                 <Tooltip 
