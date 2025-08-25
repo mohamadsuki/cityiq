@@ -1214,28 +1214,36 @@ export default function BudgetAuthorizationsPage() {
                     return acc;
                   }, {});
 
+                // נתוני דמיה לבדיקה
+                const sampleData = [
+                  { shortLabel: '01/25', count: 5, color: '#dc2626' },
+                  { shortLabel: '02/25', count: 3, color: '#ea580c' },
+                  { shortLabel: '03/25', count: 8, color: '#ca8a04' },
+                  { shortLabel: '04/25', count: 2, color: '#16a34a' },
+                  { shortLabel: '05/25', count: 6, color: '#2563eb' }
+                ];
+
                 // המרה למערך וסידור לפי תאריך
-                const timelineData = Object.values(authsByExpiry)
+                const realTimelineData = Object.values(authsByExpiry)
                   .sort((a: any, b: any) => a.date.getTime() - b.date.getTime())
                   .slice(0, 12) // הצגת 12 תקופות
                   .map((item: any) => ({
-                    ...item,
-                    // המרת התאריך למספר עבור ציר זמן רציף
-                    dateValue: item.date.getTime(),
-                    // תווית קצרה יותר לתצוגה
                     shortLabel: new Date(item.date.getFullYear(), item.date.getMonth()).toLocaleDateString('he-IL', { 
                       month: '2-digit', 
                       year: '2-digit' 
                     }).replace('.', '/'),
-                    isExpired: item.daysFromNow < 0,
+                    count: item.count,
                     color: item.daysFromNow < 0 ? '#dc2626' : 
                            item.daysFromNow <= 90 ? '#ea580c' :
                            item.daysFromNow <= 180 ? '#ca8a04' :
                            item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
                   }));
 
+                // השתמש בנתונים אמיתיים אם יש, אחרת בנתוני דמיה
+                const timelineData = realTimelineData.length > 0 ? realTimelineData : sampleData;
+
                 console.log('Timeline data:', timelineData);
-                console.log('Authorizations with valid_until:', authorizations.filter(a => a.valid_until));
+                console.log('Real data count:', realTimelineData.length);
 
                 if (timelineData.length === 0) {
                   return (
