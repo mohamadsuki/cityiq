@@ -398,10 +398,10 @@ export default function BusinessDashboard() {
         <Card className="shadow-card">
           <CardHeader><CardTitle className="text-xl">התפלגות קבוצות עסקים</CardTitle></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
+            <ResponsiveContainer width="100%" height={400}>
               <BarChart 
                 data={businessTypesData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
+                margin={{ top: 20, right: 30, left: 20, bottom: 120 }}
                 barCategoryGap="20%"
               >
                 <CartesianGrid strokeDasharray="3 3" />
@@ -409,9 +409,9 @@ export default function BusinessDashboard() {
                   dataKey="type" 
                   angle={-45}
                   textAnchor="end"
-                  height={100}
+                  height={120}
                   interval={0}
-                  tick={{ fontSize: 10, fontWeight: 'bold' }}
+                  tick={{ fontSize: 10, fontWeight: 'bold', dy: 10 }}
                 />
                 <YAxis />
                 <Tooltip 
