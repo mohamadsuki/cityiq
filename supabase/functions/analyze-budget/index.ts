@@ -162,7 +162,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-5-2025-08-07', // Using the most advanced OpenAI model
         messages: [
           { 
             role: 'system', 
@@ -183,8 +183,8 @@ serve(async (req) => {
           },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 1500,
-        temperature: 0.7
+        max_completion_tokens: 1500 // Using max_completion_tokens for GPT-5
+        // Note: temperature parameter is not supported in GPT-5
       }),
     });
 
