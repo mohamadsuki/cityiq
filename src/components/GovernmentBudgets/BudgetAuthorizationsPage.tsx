@@ -1234,39 +1234,37 @@ export default function BudgetAuthorizationsPage() {
                            item.daysFromNow <= 365 ? '#16a34a' : '#2563eb'
                   }));
 
+                console.log('Timeline data:', timelineData);
+                console.log('Authorizations with valid_until:', authorizations.filter(a => a.valid_until));
+
                 if (timelineData.length === 0) {
                   return (
                     <div className="flex items-center justify-center h-full text-muted-foreground">
-                      אין נתונים להצגה - {authorizations.length} הרשאות נמצאו
+                      אין נתונים להצגה - {authorizations.length} הרשאות נמצאו, {authorizations.filter(a => a.valid_until).length} עם תאריך תוקף
                     </div>
                   );
                 }
 
-                console.log('Timeline data:', timelineData);
-
                 return (
                   <div className="relative w-full h-full">
                     <div className="mb-2 text-xs text-gray-500">
-                      Debug: {timelineData.length} תקופות, {authorizations.length} הרשאות כולל
+                      Debug: {timelineData.length} תקופות עם נתונים
                     </div>
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="90%">
                       <BarChart
                         data={timelineData}
                         layout="horizontal"
                         margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
-                        barCategoryGap="10%"
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
                           type="number"
                           tick={{ fontSize: 11, fill: '#64748b' }}
-                          tickLine={false}
-                          axisLine={{ stroke: '#e2e8f0' }}
                           label={{ 
                             value: 'מספר הרשאות', 
                             position: 'insideBottom',
                             offset: -5,
-                            style: { textAnchor: 'middle', fill: '#64748b', fontSize: '12px' }
+                            style: { textAnchor: 'middle', fill: '#64748b' }
                           }}
                           domain={[0, 'dataMax']}
                         />
@@ -1274,8 +1272,6 @@ export default function BudgetAuthorizationsPage() {
                           type="category"
                           dataKey="shortLabel"
                           tick={{ fontSize: 10, fill: '#64748b' }}
-                          tickLine={false}
-                          axisLine={{ stroke: '#e2e8f0' }}
                           width={90}
                           interval={0}
                         />
@@ -1311,7 +1307,7 @@ export default function BudgetAuthorizationsPage() {
                                   
                                   <div className="border-t pt-3 mb-3">
                                     <div className="text-sm font-medium text-gray-700 mb-2">רשימת הרשאות:</div>
-                                    <div className="max-h-32 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-gray-300">
+                                    <div className="max-h-32 overflow-y-auto space-y-1">
                                       {data.authorizations.map((auth: any, i: number) => (
                                         <div key={i} className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
                                           <div className="font-medium">• {auth.program?.substring(0, 60)}{auth.program?.length > 60 ? '...' : ''}</div>
@@ -1358,8 +1354,9 @@ export default function BudgetAuthorizationsPage() {
                         />
                         <Bar 
                           dataKey="count" 
-                          barSize={40}
-                          radius={[0, 6, 6, 0]}
+                          barSize={30}
+                          radius={[0, 4, 4, 0]}
+                          fill="#3b82f6"
                         >
                           {timelineData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
