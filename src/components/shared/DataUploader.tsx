@@ -400,6 +400,17 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.inspection_date = parseDate(normalizedRow['תאריך ביקורת'], 'inspection_date');
       // Handle expiry dates - check multiple possible columns and prioritize non-empty values
       console.log(`🔍 All available fields for ${mapped.business_name}:`, Object.keys(normalizedRow));
+      
+      // Check for any field that might contain expiry date information
+      const allFields = Object.keys(normalizedRow);
+      const dateRelatedFields = allFields.filter(field => 
+        field.includes('תאריך') || field.includes('פקיעה') || field.includes('תוקף') || 
+        field.includes('עד') || field.includes('פוקע') || field.includes('expire') ||
+        field.includes('valid') || field.includes('end')
+      );
+      console.log(`🔍 Date-related fields found:`, dateRelatedFields);
+      
+      console.log(`🔍 Raw values check:`);
       console.log(`🔍 Raw values check:`);
       console.log(`  - תאריך פקיעה: "${normalizedRow['תאריך פקיעה']}"`);
       console.log(`  - פוקע ב: "${normalizedRow['פוקע ב']}"`);
@@ -407,15 +418,25 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       console.log(`  - תאריך עדכון תוקף: "${normalizedRow['תאריך עדכון תוקף']}"`);
       console.log(`  - תוקף עד: "${normalizedRow['תוקף עד']}"`);
       console.log(`  - תאריך תפוגה: "${normalizedRow['תאריך תפוגה']}"`);
+      console.log(`  - תוקף ר: "${normalizedRow['תוקף ר']}"`);
+      console.log(`  - פקיעה: "${normalizedRow['פקיעה']}"`);
+      console.log(`  - עד: "${normalizedRow['עד']}"`);
       
+      // More comprehensive search for expiry date fields
       const possibleExpiryFields = [
         normalizedRow['תאריך פקיעה'],
         normalizedRow['פוקע ב'],
         normalizedRow['תא.עדכון ק.תוקף'], 
         normalizedRow['תאריך עדכון תוקף'],
         normalizedRow['תוקף עד'],
-        normalizedRow['תאריך תפוגה']
-      ].filter(field => field && field.toString().trim() !== '' && field.toString().trim() !== '0');
+        normalizedRow['תאריך תפוגה'],
+        normalizedRow['תוקף ר'],
+        normalizedRow['פקיעה'],
+        normalizedRow['עד'],
+        normalizedRow['תוקף'],
+        normalizedRow['expire'],
+        normalizedRow['expiry']
+      ].filter(field => field && field.toString().trim() !== '' && field.toString().trim() !== '0' && field !== 'undefined');
       
       const expiryDateField = possibleExpiryFields[0]; // Take first non-empty value
       console.log(`🗓️ Non-empty expiry fields for ${mapped.business_name}:`, possibleExpiryFields);
