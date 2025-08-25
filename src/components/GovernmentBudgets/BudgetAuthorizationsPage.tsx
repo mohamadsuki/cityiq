@@ -1253,7 +1253,8 @@ export default function BudgetAuthorizationsPage() {
                       <BarChart
                         data={timelineData}
                         layout="horizontal"
-                        margin={{ top: 20, right: 30, left: 80, bottom: 20 }}
+                        margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+                        barCategoryGap="10%"
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
@@ -1270,21 +1271,13 @@ export default function BudgetAuthorizationsPage() {
                           domain={[0, 'dataMax']}
                         />
                         <YAxis 
-                          type="number"
-                          dataKey="dateValue"
-                          scale="time"
-                          domain={['dataMin', 'dataMax']}
+                          type="category"
+                          dataKey="shortLabel"
                           tick={{ fontSize: 10, fill: '#64748b' }}
                           tickLine={false}
                           axisLine={{ stroke: '#e2e8f0' }}
-                          width={70}
-                          tickFormatter={(value) => {
-                            const date = new Date(value);
-                            return date.toLocaleDateString('he-IL', { 
-                              month: '2-digit', 
-                              year: '2-digit' 
-                            }).replace('.', '/');
-                          }}
+                          width={90}
+                          interval={0}
                         />
                         <Tooltip 
                           content={({ active, payload, label }) => {
@@ -1365,8 +1358,8 @@ export default function BudgetAuthorizationsPage() {
                         />
                         <Bar 
                           dataKey="count" 
-                          barSize={20}
-                          radius={[0, 4, 4, 0]}
+                          barSize={40}
+                          radius={[0, 6, 6, 0]}
                         >
                           {timelineData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
