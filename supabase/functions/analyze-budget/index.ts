@@ -29,19 +29,37 @@ serve(async (req) => {
       totalIncome, 
       totalExpenses, 
       incomeDeviation, 
-      expenseDeviation 
+      expenseDeviation,
+      hasOpenAIKey: !!openAIApiKey
     });
 
+    // Validate input data
+    if (!budgetData || !Array.isArray(budgetData) || budgetData.length === 0) {
+      throw new Error('Invalid or empty budget data provided');
+    }
+
+    if (typeof totalIncome !== 'number' || typeof totalExpenses !== 'number') {
+      throw new Error('Invalid total income or expenses data');
+    }
+
     // Create a structured data summary for OpenAI
-    const dataStructure = budgetData.map((item: any) => ({
-      category: item.category_name,
-      type: item.category_type,
-      budget: item.budget_amount,
-      actual: item.actual_amount,
-      execution: item.cumulative_execution,
-      deviation: item.budget_deviation,
-      deviationPercent: item.budget_deviation_percentage
-    }));
+    const dataStructure = budgetData.map((item: any) => {
+      // Validate each item
+      if (!item || typeof item !== 'object') {
+        console.warn('Invalid budget item:', item);
+        return null;
+      }
+      
+      return {
+        category: item.category_name || 'לא מוגדר',
+        type: item.category_type || 'unknown',
+        budget: item.budget_amount || 0,
+        actual: item.actual_amount || 0,
+        execution: item.cumulative_execution || 0,
+        deviation: item.budget_deviation || 0,
+        deviationPercent: item.budget_deviation_percentage || 0
+      };
+    }).filter(item => item !== null);
 
     const prompt = `
     בתור אנליסט תקציב מומחה ומומחה להצגת נתונים, נתח את נתוני התקציב הרגיל הבאים והצג אותם בצורה מובנת וחכמה:
@@ -53,7 +71,7 @@ serve(async (req) => {
     - סטיית הוצאות (ביצוע מצטבר מול תקציב יחסי): ${expenseDeviation?.toLocaleString('he-IL')} ₪
     
     ## נתונים מפורטים:
-    ${dataStructure.map((item: any) => 
+    ${dataStructure.slice(0, 15).map((item: any) => 
       `**${item.category}** (${item.type === 'income' ? 'הכנסה' : 'הוצאה'}):
       - תקציב מאושר: ${item.budget?.toLocaleString('he-IL')} ₪
       - תקציב יחסי לתקופה: ${item.actual?.toLocaleString('he-IL')} ₪
@@ -61,24 +79,15 @@ serve(async (req) => {
       - סטיה: ${item.deviation?.toLocaleString('he-IL')} ₪ (${item.deviationPercent?.toFixed(1)}%)`
     ).join('\n\n')}
 
-    אנא ספק:
+    אנא ספק ניתוח קצר ומובן שכולל:
 
     ## 📊 הצגת הנתונים המרכזיים
-    [הדגש את הנתונים החשובים ביותר בצורה ברורה ומובנת]
-
-    ## 📈 ניתוח מגמות ודפוסים
-    [זהה מגמות מעניינות בנתונים - איפה הביצוע טוב, איפה יש בעיות]
-
+    ## 📈 ניתוח מגמות ודפוסים  
     ## ⚠️ אזורי תשומת לב
-    [זהה נקודות חשובות שדורשות התייחסות מיידית]
-
     ## 💡 תובנות והמלצות
-    [ספק המלצות מעשיות לשיפור ניהול התקציב]
-
     ## 🎯 סיכום מנהלים
-    [סיכום קצר ופרקטי למקבלי החלטות]
 
-    התשובה צריכה להיות בעברית, מובנית עם אמוג'י, וכוללת הן הצגת הנתונים והן ניתוח מעמיק.
+    התשובה צריכה להיות בעברית, מובנית עם אמוג'י, וכוללת הן הצגת הנתונים והן ניתוח מעמיק אך קצר.
     `;
 
     console.log('Sending request to OpenAI...');
@@ -98,14 +107,20 @@ serve(async (req) => {
           },
           { role: 'user', content: prompt }
         ],
-        max_completion_tokens: 1500,
+        max_completion_tokens: 1200,
       }),
     });
 
+    console.log('OpenAI response status:', response.status);
+
     if (!response.ok) {
-      const errorData = await response.text();
-      console.error('OpenAI API error:', response.status, errorData);
-      throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
+      const errorText = await response.text();
+      console.error('OpenAI API error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
