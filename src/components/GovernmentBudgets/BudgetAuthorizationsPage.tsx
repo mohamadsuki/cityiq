@@ -1241,7 +1241,8 @@ export default function BudgetAuthorizationsPage() {
                       <BarChart
                         data={timelineData}
                         layout="horizontal"
-                        margin={{ top: 20, right: 50, left: 120, bottom: 20 }}
+                        margin={{ top: 20, right: 50, left: 130, bottom: 20 }}
+                        barCategoryGap="20%"
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
@@ -1259,7 +1260,7 @@ export default function BudgetAuthorizationsPage() {
                           type="category"
                           dataKey="dateLabel"
                           tick={{ fontSize: 11, fill: '#64748b' }}
-                          width={110}
+                          width={120}
                           interval={0}
                           axisLine={false}
                           tickLine={false}
@@ -1344,8 +1345,8 @@ export default function BudgetAuthorizationsPage() {
                         <Bar 
                           dataKey="count" 
                           fill="#3b82f6"
-                          barSize={20}
-                          radius={[0, 6, 6, 0]}
+                          barSize={12}
+                          radius={[0, 3, 3, 0]}
                         >
                           {timelineData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
