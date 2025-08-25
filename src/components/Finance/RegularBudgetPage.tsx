@@ -223,35 +223,48 @@ export default function RegularBudgetPage() {
     (item.category_name.includes('סה"כ הוצאות') || item.category_name.includes('סך הוצאות'))
   );
 
+  // Add calculated fields to summary rows if they exist
+  const processedIncomeSummary = incomeSummaryRow ? {
+    ...incomeSummaryRow,
+    budget_deviation: (incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0),
+    budget_deviation_percentage: (incomeSummaryRow.actual_amount || 0) !== 0 ? (((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) / (incomeSummaryRow.actual_amount || 0)) * 100 : 0
+  } : null;
+
+  const processedExpenseSummary = expenseSummaryRow ? {
+    ...expenseSummaryRow,
+    budget_deviation: (expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0),
+    budget_deviation_percentage: (expenseSummaryRow.actual_amount || 0) !== 0 ? (((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) / (expenseSummaryRow.actual_amount || 0)) * 100 : 0
+  } : null;
+
   // Use summary rows if available, otherwise calculate from individual items
-  const totalIncome = incomeSummaryRow 
-    ? incomeSummaryRow.actual_amount 
+  const totalIncome = processedIncomeSummary 
+    ? processedIncomeSummary.actual_amount 
     : budgetData
         .filter(item => item.category_type === 'income' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
         .reduce((sum, item) => sum + item.actual_amount, 0);
 
-  const totalExpenses = expenseSummaryRow 
-    ? expenseSummaryRow.actual_amount 
+  const totalExpenses = processedExpenseSummary 
+    ? processedExpenseSummary.actual_amount 
     : budgetData
         .filter(item => item.category_type === 'expense' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
         .reduce((sum, item) => sum + item.actual_amount, 0);
 
-  const totalBudgetIncome = incomeSummaryRow 
-    ? incomeSummaryRow.budget_amount 
+  const totalBudgetIncome = processedIncomeSummary 
+    ? processedIncomeSummary.budget_amount 
     : budgetData
         .filter(item => item.category_type === 'income' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
         .reduce((sum, item) => sum + item.budget_amount, 0);
 
-  const totalBudgetExpenses = expenseSummaryRow 
-    ? expenseSummaryRow.budget_amount 
+  const totalBudgetExpenses = processedExpenseSummary 
+    ? processedExpenseSummary.budget_amount 
     : budgetData
         .filter(item => item.category_type === 'expense' && !item.category_name.includes('סה"כ') && !item.category_name.includes('סך'))
         .reduce((sum, item) => sum + item.budget_amount, 0);
 
   // Debug log for totals
   console.log("💰 Total calculations:", {
-    incomeSummaryRow,
-    expenseSummaryRow,
+    processedIncomeSummary,
+    processedExpenseSummary,
     totalIncome,
     totalExpenses,
     totalBudgetIncome,
@@ -296,7 +309,7 @@ export default function RegularBudgetPage() {
             <div className="p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-emerald-600 dark:text-emerald-400 font-medium mb-1">תקציב יחסי לתקופה</div>
               <div className="text-xl font-bold text-blue-700 dark:text-blue-300">
-                {incomeSummaryRow ? formatCurrency(incomeSummaryRow.actual_amount) : '₪0'}
+                {processedIncomeSummary ? formatCurrency(processedIncomeSummary.actual_amount) : '₪0'}
               </div>
             </div>
           </CardContent>
@@ -318,7 +331,7 @@ export default function RegularBudgetPage() {
             <div className="p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm">
               <div className="text-sm text-rose-600 dark:text-rose-400 font-medium mb-1">תקציב יחסי לתקופה</div>
               <div className="text-xl font-bold text-orange-700 dark:text-orange-300">
-                {expenseSummaryRow ? formatCurrency(expenseSummaryRow.actual_amount) : '₪0'}
+                {processedExpenseSummary ? formatCurrency(processedExpenseSummary.actual_amount) : '₪0'}
               </div>
             </div>
           </CardContent>
@@ -338,13 +351,13 @@ export default function RegularBudgetPage() {
               <div className="flex justify-between items-center p-2 bg-emerald-100/50 dark:bg-emerald-900/20 rounded-lg">
                 <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">הכנסות</span>
                 <span className="text-lg font-bold text-emerald-800 dark:text-emerald-200">
-                  {incomeSummaryRow ? formatCurrency(incomeSummaryRow.cumulative_execution || 0) : '₪0'}
+                  {processedIncomeSummary ? formatCurrency(processedIncomeSummary.cumulative_execution || 0) : '₪0'}
                 </span>
               </div>
               <div className="flex justify-between items-center p-2 bg-rose-100/50 dark:bg-rose-900/20 rounded-lg">
                 <span className="text-sm font-medium text-rose-700 dark:text-rose-300">הוצאות</span>
                 <span className="text-lg font-bold text-rose-800 dark:text-rose-200">
-                  {expenseSummaryRow ? formatCurrency(expenseSummaryRow.cumulative_execution || 0) : '₪0'}
+                  {processedExpenseSummary ? formatCurrency(processedExpenseSummary.cumulative_execution || 0) : '₪0'}
                 </span>
               </div>
             </div>
@@ -366,40 +379,40 @@ export default function RegularBudgetPage() {
           <CardContent className="space-y-3">
             <div className="space-y-2">
               <div className={`flex justify-between items-center p-2 rounded-lg ${
-                incomeSummaryRow && ((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) >= 0 
+                processedIncomeSummary && ((processedIncomeSummary.cumulative_execution || 0) - (processedIncomeSummary.actual_amount || 0)) >= 0 
                   ? 'bg-emerald-100/50 dark:bg-emerald-900/20' 
                   : 'bg-rose-100/50 dark:bg-rose-900/20'
               }`}>
                 <span className="text-sm font-medium">הכנסות</span>
                 <div className="text-left">
                   <div className={`text-lg font-bold ${
-                    incomeSummaryRow && ((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) >= 0 
+                    processedIncomeSummary && ((processedIncomeSummary.cumulative_execution || 0) - (processedIncomeSummary.actual_amount || 0)) >= 0 
                       ? 'text-emerald-700 dark:text-emerald-300' 
                       : 'text-rose-700 dark:text-rose-300'
                   }`}>
-                    {incomeSummaryRow ? formatCurrency(Math.abs((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0))) : '₪0'}
+                    {processedIncomeSummary ? formatCurrency(Math.abs((processedIncomeSummary.cumulative_execution || 0) - (processedIncomeSummary.actual_amount || 0))) : '₪0'}
                   </div>
                   <div className="text-xs text-gray-600 dark:text-gray-400">
-                    ({incomeSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 ? ((((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) / (incomeSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%)
+                    ({processedIncomeSummary && (processedIncomeSummary.actual_amount || 0) > 0 ? ((((processedIncomeSummary.cumulative_execution || 0) - (processedIncomeSummary.actual_amount || 0)) / (processedIncomeSummary.actual_amount || 1)) * 100).toFixed(1) : 0}%)
                   </div>
                 </div>
               </div>
               <div className={`flex justify-between items-center p-2 rounded-lg ${
-                expenseSummaryRow && ((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) <= 0 
+                processedExpenseSummary && ((processedExpenseSummary.cumulative_execution || 0) - (processedExpenseSummary.actual_amount || 0)) <= 0 
                   ? 'bg-emerald-100/50 dark:bg-emerald-900/20' 
                   : 'bg-rose-100/50 dark:bg-rose-900/20'
               }`}>
                 <span className="text-sm font-medium">הוצאות</span>
                 <div className="text-left">
                   <div className={`text-lg font-bold ${
-                    expenseSummaryRow && ((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) <= 0 
+                    processedExpenseSummary && ((processedExpenseSummary.cumulative_execution || 0) - (processedExpenseSummary.actual_amount || 0)) <= 0 
                       ? 'text-emerald-700 dark:text-emerald-300' 
                       : 'text-rose-700 dark:text-rose-300'
                   }`}>
-                    {expenseSummaryRow ? formatCurrency(Math.abs((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0))) : '₪0'}
+                    {processedExpenseSummary ? formatCurrency(Math.abs((processedExpenseSummary.cumulative_execution || 0) - (processedExpenseSummary.actual_amount || 0))) : '₪0'}
                   </div>
                   <div className="text-xs text-gray-600 dark:text-gray-400">
-                    ({expenseSummaryRow && (expenseSummaryRow.actual_amount || 0) > 0 ? ((((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) / (expenseSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%)
+                    ({processedExpenseSummary && (processedExpenseSummary.actual_amount || 0) > 0 ? ((((processedExpenseSummary.cumulative_execution || 0) - (processedExpenseSummary.actual_amount || 0)) / (processedExpenseSummary.actual_amount || 1)) * 100).toFixed(1) : 0}%)
                   </div>
                 </div>
               </div>
@@ -635,34 +648,34 @@ export default function RegularBudgetPage() {
             />
             
             {/* Summary row for total income */}
-            {incomeSummaryRow && (categoryFilter === 'all' || categoryFilter === 'income') && (
+            {processedIncomeSummary && (categoryFilter === 'all' || categoryFilter === 'income') && (
               <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
                 <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-200 mb-3">סיכום הכנסות</h3>
                 <div className="grid grid-cols-6 gap-4 text-sm">
                   <div>
-                    <span className="font-medium">{incomeSummaryRow.category_name}</span>
+                    <span className="font-medium">{processedIncomeSummary.category_name}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold">{formatCurrency(incomeSummaryRow.budget_amount)}</span>
+                    <span className="font-bold">{formatCurrency(processedIncomeSummary.budget_amount)}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold">{formatCurrency(incomeSummaryRow.actual_amount)}</span>
+                    <span className="font-bold">{formatCurrency(processedIncomeSummary.actual_amount)}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold">{formatCurrency(incomeSummaryRow.cumulative_execution || 0)}</span>
+                    <span className="font-bold">{formatCurrency(processedIncomeSummary.cumulative_execution || 0)}</span>
                   </div>
                   <div className="text-right">
                     <span className={`font-bold ${
-                      incomeSummaryRow.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
+                      processedIncomeSummary.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
                     }`}>
-                      {formatCurrency(incomeSummaryRow.budget_deviation)}
+                      {formatCurrency(processedIncomeSummary.budget_deviation)}
                     </span>
                   </div>
                   <div className="text-right">
                     <span className={`font-bold ${
-                      incomeSummaryRow.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
+                      processedIncomeSummary.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
                     }`}>
-                      {incomeSummaryRow.budget_deviation_percentage.toFixed(1)}%
+                      {processedIncomeSummary.budget_deviation_percentage.toFixed(1)}%
                     </span>
                   </div>
                 </div>
@@ -670,34 +683,34 @@ export default function RegularBudgetPage() {
             )}
             
             {/* Summary row for total expenses */}
-            {expenseSummaryRow && (categoryFilter === 'all' || categoryFilter === 'expense') && (
+            {processedExpenseSummary && (categoryFilter === 'all' || categoryFilter === 'expense') && (
               <div className="mt-6 p-4 bg-gradient-to-r from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 rounded-lg border border-rose-200 dark:border-rose-800">
                 <h3 className="text-lg font-bold text-rose-800 dark:text-rose-200 mb-3">סיכום הוצאות</h3>
                 <div className="grid grid-cols-6 gap-4 text-sm">
                   <div>
-                    <span className="font-medium">{expenseSummaryRow.category_name}</span>
+                    <span className="font-medium">{processedExpenseSummary.category_name}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold">{formatCurrency(expenseSummaryRow.budget_amount)}</span>
+                    <span className="font-bold">{formatCurrency(processedExpenseSummary.budget_amount)}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold">{formatCurrency(expenseSummaryRow.actual_amount)}</span>
+                    <span className="font-bold">{formatCurrency(processedExpenseSummary.actual_amount)}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold">{formatCurrency(expenseSummaryRow.cumulative_execution || 0)}</span>
+                    <span className="font-bold">{formatCurrency(processedExpenseSummary.cumulative_execution || 0)}</span>
                   </div>
                   <div className="text-right">
                     <span className={`font-bold ${
-                      expenseSummaryRow.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
+                      processedExpenseSummary.budget_deviation >= 0 ? "text-green-600" : "text-red-600"
                     }`}>
-                      {formatCurrency(expenseSummaryRow.budget_deviation)}
+                      {formatCurrency(processedExpenseSummary.budget_deviation)}
                     </span>
                   </div>
                   <div className="text-right">
                     <span className={`font-bold ${
-                      expenseSummaryRow.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
+                      processedExpenseSummary.budget_deviation_percentage >= 0 ? "text-green-600" : "text-red-600"
                     }`}>
-                      {expenseSummaryRow.budget_deviation_percentage.toFixed(1)}%
+                      {processedExpenseSummary.budget_deviation_percentage.toFixed(1)}%
                     </span>
                   </div>
                 </div>
