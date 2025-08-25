@@ -384,29 +384,7 @@ export default function BusinessDashboard() {
          <Card className="shadow-card">
            <CardHeader><CardTitle className="text-xl">סטטוס עסקים</CardTitle></CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex flex-col space-y-3">
-                <h3 className="font-semibold text-lg mb-2">פירוט סטטוסים</h3>
-                {statusData.map((item, index) => {
-                  const total = statusData.reduce((sum, s) => sum + s.value, 0);
-                  const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
-                  return (
-                    <div key={item.name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div 
-                          className="w-4 h-4 rounded" 
-                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                        />
-                        <span className="font-medium">{item.name}</span>
-                      </div>
-                      <div className="text-left">
-                        <div className="font-bold text-lg">{item.value}</div>
-                        <div className="text-sm text-muted-foreground">{percentage}%</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie 
@@ -415,9 +393,9 @@ export default function BusinessDashboard() {
                     nameKey="name" 
                     cx="50%" 
                     cy="50%" 
-                    outerRadius={100}
-                    innerRadius={0}
-                    paddingAngle={8}
+                    innerRadius={60}
+                    outerRadius={120}
+                    paddingAngle={5}
                   >
                     {statusData.map((entry, index) => (
                       <Cell 
@@ -432,6 +410,30 @@ export default function BusinessDashboard() {
                   />
                 </PieChart>
               </ResponsiveContainer>
+              
+              {/* Legend */}
+              <div className="flex flex-col justify-center space-y-2">
+                {statusData.map((item, index) => {
+                  const total = statusData.reduce((sum, s) => sum + s.value, 0);
+                  const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
+                  return (
+                    <div key={item.name} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full"
+                          style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                          aria-hidden
+                        />
+                        <span className="text-muted-foreground text-xs">{item.name}:</span>
+                      </div>
+                      <div className="text-left">
+                        <div className="font-bold text-sm">{item.value}</div>
+                        <div className="text-xs text-muted-foreground">{percentage}%</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
            </CardContent>
          </Card>
