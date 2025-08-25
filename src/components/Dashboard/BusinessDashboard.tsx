@@ -34,10 +34,13 @@ const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accen
 type LicenseRow = {
   id: string;
   business_name: string | null;
+  owner: string | null;
   type: string | null;
   status: string | null;
   license_number: string | null;
   expires_at: string | null;
+  address: string | null;
+  reason_no_license: string | null;
 };
 
 export default function BusinessDashboard() {
@@ -55,10 +58,13 @@ export default function BusinessDashboard() {
         setLicenses((data || []).map((r) => ({
           id: r.id,
           business_name: r.business_name ?? null,
+          owner: r.owner ?? null,
           type: r.type ?? null,
           status: r.status ?? null,
           license_number: r.license_number ?? null,
           expires_at: r.expires_at ?? null,
+          address: r.address ?? null,
+          reason_no_license: r.reason_no_license ?? null,
         })));
     } catch {}
   };
@@ -102,9 +108,11 @@ export default function BusinessDashboard() {
 const licenseColumns: ColumnDef<LicenseRow>[] = [
     { accessorKey: "license_number", header: "מספר רישיון" },
     { accessorKey: "business_name", header: "שם עסק" },
+    { accessorKey: "owner", header: "בעלים" },
     { accessorKey: "type", header: "סוג" },
     { accessorKey: "status", header: "סטטוס" },
     { accessorKey: "expires_at", header: "תוקף עד" },
+    { accessorKey: "address", header: "כתובת" },
   ];
 
   // Filters and derived datasets

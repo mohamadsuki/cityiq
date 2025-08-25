@@ -25,6 +25,9 @@ export default function AddLicenseDialog({ onSaved }: { onSaved?: () => void }) 
   const [licenseNumber, setLicenseNumber] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [reasonNoLicense, setReasonNoLicense] = useState("");
+  const [address, setAddress] = useState("");
+  const [lat, setLat] = useState("");
+  const [lng, setLng] = useState("");
   const [images, setImages] = useState<FileList | null>(null);
 
   
@@ -34,7 +37,20 @@ export default function AddLicenseDialog({ onSaved }: { onSaved?: () => void }) 
 
     try {
       if (!user?.id) { toast({ title: 'נדרש להתחבר', variant: 'destructive' }); return; }
-      const create = await supabase.from('licenses').insert([{ user_id: user.id, department_slug: 'business', business_name: businessName, owner: owner || null, type: type || null, status: status || null, license_number: licenseNumber || null, expires_at: expiresAt ? new Date(expiresAt).toISOString().slice(0,10) : null, reason_no_license: reasonNoLicense || null }]).select('id').single();
+      const create = await supabase.from('licenses').insert([{ 
+        user_id: user.id, 
+        department_slug: 'business', 
+        business_name: businessName, 
+        owner: owner || null, 
+        type: type || null, 
+        status: status || null, 
+        license_number: licenseNumber || null, 
+        expires_at: expiresAt ? new Date(expiresAt).toISOString().slice(0,10) : null, 
+        reason_no_license: reasonNoLicense || null,
+        address: address || null,
+        lat: lat ? parseFloat(lat) : null,
+        lng: lng ? parseFloat(lng) : null
+      }]).select('id').single();
       if (create.error) throw create.error;
       const licId = create.data.id as string;
 
@@ -100,6 +116,18 @@ export default function AddLicenseDialog({ onSaved }: { onSaved?: () => void }) 
           <div>
             <Label>תוקף עד</Label>
             <Input type="date" value={expiresAt} onChange={(e)=>setExpiresAt(e.target.value)} />
+          </div>
+          <div className="md:col-span-2">
+            <Label>כתובת</Label>
+            <Input value={address} onChange={(e)=>setAddress(e.target.value)} placeholder="כתובת העסק" />
+          </div>
+          <div>
+            <Label>קו רוחב (Latitude)</Label>
+            <Input value={lat} onChange={(e)=>setLat(e.target.value)} placeholder="32.0853" />
+          </div>
+          <div>
+            <Label>קו אורך (Longitude)</Label>
+            <Input value={lng} onChange={(e)=>setLng(e.target.value)} placeholder="34.7818" />
           </div>
           <div className="md:col-span-2">
             <Label>סיבת אי-רישוי (אם רלוונטי)</Label>
