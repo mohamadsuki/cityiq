@@ -305,42 +305,44 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       break;
       
     case 'licenses':
-      // Updated mapping for new Hebrew-columned Excel format
+      // Updated mapping for new Hebrew Excel format with additional columns
       mapped.license_number = normalizedRow['רישיון'] || normalizedRow.license_number || normalizedRow['מספר רישיון'] || '';
       mapped.business_name = normalizedRow['שם עסק'] || normalizedRow.business_name || normalizedRow['שם העסק'] || '';
       mapped.owner = normalizedRow['שם בעל העסק'] || normalizedRow.owner || normalizedRow['בעל הרישיון'] || normalizedRow['בעל'] || '';
       
-      // Combine address fields
+      // Combine address fields from street and house number
       const street = normalizedRow['רחוב'] || '';
       const houseNumber = normalizedRow['בית'] || '';
-      mapped.address = [street, houseNumber].filter(part => part && part.toString().trim() !== '' && part.toString() !== '0').join(' ');
+      mapped.address = [street, houseNumber].filter(part => 
+        part && 
+        part.toString().trim() !== '' && 
+        part.toString() !== '0' && 
+        part.toString().toLowerCase() !== 'null'
+      ).join(' ');
       
-      // Set defaults for other fields if not present in new format
+      // Map additional fields if present in Excel
+      const phoneField = normalizedRow['מס טלפון'] || normalizedRow['טלפון'] || '';
+      const mobileField = normalizedRow['מס פלאפון'] || normalizedRow['נייד'] || '';
+      const emailField = normalizedRow['כתובת מייל'] || normalizedRow['אימייל'] || '';
+      const validityField = normalizedRow['תוקף'] || normalizedRow['תוקף עד'] || '';
+      
+      // Set defaults for other fields
       mapped.type = normalizedRow.type || normalizedRow['סוג הרישיון'] || normalizedRow['סוג'] || 'כללי';
       mapped.status = normalizedRow.status || normalizedRow['סטטוס'] || 'פעיל';
       mapped.department_slug = 'business'; // Always set department_slug for licenses
       
-      // Handle dates with validation
-      const possibleDateValues = [
-        normalizedRow.expires_at, 
-        normalizedRow['תאריך תפוגה'], 
-        normalizedRow['תוקף עד']
-      ];
-      
-      for (const dateValue of possibleDateValues) {
-        if (dateValue && isValidDate(dateValue)) {
-          mapped.expires_at = dateValue;
-          break;
-        }
+      // Handle validity date
+      if (validityField && validityField.toString().trim() !== '' && validityField.toString() !== '0') {
+        mapped.expires_at = validityField.toString();
       }
       
       mapped.reason_no_license = normalizedRow.reason_no_license || normalizedRow['סיבה ללא רישוי'] || '';
       
       // Skip empty rows - check if all main fields are empty or just zeros
-      const hasContent = mapped.business_name.trim() || 
-                        mapped.owner.trim() || 
-                        mapped.license_number.trim() ||
-                        mapped.address.trim();
+      const hasContent = (mapped.business_name && mapped.business_name.trim()) || 
+                        (mapped.owner && mapped.owner.trim()) || 
+                        (mapped.license_number && mapped.license_number.trim()) ||
+                        (mapped.address && mapped.address.trim());
       
       if (!hasContent) {
         console.log('🚫 Skipping empty licenses row');
