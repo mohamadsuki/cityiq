@@ -1224,9 +1224,9 @@ export default function BudgetAuthorizationsPage() {
                     dateValue: item.date.getTime(),
                     // תווית קצרה יותר לתצוגה
                     shortLabel: new Date(item.date.getFullYear(), item.date.getMonth()).toLocaleDateString('he-IL', { 
-                      month: 'numeric', 
+                      month: '2-digit', 
                       year: '2-digit' 
-                    }),
+                    }).replace('.', '/'),
                     isExpired: item.daysFromNow < 0,
                     color: item.daysFromNow < 0 ? '#dc2626' : 
                            item.daysFromNow <= 90 ? '#ea580c' :
@@ -1256,12 +1256,21 @@ export default function BudgetAuthorizationsPage() {
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
-                          dataKey="shortLabel"
+                          type="number"
+                          dataKey="dateValue"
+                          scale="time"
+                          domain={['dataMin', 'dataMax']}
                           tick={{ fontSize: 11, fill: '#64748b' }}
                           tickLine={false}
                           axisLine={{ stroke: '#e2e8f0' }}
                           height={50}
-                          interval="preserveStartEnd"
+                          tickFormatter={(value) => {
+                            const date = new Date(value);
+                            return date.toLocaleDateString('he-IL', { 
+                              month: '2-digit', 
+                              year: '2-digit' 
+                            }).replace('.', '/');
+                          }}
                         />
                         <YAxis 
                           tick={{ fontSize: 12, fill: '#64748b' }}
