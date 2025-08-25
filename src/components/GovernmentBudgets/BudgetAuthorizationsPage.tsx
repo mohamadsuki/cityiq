@@ -1252,18 +1252,32 @@ export default function BudgetAuthorizationsPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={timelineData}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+                        layout="horizontal"
+                        margin={{ top: 20, right: 30, left: 80, bottom: 20 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
                           type="number"
-                          dataKey="dateValue"
-                          scale="time"
-                          domain={['dataMin', 'dataMax']}
                           tick={{ fontSize: 11, fill: '#64748b' }}
                           tickLine={false}
                           axisLine={{ stroke: '#e2e8f0' }}
-                          height={50}
+                          label={{ 
+                            value: 'מספר הרשאות', 
+                            position: 'insideBottom',
+                            offset: -5,
+                            style: { textAnchor: 'middle', fill: '#64748b', fontSize: '12px' }
+                          }}
+                          domain={[0, 'dataMax']}
+                        />
+                        <YAxis 
+                          type="number"
+                          dataKey="dateValue"
+                          scale="time"
+                          domain={['dataMin', 'dataMax']}
+                          tick={{ fontSize: 10, fill: '#64748b' }}
+                          tickLine={false}
+                          axisLine={{ stroke: '#e2e8f0' }}
+                          width={70}
                           tickFormatter={(value) => {
                             const date = new Date(value);
                             return date.toLocaleDateString('he-IL', { 
@@ -1271,18 +1285,6 @@ export default function BudgetAuthorizationsPage() {
                               year: '2-digit' 
                             }).replace('.', '/');
                           }}
-                        />
-                        <YAxis 
-                          tick={{ fontSize: 12, fill: '#64748b' }}
-                          tickLine={false}
-                          axisLine={{ stroke: '#e2e8f0' }}
-                          label={{ 
-                            value: 'מספר הרשאות', 
-                            angle: -90, 
-                            position: 'insideLeft',
-                            style: { textAnchor: 'middle', fill: '#64748b', fontSize: '12px' }
-                          }}
-                          domain={[0, 'dataMax']}
                         />
                         <Tooltip 
                           content={({ active, payload, label }) => {
@@ -1363,8 +1365,8 @@ export default function BudgetAuthorizationsPage() {
                         />
                         <Bar 
                           dataKey="count" 
-                          barSize={30}
-                          radius={[4, 4, 0, 0]}
+                          barSize={20}
+                          radius={[0, 4, 4, 0]}
                         >
                           {timelineData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
