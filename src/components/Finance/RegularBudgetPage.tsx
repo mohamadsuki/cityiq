@@ -282,150 +282,224 @@ export default function RegularBudgetPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">הכנסות מאושר</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalBudgetIncome)}</div>
-            <div className="text-lg font-semibold text-blue-600 mt-1">
-              תקציב יחסי: {incomeSummaryRow ? formatCurrency(incomeSummaryRow.actual_amount) : '₪0'}
+      {/* Main Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-emerald-950/30 dark:via-green-950/20 dark:to-teal-950/30 shadow-lg hover:shadow-xl transition-all duration-300 group">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-emerald-800 dark:text-emerald-200">הכנסות מאושר</CardTitle>
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <TrendingUp className="h-5 w-5 text-white" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              מתוך התקציב המאושר
-            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-3xl font-bold text-emerald-700 dark:text-emerald-300">
+              {formatCurrency(totalBudgetIncome)}
+            </div>
+            <div className="p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm">
+              <div className="text-sm text-emerald-600 dark:text-emerald-400 font-medium mb-1">תקציב יחסי לתקופה</div>
+              <div className="text-xl font-bold text-blue-700 dark:text-blue-300">
+                {incomeSummaryRow ? formatCurrency(incomeSummaryRow.actual_amount) : '₪0'}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">הוצאות מאושר</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(totalBudgetExpenses)}</div>
-            <div className="text-lg font-semibold text-orange-600 mt-1">
-              תקציב יחסי: {expenseSummaryRow ? formatCurrency(expenseSummaryRow.actual_amount) : '₪0'}
+        <Card className="border-0 bg-gradient-to-br from-rose-50 via-red-50 to-pink-50 dark:from-rose-950/30 dark:via-red-950/20 dark:to-pink-950/30 shadow-lg hover:shadow-xl transition-all duration-300 group">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-rose-800 dark:text-rose-200">הוצאות מאושר</CardTitle>
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-rose-500 to-red-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <TrendingDown className="h-5 w-5 text-white" />
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              מתוך התקציב המאושר
-            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="text-3xl font-bold text-rose-700 dark:text-rose-300">
+              {formatCurrency(totalBudgetExpenses)}
+            </div>
+            <div className="p-3 bg-white/60 dark:bg-gray-800/60 rounded-lg backdrop-blur-sm">
+              <div className="text-sm text-rose-600 dark:text-rose-400 font-medium mb-1">תקציב יחסי לתקופה</div>
+              <div className="text-xl font-bold text-orange-700 dark:text-orange-300">
+                {expenseSummaryRow ? formatCurrency(expenseSummaryRow.actual_amount) : '₪0'}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">סה"כ הכנסות והוצאות בפועל</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-950/30 dark:via-indigo-950/20 dark:to-purple-950/30 shadow-lg hover:shadow-xl transition-all duration-300 group">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-blue-800 dark:text-blue-200">סה״כ הכנסות והוצאות בפועל</CardTitle>
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <DollarSign className="h-5 w-5 text-white" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold text-blue-600">
-              הכנסות: {incomeSummaryRow ? formatCurrency(incomeSummaryRow.cumulative_execution || 0) : '₪0'}
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <div className="flex justify-between items-center p-2 bg-emerald-100/50 dark:bg-emerald-900/20 rounded-lg">
+                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">הכנסות</span>
+                <span className="text-lg font-bold text-emerald-800 dark:text-emerald-200">
+                  {incomeSummaryRow ? formatCurrency(incomeSummaryRow.cumulative_execution || 0) : '₪0'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-2 bg-rose-100/50 dark:bg-rose-900/20 rounded-lg">
+                <span className="text-sm font-medium text-rose-700 dark:text-rose-300">הוצאות</span>
+                <span className="text-lg font-bold text-rose-800 dark:text-rose-200">
+                  {expenseSummaryRow ? formatCurrency(expenseSummaryRow.cumulative_execution || 0) : '₪0'}
+                </span>
+              </div>
             </div>
-            <div className="text-lg font-bold text-red-600">
-              הוצאות: {expenseSummaryRow ? formatCurrency(expenseSummaryRow.cumulative_execution || 0) : '₪0'}
-            </div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-xs text-blue-600 dark:text-blue-400 text-center font-medium bg-blue-100/50 dark:bg-blue-900/20 p-2 rounded-lg">
               ביצוע מצטבר
-            </p>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">סטיה מהתקציב</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1">
-              <div className={`text-lg font-bold ${
-                incomeSummaryRow && ((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                הכנסות: {incomeSummaryRow ? formatCurrency(Math.abs((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0))) : '₪0'} 
-                <span className="text-sm mr-2">
-                  ({incomeSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 ? ((((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) / (incomeSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%)
-                </span>
-              </div>
-              <div className={`text-lg font-bold ${
-                expenseSummaryRow && ((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) >= 0 ? 'text-red-600' : 'text-green-600'
-              }`}>
-                הוצאות: {expenseSummaryRow ? formatCurrency(Math.abs((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0))) : '₪0'} 
-                <span className="text-sm mr-2">
-                  ({expenseSummaryRow && (expenseSummaryRow.actual_amount || 0) > 0 ? ((((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) / (expenseSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%)
-                </span>
+        <Card className="border-0 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-950/30 dark:via-yellow-950/20 dark:to-orange-950/30 shadow-lg hover:shadow-xl transition-all duration-300 group">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-amber-800 dark:text-amber-200">סטיה מהתקציב</CardTitle>
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <TrendingUp className="h-5 w-5 text-white" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              ביצוע מצטבר מינוס תקציב יחסי
-            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <div className={`flex justify-between items-center p-2 rounded-lg ${
+                incomeSummaryRow && ((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) >= 0 
+                  ? 'bg-emerald-100/50 dark:bg-emerald-900/20' 
+                  : 'bg-rose-100/50 dark:bg-rose-900/20'
+              }`}>
+                <span className="text-sm font-medium">הכנסות</span>
+                <div className="text-left">
+                  <div className={`text-lg font-bold ${
+                    incomeSummaryRow && ((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) >= 0 
+                      ? 'text-emerald-700 dark:text-emerald-300' 
+                      : 'text-rose-700 dark:text-rose-300'
+                  }`}>
+                    {incomeSummaryRow ? formatCurrency(Math.abs((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0))) : '₪0'}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    ({incomeSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 ? ((((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) / (incomeSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%)
+                  </div>
+                </div>
+              </div>
+              <div className={`flex justify-between items-center p-2 rounded-lg ${
+                expenseSummaryRow && ((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) <= 0 
+                  ? 'bg-emerald-100/50 dark:bg-emerald-900/20' 
+                  : 'bg-rose-100/50 dark:bg-rose-900/20'
+              }`}>
+                <span className="text-sm font-medium">הוצאות</span>
+                <div className="text-left">
+                  <div className={`text-lg font-bold ${
+                    expenseSummaryRow && ((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) <= 0 
+                      ? 'text-emerald-700 dark:text-emerald-300' 
+                      : 'text-rose-700 dark:text-rose-300'
+                  }`}>
+                    {expenseSummaryRow ? formatCurrency(Math.abs((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0))) : '₪0'}
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">
+                    ({expenseSummaryRow && (expenseSummaryRow.actual_amount || 0) > 0 ? ((((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) / (expenseSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%)
+                  </div>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Additional Insights Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ביצוע מצטבר הכנסות</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+      {/* Performance Insights Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="border-0 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 dark:from-sky-950/30 dark:via-blue-950/20 dark:to-indigo-950/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in group">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-sky-800 dark:text-sky-200">ביצוע מצטבר הכנסות</CardTitle>
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {incomeSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 ? 
-                (((incomeSummaryRow.cumulative_execution || 0) / (incomeSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%
+          <CardContent className="space-y-4">
+            <div className="text-center p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm border border-sky-200/50 dark:border-sky-700/50">
+              <div className="text-4xl font-bold text-sky-700 dark:text-sky-300 mb-2">
+                {incomeSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 ? 
+                  (((incomeSummaryRow.cumulative_execution || 0) / (incomeSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%
+              </div>
+              <div className="text-sm font-medium text-sky-600 dark:text-sky-400">ביצוע בפועל מתוך תקציב יחסי</div>
             </div>
-            <div className="text-sm font-semibold text-gray-600 mt-1">
-              הפרש: {formatCurrency(((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)))}
+            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-100/60 to-green-100/60 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg">
+              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">הפרש הכנסות-הוצאות</span>
+              <span className="text-lg font-bold text-emerald-800 dark:text-emerald-200">
+                {formatCurrency(((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)))}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              ביצוע בפועל מתוך תקציב יחסי
-            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ביצוע מצטבר הוצאות</CardTitle>
-            <TrendingDown className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-0 bg-gradient-to-br from-orange-50 via-red-50 to-pink-50 dark:from-orange-950/30 dark:via-red-950/20 dark:to-pink-950/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in group">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-orange-800 dark:text-orange-200">ביצוע מצטבר הוצאות</CardTitle>
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                <TrendingDown className="h-6 w-6 text-white" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {expenseSummaryRow && (expenseSummaryRow.actual_amount || 0) > 0 ? 
-                (((expenseSummaryRow.cumulative_execution || 0) / (expenseSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%
+          <CardContent className="space-y-4">
+            <div className="text-center p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm border border-orange-200/50 dark:border-orange-700/50">
+              <div className="text-4xl font-bold text-orange-700 dark:text-orange-300 mb-2">
+                {expenseSummaryRow && (expenseSummaryRow.actual_amount || 0) > 0 ? 
+                  (((expenseSummaryRow.cumulative_execution || 0) / (expenseSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%
+              </div>
+              <div className="text-sm font-medium text-orange-600 dark:text-orange-400">ביצוע בפועל מתוך תקציב יחסי</div>
             </div>
-            <div className="text-sm font-semibold text-gray-600 mt-1">
-              הפרש: {formatCurrency(((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)))}
+            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-100/60 to-green-100/60 dark:from-emerald-900/20 dark:to-green-900/20 rounded-lg">
+              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">הפרש הכנסות-הוצאות</span>
+              <span className="text-lg font-bold text-emerald-800 dark:text-emerald-200">
+                {formatCurrency(((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)))}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              ביצוע בפועל מתוך תקציב יחסי
-            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">עודף/גירעון</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-0 bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-50 dark:from-violet-950/30 dark:via-purple-950/20 dark:to-fuchsia-950/30 shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in group">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-violet-800 dark:text-violet-200">עודף/גירעון</CardTitle>
+              <div className="h-12 w-12 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                <DollarSign className="h-6 w-6 text-white" />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${
-              ((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)) >= 0 ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {formatCurrency(Math.abs((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)))}
+          <CardContent className="space-y-4">
+            <div className="text-center p-4 bg-white/70 dark:bg-gray-800/70 rounded-xl backdrop-blur-sm border border-violet-200/50 dark:border-violet-700/50">
+              <div className={`text-4xl font-bold mb-2 ${
+                ((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)) >= 0 
+                  ? 'text-emerald-700 dark:text-emerald-300' 
+                  : 'text-rose-700 dark:text-rose-300'
+              }`}>
+                {formatCurrency(Math.abs((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)))}
+              </div>
+              <div className="text-sm font-medium text-violet-600 dark:text-violet-400">
+                {((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)) >= 0 ? 'עודף' : 'גירעון'} בביצוע
+              </div>
             </div>
-            <div className={`text-lg font-semibold mt-1 ${
-              ((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)) >= 0 ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {incomeSummaryRow && expenseSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 && (expenseSummaryRow.actual_amount || 0) > 0 ? 
-                ((((incomeSummaryRow.cumulative_execution || 0) / (incomeSummaryRow.actual_amount || 1)) - 
-                  ((expenseSummaryRow.cumulative_execution || 0) / (expenseSummaryRow.actual_amount || 1))) * 100).toFixed(1) : 0}%
+            <div className="flex items-center justify-between p-3 bg-gradient-to-r from-violet-100/60 to-purple-100/60 dark:from-violet-900/20 dark:to-purple-900/20 rounded-lg">
+              <span className="text-sm font-medium text-violet-700 dark:text-violet-300">אחוז הפרש</span>
+              <span className={`text-2xl font-bold ${
+                ((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)) >= 0 
+                  ? 'text-emerald-700 dark:text-emerald-300' 
+                  : 'text-rose-700 dark:text-rose-300'
+              }`}>
+                {incomeSummaryRow && expenseSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 && (expenseSummaryRow.actual_amount || 0) > 0 ? 
+                  ((((incomeSummaryRow.cumulative_execution || 0) / (incomeSummaryRow.actual_amount || 1)) - 
+                    ((expenseSummaryRow.cumulative_execution || 0) / (expenseSummaryRow.actual_amount || 1))) * 100).toFixed(1) : 0}%
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {((incomeSummaryRow?.cumulative_execution || 0) - (expenseSummaryRow?.cumulative_execution || 0)) >= 0 ? 'עודף' : 'גירעון'} בביצוע
-            </p>
           </CardContent>
         </Card>
       </div>
