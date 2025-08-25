@@ -852,14 +852,45 @@ export default function RegularBudgetPage() {
             </div>
           ) : analysis ? (
             <div className="space-y-6">
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 p-6 rounded-xl border-l-4 border-gradient-to-b from-green-500 to-blue-500">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-sm font-medium text-green-700 dark:text-green-300">ניתוח זמין</span>
+              <div className="bg-gradient-to-r from-card to-muted/20 p-8 rounded-lg border border-border shadow-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-3 w-3 rounded-full bg-primary animate-pulse"></div>
+                  <span className="text-lg font-semibold text-foreground">ניתוח זמין</span>
+                  <Badge variant="outline" className="text-xs">
+                    נוצר אוטומטי מנתוני האקסל
+                  </Badge>
                 </div>
-                <div className="prose prose-lg max-w-none text-right">
-                  <div className="whitespace-pre-wrap text-muted-foreground leading-relaxed">
-                    {analysis.replace(/[📊💰📈📉⚠️✅❌🎯💡]/g, '').replace(/[\u{1F300}-\u{1F5FF}|\u{1F600}-\u{1F64F}|\u{1F680}-\u{1F6FF}|\u{2600}-\u{26FF}|\u{2700}-\u{27BF}]/gu, '')}
+                <div className="prose prose-lg max-w-none">
+                  <div className="text-foreground leading-relaxed space-y-4 font-medium">
+                    {analysis.split('\n').map((paragraph, index) => {
+                      if (!paragraph.trim()) return null;
+                      
+                      // Handle headers (lines that end with colons or are clearly headers)
+                      if (paragraph.match(/^[א-ת\s]+:$/) || paragraph.match(/^## /)) {
+                        return (
+                          <h3 key={index} className="text-xl font-bold text-primary mt-6 mb-3 border-b border-border pb-2">
+                            {paragraph.replace(/^## /, '').replace(/:$/, '')}
+                          </h3>
+                        );
+                      }
+                      
+                      // Handle bullet points
+                      if (paragraph.startsWith('- ')) {
+                        return (
+                          <div key={index} className="flex items-start gap-3 my-2">
+                            <div className="w-2 h-2 rounded-full bg-primary mt-2 flex-shrink-0"></div>
+                            <span className="text-muted-foreground">{paragraph.substring(2)}</span>
+                          </div>
+                        );
+                      }
+                      
+                      // Regular paragraphs
+                      return (
+                        <p key={index} className="text-muted-foreground leading-relaxed">
+                          {paragraph}
+                        </p>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
