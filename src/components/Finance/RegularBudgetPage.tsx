@@ -291,8 +291,16 @@ export default function RegularBudgetPage() {
       if (data?.analysis && data.analysis.trim()) {
         // Save analysis to database
         console.log('Saving analysis to database...');
+        
+        // Ensure user is authenticated before saving
+        if (!user?.id) {
+          console.error('Cannot save analysis: user not authenticated');
+          if (!silent) toast.error("יש להתחבר כדי לשמור את הניתוח");
+          return;
+        }
+
         const analysisData = {
-          user_id: user?.id,
+          user_id: user.id, // Use user.id directly, not user?.id
           year: new Date().getFullYear(),
           analysis_text: data.analysis,
           total_income: totalIncome,
@@ -316,9 +324,10 @@ export default function RegularBudgetPage() {
 
         if (saveError) {
           console.error("Error saving analysis:", saveError);
-          if (!silent) toast.error("שגיאה בשמירת הניתוח");
+          if (!silent) toast.error("שגיאה בשמירת הניתוח במסד הנתונים");
         } else {
           console.log("Analysis saved successfully to database");
+          if (!silent) toast.success("הניתוח נשמר בהצלחה במערכת");
         }
 
         setAnalysis(data.analysis);
@@ -888,6 +897,14 @@ export default function RegularBudgetPage() {
                   </Badge>
                   <Badge variant="secondary" className="text-xs">
                     נשמר במערכת
+                  </Badge>
+                  {/* Show period if available */}
+                  <Badge variant="outline" className="text-xs bg-primary/10 text-primary">
+                    {(() => {
+                      const analysisText = analysis || '';
+                      const periodMatch = analysisText.match(/תקופת דיווח:\s*([^\.]+)/);
+                      return periodMatch ? periodMatch[1].trim() : 'תקופה לא זוהתה';
+                    })()}
                   </Badge>
                 </div>
                 <div className="prose prose-lg max-w-none">
