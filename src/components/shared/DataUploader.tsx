@@ -321,10 +321,30 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       ).join(' ');
       
       // Map additional fields if present in Excel
-      const phoneField = normalizedRow['מס טלפון'] || normalizedRow['טלפון'] || '';
-      const mobileField = normalizedRow['מס פלאפון'] || normalizedRow['נייד'] || '';
-      const emailField = normalizedRow['כתובת מייל'] || normalizedRow['אימייל'] || '';
-      const validityField = normalizedRow['תוקף'] || normalizedRow['תוקף עד'] || '';
+      mapped.phone = normalizedRow['מס טלפון'] || normalizedRow['טלפון'] || '';
+      mapped.mobile = normalizedRow['מס פלאפון'] || normalizedRow['נייד'] || '';
+      mapped.email = normalizedRow['כתובת מייל'] || normalizedRow['אימייל'] || '';
+      mapped.validity = normalizedRow['תוקף'] || normalizedRow['תוקף עד'] || '';
+      mapped.business_nature = normalizedRow['מהות עסק'] || normalizedRow['טיב עסק'] || '';
+      mapped.request_type = normalizedRow['סוג בקשה'] || normalizedRow['סוג פנייה'] || '';
+      mapped.group_category = normalizedRow['קבוצה'] || normalizedRow['קטגוריה'] || '';
+      
+      // Handle dates
+      const requestDateField = normalizedRow['תאריך בקשה'] || normalizedRow['תאריך פנייה'] || '';
+      if (requestDateField && isValidDate(requestDateField)) {
+        mapped.request_date = requestDateField;
+      }
+      
+      const expiryDateField = normalizedRow['תאריך פקיעה'] || normalizedRow['פוקע ב'] || '';
+      if (expiryDateField && isValidDate(expiryDateField)) {
+        mapped.expiry_date = expiryDateField;
+      }
+      
+      // Handle reported area
+      const areaField = normalizedRow['שטח מדווח'] || normalizedRow['שטח'] || '';
+      if (areaField && !isNaN(parseFloat(areaField))) {
+        mapped.reported_area = parseFloat(areaField);
+      }
       
       // Set defaults for other fields
       mapped.type = normalizedRow.type || normalizedRow['סוג הרישיון'] || normalizedRow['סוג'] || 'כללי';
@@ -332,6 +352,7 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.department_slug = 'business'; // Always set department_slug for licenses
       
       // Handle validity date with proper validation
+      const validityField = normalizedRow['תוקף עד'] || normalizedRow['תוקף'] || '';
       if (validityField && validityField.toString().trim() !== '' && validityField.toString() !== '0') {
         const dateValue = validityField.toString().trim();
         // Only set date if it looks like a valid date (contains numbers and date separators)

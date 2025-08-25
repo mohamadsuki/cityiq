@@ -440,60 +440,90 @@ export type Database = {
         Row: {
           address: string | null
           business_name: string | null
+          business_nature: string | null
           created_at: string
           department_slug: Database["public"]["Enums"]["department_slug"] | null
+          email: string | null
           expires_at: string | null
+          expiry_date: string | null
+          group_category: string | null
           id: string
           image_urls: string[] | null
           lat: number | null
           license_number: string | null
           lng: number | null
+          mobile: string | null
           owner: string | null
+          phone: string | null
           reason_no_license: string | null
+          reported_area: number | null
+          request_date: string | null
+          request_type: string | null
           status: string | null
           type: string | null
           updated_at: string
           user_id: string
+          validity: string | null
         }
         Insert: {
           address?: string | null
           business_name?: string | null
+          business_nature?: string | null
           created_at?: string
           department_slug?:
             | Database["public"]["Enums"]["department_slug"]
             | null
+          email?: string | null
           expires_at?: string | null
+          expiry_date?: string | null
+          group_category?: string | null
           id?: string
           image_urls?: string[] | null
           lat?: number | null
           license_number?: string | null
           lng?: number | null
+          mobile?: string | null
           owner?: string | null
+          phone?: string | null
           reason_no_license?: string | null
+          reported_area?: number | null
+          request_date?: string | null
+          request_type?: string | null
           status?: string | null
           type?: string | null
           updated_at?: string
           user_id: string
+          validity?: string | null
         }
         Update: {
           address?: string | null
           business_name?: string | null
+          business_nature?: string | null
           created_at?: string
           department_slug?:
             | Database["public"]["Enums"]["department_slug"]
             | null
+          email?: string | null
           expires_at?: string | null
+          expiry_date?: string | null
+          group_category?: string | null
           id?: string
           image_urls?: string[] | null
           lat?: number | null
           license_number?: string | null
           lng?: number | null
+          mobile?: string | null
           owner?: string | null
+          phone?: string | null
           reason_no_license?: string | null
+          reported_area?: number | null
+          request_date?: string | null
+          request_type?: string | null
           status?: string | null
           type?: string | null
           updated_at?: string
           user_id?: string
+          validity?: string | null
         }
         Relationships: []
       }

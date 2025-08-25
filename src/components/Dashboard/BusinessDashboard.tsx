@@ -17,9 +17,11 @@ import ExecutiveTasksBanner from "@/components/Tasks/ExecutiveTasksBanner";
 import { supabase } from "@/integrations/supabase/client";
 import AddLicenseDialog from "@/components/Business/AddLicenseDialog";
 import { EditLicenseDialog } from "@/components/Business/EditLicenseDialog";
+import { ViewLicenseDialog } from "@/components/Business/ViewLicenseDialog";
 import { useAuth } from "@/context/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit, Eye } from "lucide-react";
+import { Edit, Eye, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 
 const kpi = {
@@ -47,6 +49,12 @@ type LicenseRow = {
   mobile: string | null;
   email: string | null;
   validity: string | null;
+  business_nature: string | null;
+  request_date: string | null;
+  expiry_date: string | null;
+  request_type: string | null;
+  group_category: string | null;
+  reported_area: number | null;
   lat: number | null;
   lng: number | null;
 };
@@ -54,10 +62,12 @@ type LicenseRow = {
 export default function BusinessDashboard() {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const { user, session } = useAuth();
+  const { toast } = useToast();
   const isUuid = (v?: string | null) => !!v && /^[0-9a-fA-F-]{36}$/.test(v);
   
-  // Edit dialog state
+  // Dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedLicense, setSelectedLicense] = useState<any>(null);
 
   // Licenses list (DB for auth users, localStorage for demo)
@@ -80,6 +90,12 @@ export default function BusinessDashboard() {
           mobile: (r as any).mobile ?? null,
           email: (r as any).email ?? null,
           validity: (r as any).validity ?? null,
+          business_nature: (r as any).business_nature ?? null,
+          request_date: (r as any).request_date ?? null,
+          expiry_date: (r as any).expiry_date ?? null,
+          request_type: (r as any).request_type ?? null,
+          group_category: (r as any).group_category ?? null,
+          reported_area: (r as any).reported_area ?? null,
           lat: r.lat ?? null,
           lng: r.lng ?? null,
         })));
@@ -127,28 +143,94 @@ export default function BusinessDashboard() {
     setEditDialogOpen(true);
   };
 
+  const handleViewLicense = (license: any) => {
+    setSelectedLicense(license);
+    setViewDialogOpen(true);
+  };
+
+  const handleDeleteLicense = async (licenseId: string) => {
+    try {
+      const { error } = await supabase.from('licenses').delete().eq('id', licenseId);
+      if (error) throw error;
+      
+      toast({
+        title: "רישיון נמחק בהצלחה",
+        description: "הרישיון הוסר מהמערכת",
+      });
+      
+      reloadLicenses();
+    } catch (error: any) {
+      toast({
+        title: "שגיאה במחיקת הרישיון",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const licenseColumns: ColumnDef<LicenseRow>[] = [
     { accessorKey: "license_number", header: "מספר רישיון" },
     { accessorKey: "business_name", header: "שם עסק" },
     { accessorKey: "owner", header: "בעלים" },
     { accessorKey: "type", header: "סוג" },
     { accessorKey: "status", header: "סטטוס" },
-    { accessorKey: "phone", header: "טלפון" },
-    { accessorKey: "mobile", header: "נייד" },
-    { accessorKey: "email", header: "אימייל" },
-    { accessorKey: "expires_at", header: "תוקף עד" },
-    { accessorKey: "address", header: "כתובת" },
+    { accessorKey: "validity", header: "תוקף" },
+    { accessorKey: "business_nature", header: "מהות עסק" },
+    { 
+      accessorKey: "request_date", 
+      header: "תאריך בקשה",
+      cell: ({ getValue }) => {
+        const date = getValue() as string;
+        return date ? new Date(date).toLocaleDateString('he-IL') : '';
+      }
+    },
+    { 
+      accessorKey: "expiry_date", 
+      header: "תאריך פקיעה",
+      cell: ({ getValue }) => {
+        const date = getValue() as string;
+        return date ? new Date(date).toLocaleDateString('he-IL') : '';
+      }
+    },
+    { accessorKey: "request_type", header: "סוג בקשה" },
+    { accessorKey: "group_category", header: "קבוצה" },
+    { 
+      accessorKey: "reported_area", 
+      header: "שטח מדווח",
+      cell: ({ getValue }) => {
+        const area = getValue() as number;
+        return area ? `${area} מ"ר` : '';
+      }
+    },
     {
       id: "actions",
       header: "פעולות",
       cell: ({ row }) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleViewLicense(row.original)}
+            title="צפיה ברישיון"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => handleEditLicense(row.original)}
+            title="עריכת רישיון"
           >
             <Edit className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleDeleteLicense(row.original.id)}
+            title="מחיקת רישיון"
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ),
@@ -389,6 +471,12 @@ export default function BusinessDashboard() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onSuccess={reloadLicenses}
+        license={selectedLicense}
+      />
+
+      <ViewLicenseDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
         license={selectedLicense}
       />
     </div>
