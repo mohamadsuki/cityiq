@@ -198,8 +198,16 @@ export default function RegularBudgetPage() {
         return;
       }
 
-      setAnalysis(data.analysis);
-      toast.success("ניתוח התקציב הושלם בהצלחה");
+      console.log('Analysis response data:', data);
+      console.log('Analysis content:', data?.analysis);
+      
+      if (data?.analysis) {
+        setAnalysis(data.analysis);
+        toast.success("ניתוח התקציב הושלם בהצלחה");
+      } else {
+        console.error("No analysis in response:", data);
+        toast.error("לא התקבל ניתוח מהשרת");
+      }
     } catch (error) {
       console.error("Error:", error);
       toast.error(`שגיאה בניתוח התקציב: ${error.message || 'שגיאה לא ידועה'}`);
