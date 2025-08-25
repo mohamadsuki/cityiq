@@ -52,7 +52,7 @@ export default function RegularBudgetPage() {
 
   const loadBudgetData = async () => {
     setLoading(true);
-    console.log("=== LOADING BUDGET DATA ===");
+    console.log("=== LOADING REGULAR BUDGET DATA ===");
     
     if (!user) {
       setLoading(false);
@@ -68,6 +68,8 @@ export default function RegularBudgetPage() {
 
       if (error) throw error;
 
+      console.log("📊 Raw regular budget data from DB:", data);
+
       const transformedData: RegularBudgetItem[] = (data || []).map(item => ({
         id: item.id,
         category_type: item.category_type,
@@ -78,6 +80,8 @@ export default function RegularBudgetPage() {
         difference: (item.actual_amount || 0) - (item.budget_amount || 0),
         percentage: item.budget_amount ? ((item.actual_amount || 0) / item.budget_amount) * 100 : 0
       }));
+
+      console.log("🔧 Transformed regular budget data:", transformedData);
 
       setBudgetData(transformedData);
       setFilteredData(transformedData);
@@ -226,6 +230,16 @@ export default function RegularBudgetPage() {
   const totalBudgetExpenses = budgetData
     .filter(item => item.category_type === 'expense')
     .reduce((sum, item) => sum + item.budget_amount, 0);
+
+  // Debug log for totals
+  console.log("💰 Total calculations:", {
+    totalIncome,
+    totalExpenses,
+    totalBudgetIncome,
+    totalBudgetExpenses,
+    incomeItems: budgetData.filter(item => item.category_type === 'income'),
+    expenseItems: budgetData.filter(item => item.category_type === 'expense')
+  });
 
   if (loading) {
     return <div className="p-6">טוען נתונים...</div>;
