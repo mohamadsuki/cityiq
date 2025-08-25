@@ -1220,6 +1220,13 @@ export default function BudgetAuthorizationsPage() {
                   .slice(0, 12) // הצגת 12 תקופות
                   .map((item: any) => ({
                     ...item,
+                    // המרת התאריך למספר עבור ציר זמן רציף
+                    dateValue: item.date.getTime(),
+                    // תווית קצרה יותר לתצוגה
+                    shortLabel: new Date(item.date.getFullYear(), item.date.getMonth()).toLocaleDateString('he-IL', { 
+                      month: 'numeric', 
+                      year: '2-digit' 
+                    }),
                     isExpired: item.daysFromNow < 0,
                     color: item.daysFromNow < 0 ? '#dc2626' : 
                            item.daysFromNow <= 90 ? '#ea580c' :
@@ -1245,18 +1252,16 @@ export default function BudgetAuthorizationsPage() {
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={timelineData}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-                        barCategoryGap="15%"
+                        margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
-                          dataKey="dateLabel"
+                          dataKey="shortLabel"
                           tick={{ fontSize: 11, fill: '#64748b' }}
-                          angle={-45}
-                          textAnchor="end"
-                          height={70}
-                          interval={0}
+                          tickLine={false}
                           axisLine={{ stroke: '#e2e8f0' }}
+                          height={50}
+                          interval="preserveStartEnd"
                         />
                         <YAxis 
                           tick={{ fontSize: 12, fill: '#64748b' }}
