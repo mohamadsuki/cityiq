@@ -385,7 +385,7 @@ export default function BusinessDashboard() {
            <CardHeader><CardTitle className="text-xl">סטטוס עסקים</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={350}>
                 <PieChart>
                   <Pie 
                     data={statusData} 
@@ -394,13 +394,16 @@ export default function BusinessDashboard() {
                     cx="50%" 
                     cy="50%" 
                     innerRadius={60}
-                    outerRadius={120}
+                    outerRadius={140}
                     paddingAngle={5}
+                    stroke="#fff"
+                    strokeWidth={2}
                   >
                     {statusData.map((entry, index) => (
                       <Cell 
                         key={`cell-${index}`} 
                         fill={COLORS[index % COLORS.length]}
+                        className="hover:opacity-80 transition-opacity duration-200 cursor-pointer"
                       />
                     ))}
                   </Pie>
@@ -412,13 +415,13 @@ export default function BusinessDashboard() {
               </ResponsiveContainer>
               
               {/* Legend */}
-              <div className="flex flex-col justify-center space-y-2">
+              <div className="flex flex-col justify-center space-y-1">
                 {statusData.map((item, index) => {
                   const total = statusData.reduce((sum, s) => sum + s.value, 0);
                   const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
                   return (
                     <div key={item.name} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
                         <span
                           className="inline-block h-2.5 w-2.5 rounded-full"
                           style={{ backgroundColor: COLORS[index % COLORS.length] }}
