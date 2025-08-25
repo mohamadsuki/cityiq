@@ -344,17 +344,22 @@ export default function RegularBudgetPage() {
               <div className={`text-lg font-bold ${
                 incomeSummaryRow && ((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) >= 0 ? 'text-green-600' : 'text-red-600'
               }`}>
-                הכנסות: {incomeSummaryRow ? formatCurrency(Math.abs((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0))) : '₪0'}
+                הכנסות: {incomeSummaryRow ? formatCurrency(Math.abs((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0))) : '₪0'} 
+                <span className="text-sm mr-2">
+                  ({incomeSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 ? ((((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) / (incomeSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%)
+                </span>
               </div>
               <div className={`text-lg font-bold ${
                 expenseSummaryRow && ((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) >= 0 ? 'text-red-600' : 'text-green-600'
               }`}>
-                הוצאות: {expenseSummaryRow ? formatCurrency(Math.abs((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0))) : '₪0'}
+                הוצאות: {expenseSummaryRow ? formatCurrency(Math.abs((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0))) : '₪0'} 
+                <span className="text-sm mr-2">
+                  ({expenseSummaryRow && (expenseSummaryRow.actual_amount || 0) > 0 ? ((((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) / (expenseSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%)
+                </span>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              הכנסות: {incomeSummaryRow && (incomeSummaryRow.actual_amount || 0) > 0 ? ((((incomeSummaryRow.cumulative_execution || 0) - (incomeSummaryRow.actual_amount || 0)) / (incomeSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}% | 
-              הוצאות: {expenseSummaryRow && (expenseSummaryRow.actual_amount || 0) > 0 ? ((((expenseSummaryRow.cumulative_execution || 0) - (expenseSummaryRow.actual_amount || 0)) / (expenseSummaryRow.actual_amount || 1)) * 100).toFixed(1) : 0}%
+              ביצוע מצטבר מינוס תקציב יחסי
             </p>
           </CardContent>
         </Card>
