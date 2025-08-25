@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Image as ImageIcon, Trash2, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
 
 interface PageSettingsDialogProps {
   open: boolean;
@@ -11,6 +12,7 @@ interface PageSettingsDialogProps {
 }
 
 export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogProps) {
+  const { user } = useAuth();
   const [src, setSrc] = useState<string | null>(null);
   const [fileDataUrl, setFileDataUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -22,6 +24,9 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
   const [totalBusinesses, setTotalBusinesses] = useState<number | null>(null);
   const [totalBusinessesInput, setTotalBusinessesInput] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check if user is business licensing manager
+  const isBusinessManager = user?.username === 'business';
 
   // Load data from database
   useEffect(() => {
@@ -113,85 +118,109 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
     if (isLoading) return;
     
     setIsLoading(true);
-    const newCity = cityInput.trim() || cityName;
-    const newPopulation = populationInput.trim() ? parseInt(populationInput.trim()) || population : population;
-    const newTotalBusinesses = totalBusinessesInput.trim() ? parseInt(totalBusinessesInput.trim()) || null : totalBusinesses;
-    let logoUrl: string | null = null;
-
+    
     try {
-      // Handle file upload
-      if (file) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `global-${Date.now()}.${fileExt}`;
-        const filePath = `logo/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('branding')
-          .upload(filePath, file, { 
-            cacheControl: '3600',
-            upsert: true 
+      if (isBusinessManager) {
+        // For business manager, only update total businesses
+        const newTotalBusinesses = totalBusinessesInput.trim() ? parseInt(totalBusinessesInput.trim()) || null : totalBusinesses;
+        
+        const { error } = await supabase
+          .from('city_settings')
+          .upsert({ 
+            id: 'global', 
+            total_businesses_in_city: newTotalBusinesses
+          }, { 
+            onConflict: 'id',
+            ignoreDuplicates: false 
           });
 
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error('שגיאה בהעלאת הקובץ');
+        if (error) {
+          console.error('Update error:', error);
+          throw new Error('שגיאה בעדכון הנתונים');
         }
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('branding')
-          .getPublicUrl(filePath);
-        
-        logoUrl = publicUrl;
-      } else if (urlInput.trim()) {
-        logoUrl = urlInput.trim();
+        setTotalBusinesses(newTotalBusinesses);
       } else {
-        logoUrl = src;
-      }
+        // For mayor/CEO, update all fields
+        const newCity = cityInput.trim() || cityName;
+        const newPopulation = populationInput.trim() ? parseInt(populationInput.trim()) || population : population;
+        const newTotalBusinesses = totalBusinessesInput.trim() ? parseInt(totalBusinessesInput.trim()) || null : totalBusinesses;
+        let logoUrl: string | null = null;
 
-      // Try upsert first, then insert if needed
-      let { data, error } = await supabase
-        .from('city_settings')
-        .upsert({ 
-          id: 'global', 
-          city_name: newCity, 
-          logo_url: logoUrl,
-          population: newPopulation,
-          total_businesses_in_city: newTotalBusinesses
-        }, { 
-          onConflict: 'id',
-          ignoreDuplicates: false 
-        })
-        .select();
+        // Handle file upload
+        if (file) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `global-${Date.now()}.${fileExt}`;
+          const filePath = `logo/${fileName}`;
 
-      if (error) {
-        console.error('Upsert error:', error);
-        // If upsert fails, try direct update
-        const { error: updateError } = await supabase
+          const { error: uploadError } = await supabase.storage
+            .from('branding')
+            .upload(filePath, file, { 
+              cacheControl: '3600',
+              upsert: true 
+            });
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError);
+            throw new Error('שגיאה בהעלאת הקובץ');
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('branding')
+            .getPublicUrl(filePath);
+          
+          logoUrl = publicUrl;
+        } else if (urlInput.trim()) {
+          logoUrl = urlInput.trim();
+        } else {
+          logoUrl = src;
+        }
+
+        // Try upsert first, then insert if needed
+        let { data, error } = await supabase
           .from('city_settings')
-          .update({ 
+          .upsert({ 
+            id: 'global', 
             city_name: newCity, 
             logo_url: logoUrl,
             population: newPopulation,
             total_businesses_in_city: newTotalBusinesses
+          }, { 
+            onConflict: 'id',
+            ignoreDuplicates: false 
           })
-          .eq('id', 'global');
-        
-        if (updateError) {
-          console.error('Update error:', updateError);
-          throw new Error('שגיאה בעדכון הנתונים');
-        }
-      }
+          .select();
 
-      // Update local state
-      setSrc(logoUrl);
-      setCityName(newCity);
-      setPopulation(newPopulation);
-      setTotalBusinesses(newTotalBusinesses);
-      
-      // Reset form
-      setFileDataUrl(null);
-      setFile(null);
-      setUrlInput("");
+        if (error) {
+          console.error('Upsert error:', error);
+          // If upsert fails, try direct update
+          const { error: updateError } = await supabase
+            .from('city_settings')
+            .update({ 
+              city_name: newCity, 
+              logo_url: logoUrl,
+              population: newPopulation,
+              total_businesses_in_city: newTotalBusinesses
+            })
+            .eq('id', 'global');
+          
+          if (updateError) {
+            console.error('Update error:', updateError);
+            throw new Error('שגיאה בעדכון הנתונים');
+          }
+        }
+
+        // Update local state
+        setSrc(logoUrl);
+        setCityName(newCity);
+        setPopulation(newPopulation);
+        setTotalBusinesses(newTotalBusinesses);
+        
+        // Reset form
+        setFileDataUrl(null);
+        setFile(null);
+        setUrlInput("");
+      }
       
       // Close dialog
       onOpenChange(false);
@@ -245,91 +274,124 @@ export default function PageSettingsDialog({ open, onOpenChange }: PageSettingsD
           <DialogTitle>עריכת דף</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <ImageIcon className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">עדכון שם העיר והלוגו</span>
-          </div>
-          
-          <div>
-            <label className="text-sm mb-1 block">שם העיר</label>
-            <Input 
-              placeholder="שם העיר" 
-              value={cityInput} 
-              onChange={(e) => setCityInput(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-          
-          <div>
-            <label className="text-sm mb-1 block">אוכלוסיית העיר</label>
-            <Input 
-              type="number" 
-              placeholder="אוכלוסיית העיר" 
-              value={populationInput} 
-              onChange={(e) => setPopulationInput(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-          
-          <div>
-            <label className="text-sm mb-1 block">סה"כ עסקים בעיר</label>
-            <Input 
-              type="number" 
-              placeholder="מספר כלל העסקים בעיר" 
-              value={totalBusinessesInput} 
-              onChange={(e) => setTotalBusinessesInput(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-          
-          <div>
-            <label className="text-sm mb-1 block">תצוגה מקדימה</label>
-            <div className="flex items-center gap-3">
-              <img src={displaySrc} alt="תצוגה מקדימה - לוגו" className="h-12 w-auto" />
-              <span className="text-sm text-muted-foreground">
-                שם: {cityInput || cityName}
-              </span>
-            </div>
-          </div>
-          
-          <div>
-            <label className="text-sm mb-1 block">העלאת קובץ</label>
-            <Input 
-              type="file" 
-              accept="image/*" 
-              onChange={(e) => handleFile(e.target.files?.[0])}
-              disabled={isLoading}
-            />
-          </div>
-          
-          <div>
-            <label className="text-sm mb-1 block">כתובת תמונה (URL)</label>
-            <Input 
-              placeholder="https://example.com/logo.png" 
-              value={urlInput} 
-              onChange={(e) => setUrlInput(e.target.value)}
-              disabled={isLoading}
-            />
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <Button 
-              onClick={handleSave} 
-              className="inline-flex items-center gap-2"
-              disabled={isLoading}
-            >
-              <Save className="h-4 w-4" /> 
-              {isLoading ? "שומר..." : "שמירה"}
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleRemove} 
-              className="inline-flex items-center gap-2"
-              disabled={isLoading}
-            >
-              <Trash2 className="h-4 w-4" /> מחיקה
-            </Button>
-          </div>
+          {isBusinessManager ? (
+            <>
+              <div className="flex items-center gap-3">
+                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">עדכון נתוני עסקים</span>
+              </div>
+              
+              <div>
+                <label className="text-sm mb-1 block">סה"כ עסקים בעיר</label>
+                <Input 
+                  type="number" 
+                  placeholder="מספר כלל העסקים בעיר" 
+                  value={totalBusinessesInput} 
+                  onChange={(e) => setTotalBusinessesInput(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <Button 
+                  onClick={handleSave} 
+                  className="inline-flex items-center gap-2"
+                  disabled={isLoading}
+                >
+                  <Save className="h-4 w-4" /> 
+                  {isLoading ? "שומר..." : "שמירה"}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3">
+                <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">עדכון שם העיר והלוגו</span>
+              </div>
+              
+              <div>
+                <label className="text-sm mb-1 block">שם העיר</label>
+                <Input 
+                  placeholder="שם העיר" 
+                  value={cityInput} 
+                  onChange={(e) => setCityInput(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm mb-1 block">אוכלוסיית העיר</label>
+                <Input 
+                  type="number" 
+                  placeholder="אוכלוסיית העיר" 
+                  value={populationInput} 
+                  onChange={(e) => setPopulationInput(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm mb-1 block">סה"כ עסקים בעיר</label>
+                <Input 
+                  type="number" 
+                  placeholder="מספר כלל העסקים בעיר" 
+                  value={totalBusinessesInput} 
+                  onChange={(e) => setTotalBusinessesInput(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm mb-1 block">תצוגה מקדימה</label>
+                <div className="flex items-center gap-3">
+                  <img src={displaySrc} alt="תצוגה מקדימה - לוגו" className="h-12 w-auto" />
+                  <span className="text-sm text-muted-foreground">
+                    שם: {cityInput || cityName}
+                  </span>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm mb-1 block">העלאת קובץ</label>
+                <Input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={(e) => handleFile(e.target.files?.[0])}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm mb-1 block">כתובת תמונה (URL)</label>
+                <Input 
+                  placeholder="https://example.com/logo.png" 
+                  value={urlInput} 
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <Button 
+                  onClick={handleSave} 
+                  className="inline-flex items-center gap-2"
+                  disabled={isLoading}
+                >
+                  <Save className="h-4 w-4" /> 
+                  {isLoading ? "שומר..." : "שמירה"}
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleRemove} 
+                  className="inline-flex items-center gap-2"
+                  disabled={isLoading}
+                >
+                  <Trash2 className="h-4 w-4" /> מחיקה
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
