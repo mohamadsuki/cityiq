@@ -168,39 +168,23 @@ export default function RegularBudgetPage() {
 
   const columns: ColumnDef<RegularBudgetItem>[] = [
     {
-      accessorKey: "category_type",
-      header: "סוג",
-      cell: ({ row }) => (
-        <Badge variant={row.getValue("category_type") === "income" ? "default" : "destructive"}>
-          {row.getValue("category_type") === "income" ? "הכנסה" : "הוצאה"}
-        </Badge>
-      ),
-    },
-    {
       accessorKey: "category_name",
       header: "שם הקטגוריה",
     },
     {
       accessorKey: "budget_amount",
-      header: "תקציב מתוכנן",
+      header: "תקציב מאושר",
       cell: ({ row }) => formatCurrency(row.getValue("budget_amount")),
     },
     {
       accessorKey: "actual_amount",
-      header: "סכום בפועל",
+      header: "תקציב יחסי לתקופה",
       cell: ({ row }) => formatCurrency(row.getValue("actual_amount")),
     },
     {
-      accessorKey: "difference",
-      header: "הפרש",
-      cell: ({ row }) => {
-        const diff = row.getValue("difference") as number;
-        return (
-          <span className={diff >= 0 ? "text-green-600" : "text-red-600"}>
-            {formatCurrency(diff)}
-          </span>
-        );
-      },
+      accessorKey: "cumulative_execution",
+      header: "ביצוע מצטבר",
+      cell: ({ row }) => formatCurrency(row.getValue("cumulative_execution")),
     },
     {
       accessorKey: "percentage",
@@ -627,7 +611,73 @@ export default function RegularBudgetPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <DataTable columns={columns} data={filteredData} />
+          <div className="space-y-4">
+            {/* Table for detailed items excluding summary rows */}
+            <DataTable 
+              columns={columns} 
+              data={filteredData.filter(item => 
+                !item.category_name.includes('סה"כ') && 
+                !item.category_name.includes('סך') &&
+                !item.category_name.includes('סיכום')
+              )} 
+            />
+            
+            {/* Summary row for total income */}
+            {incomeSummaryRow && (categoryFilter === 'all' || categoryFilter === 'income') && (
+              <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-200 mb-3">סיכום הכנסות</h3>
+                <div className="grid grid-cols-5 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">{incomeSummaryRow.category_name}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold">{formatCurrency(incomeSummaryRow.budget_amount)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold">{formatCurrency(incomeSummaryRow.actual_amount)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold">{formatCurrency(incomeSummaryRow.cumulative_execution || 0)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className={`font-bold ${
+                      incomeSummaryRow.percentage >= 100 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {incomeSummaryRow.percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Summary row for total expenses */}
+            {expenseSummaryRow && (categoryFilter === 'all' || categoryFilter === 'expense') && (
+              <div className="mt-6 p-4 bg-gradient-to-r from-rose-50 to-red-50 dark:from-rose-950/30 dark:to-red-950/30 rounded-lg border border-rose-200 dark:border-rose-800">
+                <h3 className="text-lg font-bold text-rose-800 dark:text-rose-200 mb-3">סיכום הוצאות</h3>
+                <div className="grid grid-cols-5 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">{expenseSummaryRow.category_name}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold">{formatCurrency(expenseSummaryRow.budget_amount)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold">{formatCurrency(expenseSummaryRow.actual_amount)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold">{formatCurrency(expenseSummaryRow.cumulative_execution || 0)}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className={`font-bold ${
+                      expenseSummaryRow.percentage >= 100 ? "text-green-600" : "text-red-600"
+                    }`}>
+                      {expenseSummaryRow.percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
