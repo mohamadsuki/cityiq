@@ -1239,27 +1239,27 @@ export default function BudgetAuthorizationsPage() {
                   <div className="relative w-full h-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
-                        layout="horizontal"
                         data={timelineData}
-                        margin={{ top: 20, right: 30, left: 80, bottom: 20 }}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                         <XAxis 
-                          type="number"
+                          dataKey="dateLabel"
+                          tick={{ fontSize: 12, fill: '#64748b' }}
+                          angle={-45}
+                          textAnchor="end"
+                          height={70}
+                          interval={0}
+                        />
+                        <YAxis 
                           tick={{ fontSize: 12, fill: '#64748b' }}
                           label={{ 
                             value: 'מספר הרשאות', 
-                            position: 'insideBottom',
-                            offset: -10,
+                            angle: -90, 
+                            position: 'insideLeft',
                             style: { textAnchor: 'middle', fill: '#64748b' }
                           }}
-                          domain={[0, 'dataMax + 1']}
-                        />
-                        <YAxis 
-                          type="category"
-                          dataKey="dateLabel"
-                          tick={{ fontSize: 12, fill: '#64748b' }}
-                          width={70}
+                          domain={[0, 'dataMax + 2']}
                         />
                         <Tooltip 
                           content={({ active, payload, label }) => {
@@ -1340,8 +1340,7 @@ export default function BudgetAuthorizationsPage() {
                         />
                         <Bar 
                           dataKey="count" 
-                          radius={[0, 2, 2, 0]}
-                          maxBarSize={20}
+                          radius={[4, 4, 0, 0]}
                         >
                           {timelineData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
