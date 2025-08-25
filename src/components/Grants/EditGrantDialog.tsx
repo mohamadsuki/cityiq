@@ -263,6 +263,29 @@ export default function EditGrantDialog({ isOpen, onClose, onSuccess, grant }: E
             </div>
             
             <div className="space-y-2">
+              <Label htmlFor="support_amount">סכום תמיכה</Label>
+              <Input
+                id="support_amount"
+                type="number"
+                value={formData.support_amount}
+                onChange={(e) => setFormData({ ...formData, support_amount: e.target.value })}
+                placeholder="0"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="municipality_participation">השתתפות עירייה</Label>
+              <Input
+                id="municipality_participation"
+                type="number"
+                value={formData.municipality_participation}
+                onChange={(e) => setFormData({ ...formData, municipality_participation: e.target.value })}
+                placeholder="0"
+              />
+            </div>
+            
+            
+            <div className="space-y-2">
               <Label htmlFor="submitted_at">תאריך הגשה</Label>
               <Input
                 id="submitted_at"

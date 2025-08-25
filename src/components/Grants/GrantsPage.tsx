@@ -232,6 +232,22 @@ export default function GrantsPage() {
       },
     },
     {
+      accessorKey: "support_amount", 
+      header: "סכום תמיכה",
+      cell: ({ row }) => {
+        const amount = row.original.support_amount;
+        return amount ? `₪${amount.toLocaleString('he-IL')}` : "לא צוין";
+      },
+    },
+    {
+      accessorKey: "municipality_participation",
+      header: "השתתפות עירייה", 
+      cell: ({ row }) => {
+        const amount = row.original.municipality_participation;
+        return amount ? `₪${amount.toLocaleString('he-IL')}` : "לא צוין";
+      },
+    },
+    {
       accessorKey: "status",
       header: "סטטוס",
       cell: ({ row }) => (
