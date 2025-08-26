@@ -51,33 +51,70 @@ serve(async (req) => {
       hasUserId: !!userId
     });
 
-    // Extract period information from budget data
-    const periodInfo = budgetData.map(item => item.category_name).join(' ');
-    let detectedPeriod = 'לא זוהתה תקופה';
+    // Extract period information from budget data - check all possible fields
+    const allTextData = budgetData.map(item => 
+      `${item.category_name || ''} ${item.excel_cell_ref || ''} ${JSON.stringify(item)}`
+    ).join(' ');
     
-    // Search for period patterns in the data
+    let detectedPeriod = '';
+    let detectedYear = '';
+    let detectedMonth = '';
+    let detectedQuarter = '';
+    
+    // Enhanced quarter detection patterns
     const quarterPatterns = [
-      /רבעון ראשון|רבעון 1|Q1/i,
-      /רבעון שני|רבעון 2|Q2/i, 
-      /רבעון שלישי|רבעון 3|Q3/i,
-      /רבעון רביעי|רבעון 4|Q4/i
+      { pattern: /רבעון ראשון|רבעון 1|Q1|קוורטר 1/i, quarter: 'רבעון ראשון' },
+      { pattern: /רבעון שני|רבעון 2|Q2|קוורטר 2/i, quarter: 'רבעון שני' },
+      { pattern: /רבעון שלישי|רבעון 3|Q3|קוורטר 3/i, quarter: 'רבעון שלישי' },
+      { pattern: /רבעון רביעי|רבעון 4|Q4|קוורטר 4/i, quarter: 'רבעון רביעי' }
     ];
     
-    const yearPattern = /20\d{2}/;
-
-    // Try to detect quarter
-    quarterPatterns.forEach((pattern, index) => {
-      if (pattern.test(periodInfo)) {
-        detectedPeriod = `רבעון ${index + 1}`;
+    // Enhanced year detection
+    const yearPattern = /20\d{2}/g;
+    const yearMatches = allTextData.match(yearPattern);
+    if (yearMatches) {
+      detectedYear = yearMatches[yearMatches.length - 1]; // Take the most recent year
+    }
+    
+    // Month/Year format detection (MM/YYYY, M/YYYY)
+    const monthYearPattern = /(\d{1,2})\/(\d{4})/g;
+    const monthYearMatches = [...allTextData.matchAll(monthYearPattern)];
+    if (monthYearMatches.length > 0) {
+      const latestMatch = monthYearMatches[monthYearMatches.length - 1];
+      detectedMonth = latestMatch[1];
+      detectedYear = latestMatch[2];
+    }
+    
+    // Quarter detection
+    quarterPatterns.forEach(({ pattern, quarter }) => {
+      if (pattern.test(allTextData)) {
+        detectedQuarter = quarter;
       }
     });
-
-    // Try to detect year
-    const yearMatch = periodInfo.match(yearPattern);
-    if (yearMatch) {
-      detectedPeriod += ` ${yearMatch[0]}`;
+    
+    // Hebrew month names detection
+    const hebrewMonths = [
+      'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+      'יולי', 'אוגוסט', 'סeptember', 'אוקטובר', 'נובמבר', 'דצמבר'
+    ];
+    let detectedHebrewMonth = '';
+    hebrewMonths.forEach((month, index) => {
+      if (allTextData.includes(month)) {
+        detectedHebrewMonth = month;
+        detectedMonth = (index + 1).toString();
+      }
+    });
+    
+    // Build comprehensive period string
+    if (detectedQuarter && detectedYear) {
+      detectedPeriod = `${detectedQuarter} ${detectedYear}`;
+    } else if (detectedMonth && detectedYear) {
+      const monthName = detectedHebrewMonth || `חודש ${detectedMonth}`;
+      detectedPeriod = `${monthName} ${detectedYear}`;
+    } else if (detectedYear) {
+      detectedPeriod = `שנת ${detectedYear}`;
     } else {
-      detectedPeriod += ` ${new Date().getFullYear()}`;
+      detectedPeriod = `שנת ${new Date().getFullYear()} (לא זוהתה תקופה ספציפית)`;
     }
     
     // Calculate additional insights
