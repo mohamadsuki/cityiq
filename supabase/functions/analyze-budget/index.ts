@@ -205,7 +205,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-2025-08-07', // Using the most advanced OpenAI model
+        model: 'gpt-5-nano-2025-08-07', // Using the cheapest OpenAI model
         messages: [
           { 
             role: 'system', 
