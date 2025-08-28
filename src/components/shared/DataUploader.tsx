@@ -12,6 +12,7 @@ import Fuse from 'fuse.js';
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { validateRowData } from "@/validation";
 
 type ImportOption = {
   mode: 'replace' | 'append';
@@ -876,15 +877,24 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
         allMappedRows.push(normalizedRow);
       }
 
-      // Remove duplicates based on canonical fields hash
-      setProgressStatus('בודק כפילויות...');
+      // Remove duplicates based on canonical fields hash and validate rows
+      setProgressStatus('בודק כפילויות ומוודא תקינות...');
       setUploadProgress(20);
-      addLog('info', 'בודק כפילויות...');
+      addLog('info', 'בודק כפילויות ומוודא תקינות...');
       const hashSet = new Set<string>();
       const mappedRows: Record<string, any>[] = [];
       let skippedDuplicates = 0;
+      let validationFailures = 0;
 
       for (const row of allMappedRows) {
+        // Validate row first
+        const validation = validateRowData(row, detected.table!);
+        if (!validation.isValid) {
+          validationFailures++;
+          addLog('warning', `שורה נפסלה בולידציה: ${validation.error}`);
+          continue;
+        }
+
         const hash = await createRowHash(row, canonicalFields);
         
         if (hashSet.has(hash)) {
@@ -898,6 +908,10 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
 
       if (skippedDuplicates > 0) {
         addLog('info', `נמצאו ${skippedDuplicates} כפילויות, ${mappedRows.length} שורות ייחודיות נותרו`);
+      }
+      
+      if (validationFailures > 0) {
+        addLog('info', `שורות שנפסלו ע"י ולידציה: ${validationFailures}`);
       }
 
       // Process in batches with binary backoff
@@ -987,7 +1001,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       if (insertedCount > 0) {
         setProgressStatus('הושלם בהצלחה!');
         setUploadProgress(100);
-        const successMessage = `הטענה הושלמה בהצלחה: ${insertedCount} שורות נטענו${skippedDuplicates > 0 ? `. נמנעו כפילויות: ${skippedDuplicates}` : ''}`;
+        const successMessage = `הטענה הושלמה בהצלחה: ${insertedCount} שורות נטענו${skippedDuplicates > 0 ? `. נמנעו כפילויות: ${skippedDuplicates}` : ''}${validationFailures > 0 ? `. שורות שנפסלו ע"י ולידציה: ${validationFailures}` : ''}`;
         addLog('success', successMessage);
         if (errorCount > 0) {
           addLog('warning', `${errorCount} שורות לא נטענו בגלל שגיאות`);
@@ -995,7 +1009,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
         
         toast({
           title: "הטענה הושלמה",
-          description: `${insertedCount} שורות נטענו בהצלחה${skippedDuplicates > 0 ? `. נמנעו כפילויות: ${skippedDuplicates}` : ''}${errorCount > 0 ? ` (${errorCount} שגיאות)` : ''}`,
+          description: `${insertedCount} שורות נטענו בהצלחה${skippedDuplicates > 0 ? `. נמנעו כפילויות: ${skippedDuplicates}` : ''}${validationFailures > 0 ? `. שורות שנפסלו ע"י ולידציה: ${validationFailures}` : ''}${errorCount > 0 ? ` (${errorCount} שגיאות)` : ''}`,
         });
         
         onComplete?.();
