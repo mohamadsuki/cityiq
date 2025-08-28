@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { validateRowData } from "@/validation";
+import synonymsData from "@/mappings/synonyms.json";
 
 type ImportOption = {
   mode: 'replace' | 'append';
@@ -131,7 +132,7 @@ const detectDataType = (headers: string[], rows: Record<string, any>[], context?
     const matches: string[] = [];
     
     headers.forEach(header => {
-      const normalized = normalizeKey(header);
+      const normalized = normalizeKey(header, undefined, datasetKey);
       
       // Check direct match
       if ([...coreFields].includes(normalized as any)) {
@@ -141,54 +142,7 @@ const detectDataType = (headers: string[], rows: Record<string, any>[], context?
       }
       
       // Check fuzzy match
-      const synonymsMap: Record<string, string[]> = {
-        'institution_name': ['שם המוסד', 'שם מוסד', 'מוסד'],
-        'address': ['כתובת', 'מען', 'כתובת המוסד'],
-        'phone': ['טלפון', 'טל', 'מספר טלפון'],
-        'institution_type': ['סוג המוסד', 'סוג מוסד', 'קטגוריה'],
-        'business_name': ['שם העסק', 'שם עסק', 'עסק'],
-        'license_holder': ['בעל הרישיון', 'בעל רישיון', 'בעלים'],
-        'license_number': ['מספר רישיון', 'מס רישיון', 'מס\' רישיון'],
-        'license_type': ['סוג הרישיון', 'סוג רישיון', 'קטגוריית רישיון'],
-        'issue_date': ['תאריך הנפקה', 'תאריך נפקה', 'הונפק ב'],
-        'expiry_date': ['תאריך תפוגה', 'תפוגה', 'פוגה ב'],
-        'status': ['סטטוס', 'מצב', 'סטאטוס'],
-        'category_name': ['קטגוריה', 'שם קטגוריה', 'שם הקטגוריה'],
-        'category_type': ['סוג', 'סוג קטגוריה', 'טיפוס'],
-        'budget_amount': ['תקציב', 'סכום תקציב', 'תקציב מאושר'],
-        'actual_amount': ['ביצוע', 'בפועל', 'ביצוע בפועל'],
-        'property_type': ['סוג נכס', 'סוג הנכס', 'נכס'],
-        'annual_budget': ['תקציב שנתי', 'תקציב לשנה', 'תקציב'],
-        'relative_budget': ['תקציב יחסי', 'תקציב יחסי %', 'אחוז תקציב'],
-        'actual_collection': ['גביה בפועל', 'גביה', 'גבייה בפועל'],
-        'tabar_name': ['שם תב"ר', 'שם התב"ר', 'תב"ר'],
-        'tabar_number': ['מספר תב"ר', 'מס תב"ר', 'מס\' תב"ר'],
-        'domain': ['תחום', 'תחום פעילות', 'תחום עיסוק'],
-        'funding_source1': ['מקור מימון', 'מקור מימון 1', 'מימון'],
-        'approved_budget': ['תקציב מאושר', 'תקציב', 'אושר'],
-        'income_actual': ['הכנסות בפועל', 'הכנסות', 'הכנסה בפועל'],
-        'expense_actual': ['הוצאות בפועל', 'הוצאות', 'הוצאה בפועל'],
-        'grant_name': ['שם הקול קורא', 'שם', 'קול קורא', 'שם גרנט'],
-        'ministry': ['משרד', 'משרד ממשלתי', 'גוף מממן'],
-        'grant_amount': ['סכום', 'תקציב גרנט', 'סכום גרנט'],
-        'grant_status': ['סטטוס גרנט', 'מצב גרנט', 'סטטוס'],
-        'submitted_at': ['תאריך הגשה', 'הוגש ב', 'תאריך הגשת הבקשה'],
-        'decision_at': ['תאריך החלטה', 'החלטה ב', 'תאריך תשובה'],
-        'authorization_number': ['מספר הרשאה', 'מס הרשאה', 'מס\' הרשאה'],
-        'program': ['תוכנית', 'תכנית', 'פרוגרמה'],
-        'purpose': ['מס\' תב"ר', 'מספר תב"ר', 'מטרה'],
-        'amount': ['סכום ההרשאה', 'סכום', 'סכום מאושר'],
-        'valid_until': ['תוקף ההרשאה', 'תוקף', 'בתוקף עד'],
-        'department': ['מחלקה מטפלת', 'מחלקה', 'יחידה מטפלת'],
-        'approved_at': ['תאריך אישור מליאה', 'אושר ב', 'תאריך אישור'],
-        'notes': ['הערות', 'הערה', 'הארות'],
-        'quarter': ['רבעון', 'רבע', 'ק'],
-        'general_salary': ['משכורת כללית', 'שכר כללי', 'כללי'],
-        'education_salary': ['משכורת חינוך', 'שכר חינוך', 'חינוך'],
-        'welfare_salary': ['משכורת רווחה', 'שכר רווחה', 'רווחה'],
-        'students': ['תלמידים', 'מספר תלמידים', 'כמות תלמידים']
-      };
-      
+      const synonymsMap = buildSynonymsMap(datasetKey);
       const fuzzyMatch = resolveCanonicalHeader(header, synonymsMap, FUZZY_MATCH_THRESHOLD);
       if (fuzzyMatch && [...coreFields].includes(fuzzyMatch as any)) {
         matchCount++;
@@ -281,12 +235,18 @@ const resolveCanonicalHeader = (header: string, synonymsMap: Record<string, stri
   return null;
 };
 
-const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
-  const original = k;
-  let normalized = k.toLowerCase().trim();
+// Function to build synonyms map for a specific dataset
+const buildSynonymsMap = (datasetKey: string): Record<string, string[]> => {
+  const datasetSynonyms = synonymsData[datasetKey as keyof typeof synonymsData] || {};
+  const commonSynonyms = synonymsData.common || {};
   
-  // Hebrew to English mappings with synonyms
-  const synonymsMap: Record<string, string[]> = {
+  // Merge dataset-specific synonyms with common ones
+  return { ...commonSynonyms, ...datasetSynonyms };
+};
+
+// Fallback synonyms map for backward compatibility
+const getFallbackSynonymsMap = (): Record<string, string[]> => {
+  return {
     // Institution fields
     'institution_name': ['שם המוסד', 'שם מוסד', 'מוסד'],
     'address': ['כתובת', 'מען', 'כתובת המוסד'],
@@ -346,6 +306,14 @@ const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
     'welfare_salary': ['משכורת רווחה', 'שכר רווחה', 'רווחה'],
     'students': ['תלמידים', 'מספר תלמידים', 'כמות תלמידים']
   };
+};
+
+const normalizeKey = (k: string, debugLogs?: DebugLog[], datasetKey?: string) => {
+  const original = k;
+  let normalized = k.toLowerCase().trim();
+  
+  // Get synonyms map - use dataset-specific if available, otherwise fallback
+  const synonymsMap = datasetKey ? buildSynonymsMap(datasetKey) : getFallbackSynonymsMap();
 
   // First, try direct exact match in synonyms
   for (const [canonical, synonyms] of Object.entries(synonymsMap)) {
@@ -867,7 +835,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           Object.entries(row).forEach(([key, value]) => {
             if (key === '__rowNum__') return;
             
-            const normalizedKey = normalizeKey(key);
+            const normalizedKey = normalizeKey(key, undefined, detected.table!);
             if (value !== undefined && value !== null && value !== '') {
               normalizedRow[normalizedKey] = value;
             }
