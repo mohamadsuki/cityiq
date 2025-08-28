@@ -397,7 +397,11 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
   const [detected, setDetected] = useState<{ table: string | null; reason: string }>({ table: null, reason: '' });
   const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [progressStatus, setProgressStatus] = useState<string>('');
+  const [processedRows, setProcessedRows] = useState(0);
+  const [totalRows, setTotalRows] = useState(0);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -722,6 +726,13 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
 
     console.log('🔄 Starting upload and ingestion process');
     
+    // Reset cancellation flag and progress
+    setIsCancelled(false);
+    setProgressStatus('מתחיל...');
+    setProcessedRows(0);
+    setTotalRows(rows.length);
+    setUploadProgress(0);
+    
     // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     const currentUserId = user?.id || '33333333-3333-3333-3333-333333333333'; // Fallback to demo user
@@ -745,7 +756,14 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       console.log('🗂️ Starting data mapping and insertion process...');
       addLog('info', `מתחיל עיבוד ${rows.length} שורות לטבלה: ${detected.table}`);
 
+      // Check for cancellation
+      if (isCancelled) {
+        addLog('warning', 'העליה בוטלה על ידי המשתמש');
+        return;
+      }
+
       // Upload file to storage first
+      setProgressStatus('מעלה קובץ...');
       const timestamp = Date.now();
       const fileName = `${detected.table}_${timestamp}.xlsx`;
       const filePath = `uploads/${fileName}`;
@@ -817,9 +835,17 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       const canonicalFields = datasetDef ? [...datasetDef.coreFields] : [];
 
       // Prepare all rows first
+      setProgressStatus('ממפה נתונים...');
+      setUploadProgress(10);
       const allMappedRows: Record<string, any>[] = [];
       
       addLog('info', 'מכין נתונים למיפוי...');
+      
+      // Check for cancellation
+      if (isCancelled) {
+        addLog('warning', 'העליה בוטלה על ידי המשתמש');
+        return;
+      }
       for (const row of rows) {
         const normalizedRow: Record<string, any> = {
           user_id: currentUserId
@@ -851,6 +877,8 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       }
 
       // Remove duplicates based on canonical fields hash
+      setProgressStatus('בודק כפילויות...');
+      setUploadProgress(20);
       addLog('info', 'בודק כפילויות...');
       const hashSet = new Set<string>();
       const mappedRows: Record<string, any>[] = [];
@@ -873,6 +901,8 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       }
 
       // Process in batches with binary backoff
+      setProgressStatus('מכניס נתונים...');
+      setUploadProgress(30);
       const BATCH_SIZE = 500;
       const FALLBACK_BATCH_SIZE = 50;
       const totalBatches = Math.ceil(mappedRows.length / BATCH_SIZE);
@@ -880,8 +910,17 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       addLog('info', `מעבד ${totalBatches} אצוות של ${BATCH_SIZE} שורות...`);
 
       for (let i = 0; i < mappedRows.length; i += BATCH_SIZE) {
+        // Check for cancellation before each batch
+        if (isCancelled) {
+          addLog('warning', 'העליה בוטלה על ידי המשתמש');
+          return;
+        }
+
         const batch = mappedRows.slice(i, i + BATCH_SIZE);
         const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+        
+        setProgressStatus(`מכניס נתונים (אצווה ${batchNumber}/${totalBatches})...`);
+        setProcessedRows(i);
         
         try {
           // Try large batch first (without .select() to reduce server response)
@@ -922,10 +961,16 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           }
         }
         
-        // Update progress
-        const progress = Math.round(((i + batch.length) / mappedRows.length) * 100);
-        setUploadProgress(progress);
+         // Update progress after batch completion
+         const progressPercent = 30 + ((i + batch.length) / mappedRows.length) * 60; // 30-90% for data insertion
+         setUploadProgress(Math.round(progressPercent));
+         setProcessedRows(i + batch.length);
       }
+
+      // Final progress update
+      setProgressStatus('מסיים עיבוד...');
+      setUploadProgress(95);
+      setProcessedRows(mappedRows.length);
 
       // Update ingestion log
       if (logEntry) {
@@ -940,6 +985,8 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       }
 
       if (insertedCount > 0) {
+        setProgressStatus('הושלם בהצלחה!');
+        setUploadProgress(100);
         const successMessage = `הטענה הושלמה בהצלחה: ${insertedCount} שורות נטענו${skippedDuplicates > 0 ? `. נמנעו כפילויות: ${skippedDuplicates}` : ''}`;
         addLog('success', successMessage);
         if (errorCount > 0) {
@@ -969,8 +1016,20 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       });
     } finally {
       setIsUploading(false);
+      setProgressStatus('');
+      setUploadProgress(0);
+      setProcessedRows(0);
+      setTotalRows(0);
     }
   }, [file, detected.table, rows, debugLogs, importOption, context, toast, onComplete, onUploadSuccess, previewData]);
+
+  const handleCancelUpload = () => {
+    setIsCancelled(true);
+    toast({
+      title: "ביטול העליה",
+      description: "העליה תבוטל לאחר השלמת האצווה הנוכחית",
+    });
+  };
 
   const handleConfirmImport = async (mode: 'replace' | 'append') => {
     setImportOption({ mode, confirmed: true });
@@ -988,6 +1047,11 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
     setDebugLogs([]);
     setImportOption({ mode: 'replace', confirmed: false });
     setIsUploading(false);
+    setIsCancelled(false);
+    setUploadProgress(0);
+    setProgressStatus('');
+    setProcessedRows(0);
+    setTotalRows(0);
     setPreviewData(null);
     setShowPreviewDialog(false);
     setShowDatasetSelection(false);
@@ -1311,12 +1375,26 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           {renderDebugLogs()}
 
           {isUploading && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span>מעלה נתונים...</span>
+                <span>{progressStatus}</span>
+                <span>{processedRows.toLocaleString()} / {totalRows.toLocaleString()} שורות</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span>התקדמות:</span>
                 <span>{uploadProgress}%</span>
               </div>
               <Progress value={uploadProgress} className="w-full" />
+              <div className="flex justify-center">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCancelUpload}
+                  disabled={isCancelled}
+                >
+                  {isCancelled ? 'מבטל...' : 'ביטול'}
+                </Button>
+              </div>
             </div>
           )}
 
