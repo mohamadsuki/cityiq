@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { FileUp, Upload, AlertCircle, CheckCircle, Database, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from 'xlsx';
+import Fuse from 'fuse.js';
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 
@@ -192,84 +193,148 @@ const isHeaderRow = (row: any): boolean => {
   return headerCount > values.length / 2;
 };
 
+// Fuzzy matching threshold constant
+const FUZZY_MATCH_THRESHOLD = 85;
+
+// Function to resolve canonical header using fuzzy matching
+const resolveCanonicalHeader = (header: string, synonymsMap: Record<string, string[]>, threshold = FUZZY_MATCH_THRESHOLD): string | null => {
+  // Create a flat list of all synonyms with their canonical fields
+  const synonymsList: { canonical: string; synonym: string }[] = [];
+  
+  Object.entries(synonymsMap).forEach(([canonical, synonyms]) => {
+    synonyms.forEach(synonym => {
+      synonymsList.push({ canonical, synonym });
+    });
+  });
+
+  // Use Fuse.js for fuzzy matching
+  const fuse = new Fuse(synonymsList, {
+    keys: ['synonym'],
+    threshold: (100 - threshold) / 100, // Convert percentage to Fuse threshold (0-1, lower = more strict)
+    includeScore: true
+  });
+
+  const results = fuse.search(header);
+  
+  if (results.length > 0 && results[0].score !== undefined) {
+    const score = Math.round((1 - results[0].score) * 100); // Convert back to percentage
+    const matched = results[0].item;
+    
+    console.debug('Fuzzy match', { 
+      original: header, 
+      matched: matched.synonym, 
+      canonical: matched.canonical,
+      score 
+    });
+    
+    if (score >= threshold) {
+      return matched.canonical;
+    }
+  }
+  
+  return null;
+};
+
 const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
   const original = k;
   let normalized = k.toLowerCase().trim();
   
-  // Hebrew to English mappings
-  const mappings: Record<string, string> = {
+  // Hebrew to English mappings with synonyms
+  const synonymsMap: Record<string, string[]> = {
     // Institution fields
-    'שם המוסד': 'institution_name',
-    'כתובת': 'address',
-    'טלפון': 'phone',
-    'סוג המוסד': 'institution_type',
+    'institution_name': ['שם המוסד', 'שם מוסד', 'מוסד'],
+    'address': ['כתובת', 'מען', 'כתובת המוסד'],
+    'phone': ['טלפון', 'טל', 'מספר טלפון'],
+    'institution_type': ['סוג המוסד', 'סוג מוסד', 'קטגוריה'],
     
     // Business license fields  
-    'שם העסק': 'business_name',
-    'בעל הרישיון': 'license_holder',
-    'מספר רישיון': 'license_number',
-    'סוג הרישיון': 'license_type',
-    'תאריך הנפקה': 'issue_date',
-    'תאריך תפוגה': 'expiry_date',
-    'סטטוס': 'status',
+    'business_name': ['שם העסק', 'שם עסק', 'עסק'],
+    'license_holder': ['בעל הרישיון', 'בעל רישיון', 'בעלים'],
+    'license_number': ['מספר רישיון', 'מס רישיון', 'מס\' רישיון'],
+    'license_type': ['סוג הרישיון', 'סוג רישיון', 'קטגוריית רישיון'],
+    'issue_date': ['תאריך הנפקה', 'תאריך נפקה', 'הונפק ב'],
+    'expiry_date': ['תאריך תפוגה', 'תפוגה', 'פוגה ב'],
+    'status': ['סטטוס', 'מצב', 'סטאטוס'],
     
     // Budget fields
-    'קטגוריה': 'category_name',
-    'סוג': 'category_type',
-    'תקציב': 'budget_amount',
-    'ביצוע': 'actual_amount',
+    'category_name': ['קטגוריה', 'שם קטגוריה', 'שם הקטגוריה'],
+    'category_type': ['סוג', 'סוג קטגוריה', 'טיפוס'],
+    'budget_amount': ['תקציב', 'סכום תקציב', 'תקציב מאושר'],
+    'actual_amount': ['ביצוע', 'בפועל', 'ביצוע בפועל'],
     
     // Collection fields
-    'סוג נכס': 'property_type',
-    'תקציב שנתי': 'annual_budget',
-    'תקציב יחסי': 'relative_budget',
-    'גביה בפועל': 'actual_collection',
+    'property_type': ['סוג נכס', 'סוג הנכס', 'נכס'],
+    'annual_budget': ['תקציב שנתי', 'תקציב לשנה', 'תקציב'],
+    'relative_budget': ['תקציב יחסי', 'תקציב יחסי %', 'אחוז תקציב'],
+    'actual_collection': ['גביה בפועל', 'גביה', 'גבייה בפועל'],
     
     // Tabarim fields
-    'שם תב"ר': 'tabar_name',
-    'מספר תב"ר': 'tabar_number',
-    'תחום': 'domain',
-    'תחום פעילות': 'domain',
-    'מקור מימון': 'funding_source1',
-    'מקור מימון 1': 'funding_source1',
-    'תקציב מאושר': 'approved_budget',
-    'הכנסות בפועל': 'income_actual',
-    'הוצאות בפועל': 'expense_actual',
+    'tabar_name': ['שם תב"ר', 'שם התב"ר', 'תב"ר'],
+    'tabar_number': ['מספר תב"ר', 'מס תב"ר', 'מס\' תב"ר'],
+    'domain': ['תחום', 'תחום פעילות', 'תחום עיסוק'],
+    'funding_source1': ['מקור מימון', 'מקור מימון 1', 'מימון'],
+    'approved_budget': ['תקציב מאושר', 'תקציב', 'אושר'],
+    'income_actual': ['הכנסות בפועל', 'הכנסות', 'הכנסה בפועל'],
+    'expense_actual': ['הוצאות בפועל', 'הוצאות', 'הוצאה בפועל'],
     
     // Grants fields
-    'שם הקול קורא': 'grant_name',
-    'שם': 'grant_name', 
-    'משרד': 'ministry',
-    'סכום': 'grant_amount',
-    'תקציב גרנט': 'grant_amount',
-    'סטטוס גרנט': 'grant_status',
-    'תאריך הגשה': 'submitted_at',
-    'תאריך החלטה': 'decision_at',
+    'grant_name': ['שם הקול קורא', 'שם', 'קול קורא', 'שם גרנט'],
+    'ministry': ['משרד', 'משרד ממשלתי', 'גוף מממן'],
+    'grant_amount': ['סכום', 'תקציב גרנט', 'סכום גרנט'],
+    'grant_status': ['סטטוס גרנט', 'מצב גרנט', 'סטטוס'],
+    'submitted_at': ['תאריך הגשה', 'הוגש ב', 'תאריך הגשת הבקשה'],
+    'decision_at': ['תאריך החלטה', 'החלטה ב', 'תאריך תשובה'],
     
     // Budget Authorization fields
-    'מספר הרשאה': 'authorization_number',
-    'משרד מממן': 'ministry',
-    'תוכנית': 'program',
-    'מס\' תב"ר': 'purpose',
-    'סכום ההרשאה': 'amount',
-    'תוקף ההרשאה': 'valid_until',
-    'מחלקה מטפלת': 'department',
-    'תאריך אישור מליאה': 'approved_at',
-    'הערות': 'notes'
+    'authorization_number': ['מספר הרשאה', 'מס הרשאה', 'מס\' הרשאה'],
+    'program': ['תוכנית', 'תכנית', 'פרוגרמה'],
+    'purpose': ['מס\' תב"ר', 'מספר תב"ר', 'מטרה'],
+    'amount': ['סכום ההרשאה', 'סכום', 'סכום מאושר'],
+    'valid_until': ['תוקף ההרשאה', 'תוקף', 'בתוקף עד'],
+    'department': ['מחלקה מטפלת', 'מחלקה', 'יחידה מטפלת'],
+    'approved_at': ['תאריך אישור מליאה', 'אושר ב', 'תאריך אישור'],
+    'notes': ['הערות', 'הערה', 'הארות']
   };
-  
 
-  
-  if (mappings[original]) {
-    normalized = mappings[original];
+  // First, try direct exact match in synonyms
+  for (const [canonical, synonyms] of Object.entries(synonymsMap)) {
+    if (synonyms.includes(original)) {
+      normalized = canonical;
+      if (debugLogs) {
+        debugLogs.push({
+          id: Math.random().toString(),
+          type: 'info',
+          message: `מיפוי ישיר: "${original}" → "${normalized}"`,
+          timestamp: new Date()
+        });
+      }
+      return normalized;
+    }
+  }
+
+  // If no direct match, try fuzzy matching
+  const fuzzyMatch = resolveCanonicalHeader(original, synonymsMap, FUZZY_MATCH_THRESHOLD);
+  if (fuzzyMatch) {
+    normalized = fuzzyMatch;
     if (debugLogs) {
       debugLogs.push({
         id: Math.random().toString(),
         type: 'info',
-        message: `מיפוי כותרת: "${original}" → "${normalized}"`,
+        message: `מיפוי מטושטש: "${original}" → "${normalized}"`,
         timestamp: new Date()
       });
     }
+    return normalized;
+  }
+
+  // If still no match, mark as unrecognized
+  if (debugLogs) {
+    debugLogs.push({
+      id: Math.random().toString(),
+      type: 'warning',
+      message: `כותרת לא מזוהה: "${original}" - נדרש מיפוי ידני`,
+      timestamp: new Date()
+    });
   }
   
   return normalized;
