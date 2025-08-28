@@ -20,6 +20,8 @@ type ImportOption = {
 type DataUploaderProps = {
   context?: string;
   onComplete?: () => void;
+  onUploadSuccess?: () => void | Promise<void>;
+  onAnalysisTriggered?: () => Promise<void>;
 };
 
 type DebugLog = {
@@ -130,7 +132,7 @@ const detectDataType = (headers: string[], rows: Record<string, any>[], context?
       const normalized = normalizeKey(header);
       
       // Check direct match
-      if (coreFields.includes(normalized)) {
+      if ([...coreFields].includes(normalized as any)) {
         matchCount++;
         matches.push(`${header} → ${normalized} (ישיר)`);
         return;
@@ -186,7 +188,7 @@ const detectDataType = (headers: string[], rows: Record<string, any>[], context?
       };
       
       const fuzzyMatch = resolveCanonicalHeader(header, synonymsMap, FUZZY_MATCH_THRESHOLD);
-      if (fuzzyMatch && coreFields.includes(fuzzyMatch)) {
+      if (fuzzyMatch && [...coreFields].includes(fuzzyMatch as any)) {
         matchCount++;
         matches.push(`${header} → ${fuzzyMatch} (מטושטש)`);
       }
@@ -387,8 +389,7 @@ const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
   return normalized;
 };
 
-export { DataUploader };
-export default DataUploader;
+function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggered }: DataUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, any>[]>([]);
@@ -539,7 +540,9 @@ export default DataUploader;
     });
   };
 
-  const onFile = async (f: File) => {
+  const onFile = async (f: File | null) => {
+    if (!f) return;
+    
     console.log('🔥 onFile called with file:', f.name, 'context:', context);
     setFile(f);
     setDebugLogs([]);
@@ -583,7 +586,7 @@ export default DataUploader;
       
       // Find the first non-empty row as headers
       let headerRowIndex = 0;
-      while (headerRowIndex < jsonData.length && (!jsonData[headerRowIndex] || jsonData[headerRowIndex].length === 0)) {
+      while (headerRowIndex < jsonData.length && (!jsonData[headerRowIndex] || (jsonData[headerRowIndex] as any[]).length === 0)) {
         headerRowIndex++;
       }
       
@@ -862,6 +865,7 @@ export default DataUploader;
         });
         
         onComplete?.();
+        onUploadSuccess?.();
       } else {
         throw new Error('לא נטענו נתונים');
       }
@@ -879,7 +883,7 @@ export default DataUploader;
     } finally {
       setIsUploading(false);
     }
-  }, [file, detected.table, rows, debugLogs, importOption, context, toast, onComplete, previewData]);
+  }, [file, detected.table, rows, debugLogs, importOption, context, toast, onComplete, onUploadSuccess, previewData]);
 
   const handleConfirmImport = async (mode: 'replace' | 'append') => {
     setImportOption({ mode, confirmed: true });
@@ -1273,3 +1277,6 @@ export default DataUploader;
     </>
   );
 }
+
+export { DataUploader };
+export default DataUploader;
