@@ -798,8 +798,26 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       let insertedCount = 0;
       let errorCount = 0;
       
+      // Helper function to create SHA-256 hash
+      const createRowHash = async (row: Record<string, any>, canonicalFields: string[]): Promise<string> => {
+        const values = canonicalFields
+          .map(field => String(row[field] || '').trim())
+          .filter(value => value.length > 0)
+          .join('|');
+        
+        const encoder = new TextEncoder();
+        const data = encoder.encode(values);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      };
+
+      // Get canonical fields for the detected table
+      const datasetDef = DATASET_DEFINITIONS[detected.table as keyof typeof DATASET_DEFINITIONS];
+      const canonicalFields = datasetDef ? [...datasetDef.coreFields] : [];
+
       // Prepare all rows first
-      const mappedRows: Record<string, any>[] = [];
+      const allMappedRows: Record<string, any>[] = [];
       
       addLog('info', 'מכין נתונים למיפוי...');
       for (const row of rows) {
@@ -829,7 +847,29 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           });
         }
         
-        mappedRows.push(normalizedRow);
+        allMappedRows.push(normalizedRow);
+      }
+
+      // Remove duplicates based on canonical fields hash
+      addLog('info', 'בודק כפילויות...');
+      const hashSet = new Set<string>();
+      const mappedRows: Record<string, any>[] = [];
+      let skippedDuplicates = 0;
+
+      for (const row of allMappedRows) {
+        const hash = await createRowHash(row, canonicalFields);
+        
+        if (hashSet.has(hash)) {
+          skippedDuplicates++;
+          continue;
+        }
+        
+        hashSet.add(hash);
+        mappedRows.push(row);
+      }
+
+      if (skippedDuplicates > 0) {
+        addLog('info', `נמצאו ${skippedDuplicates} כפילויות, ${mappedRows.length} שורות ייחודיות נותרו`);
       }
 
       // Process in batches with binary backoff
@@ -900,14 +940,15 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       }
 
       if (insertedCount > 0) {
-        addLog('success', `הטענה הושלמה בהצלחה: ${insertedCount} שורות נטענו`);
+        const successMessage = `הטענה הושלמה בהצלחה: ${insertedCount} שורות נטענו${skippedDuplicates > 0 ? `. נמנעו כפילויות: ${skippedDuplicates}` : ''}`;
+        addLog('success', successMessage);
         if (errorCount > 0) {
           addLog('warning', `${errorCount} שורות לא נטענו בגלל שגיאות`);
         }
         
         toast({
           title: "הטענה הושלמה",
-          description: `${insertedCount} שורות נטענו בהצלחה${errorCount > 0 ? ` (${errorCount} שגיאות)` : ''}`,
+          description: `${insertedCount} שורות נטענו בהצלחה${skippedDuplicates > 0 ? `. נמנעו כפילויות: ${skippedDuplicates}` : ''}${errorCount > 0 ? ` (${errorCount} שגיאות)` : ''}`,
         });
         
         onComplete?.();
