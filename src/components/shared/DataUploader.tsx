@@ -31,6 +31,19 @@ type DebugLog = {
   details?: any;
 };
 
+type HeaderMapping = {
+  original: string;
+  canonical: string | 'לא מזוהה';
+  score?: number;
+  manualOverride?: string;
+};
+
+type PreviewData = {
+  mappings: HeaderMapping[];
+  sampleRows: Record<string, any>[];
+  detectedTable: string | null;
+};
+
 const detectDataType = (headers: string[], rows: any[], context?: string) => {
   const headerStr = headers.join(' ').toLowerCase();
   console.log('🔍 Headers for detection:', headers);
@@ -1045,19 +1058,147 @@ export function DataUploader({ context = 'global', onUploadSuccess, onAnalysisTr
   const [detected, setDetected] = useState<{ table: string | null; reason: string }>({ table: null, reason: '' });
   const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importOption, setImportOption] = useState<ImportOption>({ mode: 'replace', confirmed: false });
   const { toast } = useToast();
 
-  const handleConfirmImport = (mode: 'replace' | 'append') => {
-    console.log(`📋 Import confirmed with mode: ${mode}`);
-    setImportOption({ mode, confirmed: true });
-    setShowImportDialog(false);
-    // Continue with the import process
-    setTimeout(() => {
-      console.log('🔄 Continuing import after dialog close');
-      uploadAndIngest();
-    }, 100);
+
+  // Get all canonical field names for manual mapping
+  const getAllCanonicalFields = () => {
+    const synonymsMap: Record<string, string[]> = {
+      'institution_name': ['שם המוסד', 'שם מוסד', 'מוסד'],
+      'address': ['כתובת', 'מען', 'כתובת המוסד'],
+      'phone': ['טלפון', 'טל', 'מספר טלפון'],
+      'institution_type': ['סוג המוסד', 'סוג מוסד', 'קטגוריה'],
+      'business_name': ['שם העסק', 'שם עסק', 'עסק'],
+      'license_holder': ['בעל הרישיון', 'בעל רישיון', 'בעלים'],
+      'license_number': ['מספר רישיון', 'מס רישיון', 'מס\' רישיון'],
+      'license_type': ['סוג הרישיון', 'סוג רישיון', 'קטגוריית רישיון'],
+      'issue_date': ['תאריך הנפקה', 'תאריך נפקה', 'הונפק ב'],
+      'expiry_date': ['תאריך תפוגה', 'תפוגה', 'פוגה ב'],
+      'status': ['סטטוס', 'מצב', 'סטאטוס'],
+      'category_name': ['קטגוריה', 'שם קטגוריה', 'שם הקטגוריה'],
+      'category_type': ['סוג', 'סוג קטגוריה', 'טיפוס'],
+      'budget_amount': ['תקציב', 'סכום תקציב', 'תקציב מאושר'],
+      'actual_amount': ['ביצוע', 'בפועל', 'ביצוע בפועל'],
+      'property_type': ['סוג נכס', 'סוג הנכס', 'נכס'],
+      'annual_budget': ['תקציב שנתי', 'תקציב לשנה', 'תקציב'],
+      'relative_budget': ['תקציב יחסי', 'תקציב יחסי %', 'אחוז תקציב'],
+      'actual_collection': ['גביה בפועל', 'גביה', 'גבייה בפועל'],
+      'tabar_name': ['שם תב"ר', 'שם התב"ר', 'תב"ר'],
+      'tabar_number': ['מספר תב"ר', 'מס תב"ר', 'מס\' תב"ר'],
+      'domain': ['תחום', 'תחום פעילות', 'תחום עיסוק'],
+      'funding_source1': ['מקור מימון', 'מקור מימון 1', 'מימון'],
+      'approved_budget': ['תקציב מאושר', 'תקציב', 'אושר'],
+      'income_actual': ['הכנסות בפועל', 'הכנסות', 'הכנסה בפועל'],
+      'expense_actual': ['הוצאות בפועל', 'הוצאות', 'הוצאה בפועל'],
+      'grant_name': ['שם הקול קורא', 'שם', 'קול קורא', 'שם גרנט'],
+      'ministry': ['משרד', 'משרד ממשלתי', 'גוף מממן'],
+      'grant_amount': ['סכום', 'תקציב גרנט', 'סכום גרנט'],
+      'grant_status': ['סטטוס גרנט', 'מצב גרנט', 'סטטוס'],
+      'submitted_at': ['תאריך הגשה', 'הוגש ב', 'תאריך הגשת הבקשה'],
+      'decision_at': ['תאריך החלטה', 'החלטה ב', 'תאריך תשובה'],
+      'authorization_number': ['מספר הרשאה', 'מס הרשאה', 'מס\' הרשאה'],
+      'program': ['תוכנית', 'תכנית', 'פרוגרמה'],
+      'purpose': ['מס\' תב"ר', 'מספר תב"ר', 'מטרה'],
+      'amount': ['סכום ההרשאה', 'סכום', 'סכום מאושר'],
+      'valid_until': ['תוקף ההרשאה', 'תוקף', 'בתוקף עד'],
+      'department': ['מחלקה מטפלת', 'מחלקה', 'יחידה מטפלת'],
+      'approved_at': ['תאריך אישור מליאה', 'אושר ב', 'תאריך אישור'],
+      'notes': ['הערות', 'הערה', 'הארות']
+    };
+    return Object.keys(synonymsMap);
+  };
+
+  const buildHeaderMappings = (headers: string[]): HeaderMapping[] => {
+    return headers.map(header => {
+      const debugLogs: DebugLog[] = [];
+      const normalized = normalizeKey(header, debugLogs);
+      
+      // Check if it was successfully mapped
+      if (normalized === header.toLowerCase().trim()) {
+        // Not mapped, try fuzzy matching
+        const synonymsMap: Record<string, string[]> = {
+          'institution_name': ['שם המוסד', 'שם מוסד', 'מוסד'],
+          'address': ['כתובת', 'מען', 'כתובת המוסד'],
+          'phone': ['טלפון', 'טל', 'מספר טלפון'],
+          'institution_type': ['סוג המוסד', 'סוג מוסד', 'קטגוריה'],
+          'business_name': ['שם העסק', 'שם עסק', 'עסק'],
+          'license_holder': ['בעל הרישיון', 'בעל רישיון', 'בעלים'],
+          'license_number': ['מספר רישיון', 'מס רישיון', 'מס\' רישיון'],
+          'license_type': ['סוג הרישיון', 'סוג רישיון', 'קטגוריית רישיון'],
+          'issue_date': ['תאריך הנפקה', 'תאריך נפקה', 'הונפק ב'],
+          'expiry_date': ['תאריך תפוגה', 'תפוגה', 'פוגה ב'],
+          'status': ['סטטוס', 'מצב', 'סטאטוס'],
+          'category_name': ['קטגוריה', 'שם קטגוריה', 'שם הקטגוריה'],
+          'category_type': ['סוג', 'סוג קטגוריה', 'טיפוס'],
+          'budget_amount': ['תקציב', 'סכום תקציב', 'תקציב מאושר'],
+          'actual_amount': ['ביצוע', 'בפועל', 'ביצוע בפועל'],
+          'property_type': ['סוג נכס', 'סוג הנכס', 'נכס'],
+          'annual_budget': ['תקציב שנתי', 'תקציב לשנה', 'תקציב'],
+          'relative_budget': ['תקציב יחסי', 'תקציב יחסי %', 'אחוז תקציב'],
+          'actual_collection': ['גביה בפועל', 'גביה', 'גבייה בפועל'],
+          'tabar_name': ['שם תב"ר', 'שם התב"ר', 'תב"ר'],
+          'tabar_number': ['מספר תב"ר', 'מס תב"ר', 'מס\' תב"ר'],
+          'domain': ['תחום', 'תחום פעילות', 'תחום עיסוק'],
+          'funding_source1': ['מקור מימון', 'מקור מימון 1', 'מימון'],
+          'approved_budget': ['תקציב מאושר', 'תקציב', 'אושר'],
+          'income_actual': ['הכנסות בפועל', 'הכנסות', 'הכנסה בפועל'],
+          'expense_actual': ['הוצאות בפועל', 'הוצאות', 'הוצאה בפועל'],
+          'grant_name': ['שם הקול קורא', 'שם', 'קול קורא', 'שם גרנט'],
+          'ministry': ['משרד', 'משרד ממשלתי', 'גוף מממן'],
+          'grant_amount': ['סכום', 'תקציב גרנט', 'סכום גרנט'],
+          'grant_status': ['סטטוס גרנט', 'מצב גרנט', 'סטטוס'],
+          'submitted_at': ['תאריך הגשה', 'הוגש ב', 'תאריך הגשת הבקשה'],
+          'decision_at': ['תאריך החלטה', 'החלטה ב', 'תאריך תשובה'],
+          'authorization_number': ['מספר הרשאה', 'מס הרשאה', 'מס\' הרשאה'],
+          'program': ['תוכנית', 'תכנית', 'פרוגרמה'],
+          'purpose': ['מס\' תב"ר', 'מספר תב"ר', 'מטרה'],
+          'amount': ['סכום ההרשאה', 'סכום', 'סכום מאושר'],
+          'valid_until': ['תוקף ההרשאה', 'תוקף', 'בתוקף עד'],
+          'department': ['מחלקה מטפלת', 'מחלקה', 'יחידה מטפלת'],
+          'approved_at': ['תאריך אישור מליאה', 'אושר ב', 'תאריך אישור'],
+          'notes': ['הערות', 'הערה', 'הארות']
+        };
+        const fuzzyMatch = resolveCanonicalHeader(header, synonymsMap, FUZZY_MATCH_THRESHOLD);
+        if (fuzzyMatch) {
+          // Extract score from console.debug call
+          const synonymsList: { canonical: string; synonym: string }[] = [];
+          Object.entries(synonymsMap).forEach(([canonical, synonyms]) => {
+            synonyms.forEach(synonym => {
+              synonymsList.push({ canonical, synonym });
+            });
+          });
+          const fuse = new Fuse(synonymsList, {
+            keys: ['synonym'],
+            threshold: (100 - FUZZY_MATCH_THRESHOLD) / 100,
+            includeScore: true
+          });
+          const results = fuse.search(header);
+          const score = results.length > 0 && results[0].score !== undefined ? 
+            Math.round((1 - results[0].score) * 100) : 0;
+          
+          return {
+            original: header,
+            canonical: fuzzyMatch,
+            score
+          };
+        } else {
+          return {
+            original: header,
+            canonical: 'לא מזוהה' as const
+          };
+        }
+      } else {
+        return {
+          original: header,
+          canonical: normalized,
+          score: 100 // Exact match
+        };
+      }
+    });
   };
 
   const onFile = async (f: File) => {
@@ -1136,16 +1277,48 @@ export function DataUploader({ context = 'global', onUploadSuccess, onAnalysisTr
       const detection = detectDataType(headersArray, rowObjects.slice(0, 5), context);
       setDetected(detection);
       
-      if (detection.table) {
-        addLog('success', `זוהה כ: ${detection.table} - ${detection.reason}`);
-      } else {
-        addLog('warning', `לא זוהה סוג נתונים: ${detection.reason}`);
-      }
+      // Build header mappings and show preview dialog
+      const mappings = buildHeaderMappings(headersArray);
+      const sampleRows = rowObjects.slice(0, 10);
+      
+      setPreviewData({
+        mappings,
+        sampleRows,
+        detectedTable: detection.table
+      });
+      
+      setShowPreviewDialog(true);
       
     } catch (error) {
       console.error('Error reading file:', error);
       addLog('error', `שגיאה בקריאת הקובץ: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}`);
     }
+  };
+
+  const confirmPreviewAndProceed = () => {
+    if (!previewData?.detectedTable) return;
+    
+    setDetected({ 
+      table: previewData.detectedTable, 
+      reason: `זוהה כ: ${previewData.detectedTable}` 
+    });
+    setShowPreviewDialog(false);
+    setShowImportDialog(true);
+  };
+
+  const updateManualMapping = (originalHeader: string, newCanonical: string) => {
+    if (!previewData) return;
+    
+    const updatedMappings = previewData.mappings.map(mapping => 
+      mapping.original === originalHeader 
+        ? { ...mapping, canonical: newCanonical, manualOverride: newCanonical }
+        : mapping
+    );
+    
+    setPreviewData({
+      ...previewData,
+      mappings: updatedMappings
+    });
   };
 
   const uploadAndIngest = useCallback(async () => {
@@ -1396,6 +1569,159 @@ export function DataUploader({ context = 'global', onUploadSuccess, onAnalysisTr
     );
   };
 
+  const handleConfirmImport = async (mode: 'replace' | 'append') => {
+    setImportOption({ mode, confirmed: true });
+    setShowImportDialog(false);
+    
+    // Continue with the upload process
+    await uploadAndIngest();
+  };
+
+  const clearData = () => {
+    setFile(null);
+    setHeaders([]);
+    setRows([]);
+    setDetected({ table: null, reason: '' });
+    setDebugLogs([]);
+    setImportOption({ mode: 'replace', confirmed: false });
+    setIsUploading(false);
+    setPreviewData(null);
+    setShowPreviewDialog(false);
+  };
+
+  const renderPreviewDialog = () => {
+    if (!previewData) return null;
+
+    const unrecognizedCount = previewData.mappings.filter(m => m.canonical === 'לא מזוהה').length;
+    const canonicalFields = getAllCanonicalFields();
+
+    return (
+      <Dialog open={showPreviewDialog} onOpenChange={setShowPreviewDialog}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>תצוגה מקדימה - מיפוי כותרות</DialogTitle>
+            <DialogDescription>
+              בדוק את מיפוי הכותרות לפני טעינת הנתונים. 
+              {unrecognizedCount > 0 && (
+                <span className="text-warning font-medium">
+                  {" "}נמצאו {unrecognizedCount} כותרות לא מזוהות - נדרש מיפוי ידני.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {/* Header Mappings Table */}
+            <div>
+              <h3 className="text-lg font-medium mb-3">מיפוי כותרות</h3>
+              <div className="border rounded-lg overflow-hidden">
+                <div className="bg-muted px-4 py-2 grid grid-cols-4 gap-4 font-medium text-sm">
+                  <div>כותרת מקורית</div>
+                  <div>שדה יעד</div>
+                  <div>ציון התאמה</div>
+                  <div>פעולה</div>
+                </div>
+                <div className="divide-y max-h-64 overflow-auto">
+                  {previewData.mappings.map((mapping, index) => (
+                    <div key={index} className="px-4 py-3 grid grid-cols-4 gap-4 items-center text-sm">
+                      <div className="font-mono">{mapping.original}</div>
+                      <div className={cn(
+                        "font-mono",
+                        mapping.canonical === 'לא מזוהה' && "text-warning"
+                      )}>
+                        {mapping.canonical}
+                      </div>
+                      <div>
+                        {mapping.score !== undefined ? (
+                          <span className={cn(
+                            "px-2 py-1 rounded text-xs",
+                            mapping.score === 100 && "bg-success/20 text-success",
+                            mapping.score >= 85 && mapping.score < 100 && "bg-warning/20 text-warning",
+                            mapping.score < 85 && "bg-destructive/20 text-destructive"
+                          )}>
+                            {mapping.score}%
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
+                      <div>
+                        {mapping.canonical === 'לא מזוהה' && (
+                          <select
+                            className="text-xs border rounded px-2 py-1 w-full"
+                            onChange={(e) => updateManualMapping(mapping.original, e.target.value)}
+                            value={mapping.manualOverride || ''}
+                          >
+                            <option value="">בחר שדה...</option>
+                            {canonicalFields.map(field => (
+                              <option key={field} value={field}>{field}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sample Data Preview */}
+            <div>
+              <h3 className="text-lg font-medium mb-3">תצוגה מקדימה של הנתונים (10 שורות ראשונות)</h3>
+              <div className="border rounded-lg overflow-auto max-h-64">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted">
+                    <tr>
+                      {previewData.mappings.map((mapping, index) => (
+                        <th key={index} className="px-3 py-2 text-right font-medium">
+                          <div className="space-y-1">
+                            <div className="text-xs text-muted-foreground">{mapping.original}</div>
+                            <div className={cn(
+                              "font-mono text-xs",
+                              mapping.canonical === 'לא מזוהה' && "text-warning"
+                            )}>
+                              {mapping.manualOverride || mapping.canonical}
+                            </div>
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {previewData.sampleRows.map((row, rowIndex) => (
+                      <tr key={rowIndex} className="hover:bg-muted/50">
+                        {previewData.mappings.map((mapping, colIndex) => (
+                          <td key={colIndex} className="px-3 py-2 text-right">
+                            {String(row[mapping.original] || '')}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-between pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowPreviewDialog(false)}
+            >
+              ביטול
+            </Button>
+            <Button 
+              onClick={confirmPreviewAndProceed}
+              disabled={unrecognizedCount > 0 && previewData.mappings.some(m => m.canonical === 'לא מזוהה')}
+            >
+              אישור טעינה
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   const renderDebugLogs = () => {
     if (debugLogs.length === 0) return null;
 
@@ -1469,25 +1795,19 @@ export function DataUploader({ context = 'global', onUploadSuccess, onAnalysisTr
 
           <div className="flex gap-2">
             <Button 
-              onClick={uploadAndIngest}
-              disabled={!file || !detected.table || isUploading}
+              onClick={() => setShowPreviewDialog(true)}
+              disabled={!file || !headers.length}
+              variant="outline"
               className="flex-1"
             >
-              {isUploading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />
-                  מעלה...
-                </>
-              ) : (
-                <>
-                  <FileUp className="w-4 h-4 mr-2" />
-                  העלה לבסיס הנתונים
-                </>
-              )}
+              <FileUp className="w-4 h-4 mr-2" />
+              תצוגה מקדימה
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {renderPreviewDialog()}
 
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
         <DialogContent>
