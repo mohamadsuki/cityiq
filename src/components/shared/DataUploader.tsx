@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx';
 import Fuse from 'fuse.js';
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 type ImportOption = {
   mode: 'replace' | 'append';
@@ -396,6 +397,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
   const [detected, setDetected] = useState<{ table: string | null; reason: string }>({ table: null, reason: '' });
   const [debugLogs, setDebugLogs] = useState<DebugLog[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -792,53 +794,97 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
         }
       }
 
-      // Process and insert data
+      // Process and insert data with batch processing
       let insertedCount = 0;
       let errorCount = 0;
       
+      // Prepare all rows first
+      const mappedRows: Record<string, any>[] = [];
+      
+      addLog('info', 'מכין נתונים למיפוי...');
       for (const row of rows) {
-        try {
-          const normalizedRow: Record<string, any> = {
-            user_id: currentUserId
-          };
+        const normalizedRow: Record<string, any> = {
+          user_id: currentUserId
+        };
 
-          // Map headers using the preview mappings if available
-          if (previewData?.mappings) {
-            previewData.mappings.forEach(mapping => {
-              const value = row[mapping.original];
-              const targetField = mapping.manualOverride || mapping.canonical;
-              
-              if (targetField !== 'לא מזוהה' && value !== undefined && value !== null && value !== '') {
-                normalizedRow[targetField] = value;
-              }
-            });
-          } else {
-            // Fallback to old mapping logic
-            Object.entries(row).forEach(([key, value]) => {
-              if (key === '__rowNum__') return;
-              
-              const normalizedKey = normalizeKey(key);
-              if (value !== undefined && value !== null && value !== '') {
-                normalizedRow[normalizedKey] = value;
-              }
-            });
-          }
-
-          // Insert the record
-          const { error: insertError } = await supabase
-            .from(detected.table as any)
-            .insert(normalizedRow);
-
-          if (insertError) {
-            console.error(`Insert error for row:`, insertError, normalizedRow);
-            errorCount++;
-          } else {
-            insertedCount++;
-          }
-        } catch (error) {
-          console.error('Error processing row:', error, row);
-          errorCount++;
+        // Map headers using the preview mappings if available
+        if (previewData?.mappings) {
+          previewData.mappings.forEach(mapping => {
+            const value = row[mapping.original];
+            const targetField = mapping.manualOverride || mapping.canonical;
+            
+            if (targetField !== 'לא מזוהה' && value !== undefined && value !== null && value !== '') {
+              normalizedRow[targetField] = value;
+            }
+          });
+        } else {
+          // Fallback to old mapping logic
+          Object.entries(row).forEach(([key, value]) => {
+            if (key === '__rowNum__') return;
+            
+            const normalizedKey = normalizeKey(key);
+            if (value !== undefined && value !== null && value !== '') {
+              normalizedRow[normalizedKey] = value;
+            }
+          });
         }
+        
+        mappedRows.push(normalizedRow);
+      }
+
+      // Process in batches with binary backoff
+      const BATCH_SIZE = 500;
+      const FALLBACK_BATCH_SIZE = 50;
+      const totalBatches = Math.ceil(mappedRows.length / BATCH_SIZE);
+      
+      addLog('info', `מעבד ${totalBatches} אצוות של ${BATCH_SIZE} שורות...`);
+
+      for (let i = 0; i < mappedRows.length; i += BATCH_SIZE) {
+        const batch = mappedRows.slice(i, i + BATCH_SIZE);
+        const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+        
+        try {
+          // Try large batch first (without .select() to reduce server response)
+          const { error: batchError } = await supabase
+            .from(detected.table as any)
+            .insert(batch);
+
+          if (batchError) {
+            throw batchError;
+          }
+          
+          insertedCount += batch.length;
+          addLog('info', `אצווה ${batchNumber}/${totalBatches} הושלמה (${batch.length} שורות)`);
+          
+        } catch (batchError) {
+          console.warn(`Batch ${batchNumber} failed, trying smaller batches:`, batchError);
+          addLog('warning', `אצווה ${batchNumber} נכשלה, מנסה אצוות קטנות יותר...`);
+          
+          // Binary backoff: split to smaller batches
+          for (let j = 0; j < batch.length; j += FALLBACK_BATCH_SIZE) {
+            const smallBatch = batch.slice(j, j + FALLBACK_BATCH_SIZE);
+            
+            try {
+              const { error: smallBatchError } = await supabase
+                .from(detected.table as any)
+                .insert(smallBatch);
+
+              if (smallBatchError) {
+                console.error(`Small batch error:`, smallBatchError);
+                errorCount += smallBatch.length;
+              } else {
+                insertedCount += smallBatch.length;
+              }
+            } catch (error) {
+              console.error('Small batch processing error:', error);
+              errorCount += smallBatch.length;
+            }
+          }
+        }
+        
+        // Update progress
+        const progress = Math.round(((i + batch.length) / mappedRows.length) * 100);
+        setUploadProgress(progress);
       }
 
       // Update ingestion log
@@ -1223,10 +1269,20 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           {renderPreview()}
           {renderDebugLogs()}
 
+          {isUploading && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span>מעלה נתונים...</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} className="w-full" />
+            </div>
+          )}
+
           <div className="flex gap-2">
             <Button 
               onClick={() => setShowPreviewDialog(true)}
-              disabled={!file || !headers.length}
+              disabled={!file || !headers.length || isUploading}
               variant="outline"
               className="flex-1"
             >
