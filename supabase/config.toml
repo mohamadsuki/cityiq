@@ -36,3 +36,6 @@ security_update_password_require_reauthentication = true
 
 [functions.analyze-budget]
 verify_jwt = false
+
+[functions.analyze-tabarim]
+verify_jwt = false

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Upload, Plus, Pencil } from "lucide-react";
+import { Trash2, Upload, Plus, Pencil, Brain, Loader2, TrendingUp, TrendingDown, BarChart3, DollarSign } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -29,6 +29,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from '@/context/AuthContext';
 
 interface Tabar {
   id: string;
@@ -46,6 +48,7 @@ interface Tabar {
 }
 
 export default function TabarimPage() {
+  const { user } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showUploader, setShowUploader] = useState(false);
@@ -56,6 +59,10 @@ export default function TabarimPage() {
   const [balanceFilter, setBalanceFilter] = useState<'all' | 'deficit' | 'surplus'>('all');
   const [domainFilter, setDomainFilter] = useState<string>('all');
   const [fundingSourceFilter, setFundingSourceFilter] = useState<string>('all');
+  const [analysis, setAnalysis] = useState<string>("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [reportingPeriod, setReportingPeriod] = useState<string>("");
   const { toast } = useToast();
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -96,6 +103,133 @@ export default function TabarimPage() {
   useEffect(() => {
     loadTabarim();
   }, []);
+
+  const loadSavedAnalysis = async () => {
+    if (!user) return;
+    
+    setAnalysisLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('tabarim_analysis')
+        .select('analysis_text, created_at')
+        .eq('user_id', user.id)
+        .eq('year', new Date().getFullYear())
+        .eq('analysis_type', 'tabarim')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data && !error) {
+        setAnalysis(data.analysis_text);
+        console.log('Loaded saved tabarim analysis from:', data.created_at);
+      } else if (tabarim.length > 0) {
+        // If no saved analysis, generate new one automatically
+        console.log('No saved tabarim analysis found, generating new one...');
+        handleAnalyzeTabarim(true); // silent generation
+      }
+    } catch (error) {
+      console.error('Error loading saved tabarim analysis:', error);
+      // Try to generate new analysis
+      if (tabarim.length > 0) {
+        handleAnalyzeTabarim(true);
+      }
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
+  const handleAnalyzeTabarim = async (silent = false) => {
+    if (!tabarim || tabarim.length === 0) {
+      if (!silent) toast({
+        title: "שגיאה",
+        description: "אין נתוני תב\"רים לניתוח",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user?.id) {
+      if (!silent) toast({
+        title: "שגיאה", 
+        description: "יש להתחבר כדי לבצע ניתוח",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    console.log('🚀 Starting tabarim analysis...');
+    try {
+      const totalApprovedBudget = tabarim.reduce((sum, tabar) => sum + (tabar.approved_budget || 0), 0);
+      const totalIncomeActual = tabarim.reduce((sum, tabar) => sum + (tabar.income_actual || 0), 0);
+      const totalExpenseActual = tabarim.reduce((sum, tabar) => sum + (tabar.expense_actual || 0), 0);
+      const totalSurplusDeficit = tabarim.reduce((sum, tabar) => sum + (tabar.surplus_deficit || 0), 0);
+      
+      const { data, error } = await supabase.functions.invoke('analyze-tabarim', {
+        body: {
+          tabarimData: tabarim,
+          totalApprovedBudget,
+          totalIncomeActual,
+          totalExpenseActual,
+          totalSurplusDeficit
+        }
+      });
+
+      if (error) {
+        console.error("Error analyzing tabarim:", error);
+        if (!silent) toast({
+          title: "שגיאה",
+          description: `שגיאה בניתוח התב\"רים: ${error.message || 'שגיאה לא ידועה'}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.error) {
+        console.error("OpenAI API error:", data.error);
+        if (!silent) toast({
+          title: "שגיאה",
+          description: `שגיאה ב-OpenAI: ${data.error}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (data?.analysis && data.analysis.trim()) {
+        setAnalysis(data.analysis);
+        if (data.reportingPeriod) {
+          setReportingPeriod(data.reportingPeriod);
+        }
+        if (!silent) toast({
+          title: "הצלחה",
+          description: "ניתוח התב\"רים הושלם בהצלחה",
+        });
+      } else {
+        console.error("No valid analysis in response:", data);
+        if (!silent) toast({
+          title: "שגיאה",
+          description: "לא התקבל ניתוח תקין מהשרת",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      if (!silent) toast({
+        title: "שגיאה",
+        description: `שגיאה בניתוח התב\"רים: ${error.message || 'שגיאה לא ידועה'}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Load saved analysis when tabarim data is loaded
+  useEffect(() => {
+    if (tabarim.length > 0 && user && !analysis) {
+      loadSavedAnalysis();
+    }
+  }, [tabarim, user]);
 
   const handleTabarSaved = () => {
     setShowAddDialog(false);
@@ -1348,6 +1482,228 @@ export default function TabarimPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Smart Budget Analysis Section */}
+      {tabarim.length > 0 && (
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Brain className="h-6 w-6 text-primary" />
+                  <CardTitle>ניתוח חכם של התב"רים</CardTitle>
+                </div>
+                <Button 
+                  onClick={() => handleAnalyzeTabarim(false)}
+                  disabled={isAnalyzing}
+                  className="flex items-center gap-2"
+                >
+                  {isAnalyzing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <BarChart3 className="h-4 w-4" />
+                  )}
+                  {isAnalyzing ? "מנתח..." : "נתח מחדש"}
+                </Button>
+              </div>
+              {reportingPeriod && (
+                <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                    <span className="font-medium text-blue-800 dark:text-blue-200">
+                      תקופת הדו"ח: {reportingPeriod}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="financial-summary" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="financial-summary">סיכום כספי</TabsTrigger>
+                  <TabsTrigger value="charts">גרפים</TabsTrigger>
+                  <TabsTrigger value="data-table">טבלת נתונים</TabsTrigger>
+                  <TabsTrigger value="ai-analysis">ניתוח AI</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="financial-summary" className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">תקציב מאושר</CardTitle>
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          ₪{tabarim.reduce((sum, t) => sum + (t.approved_budget || 0), 0).toLocaleString()}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">הכנסה בפועל</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-green-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold text-green-600">
+                          ₪{tabarim.reduce((sum, t) => sum + (t.income_actual || 0), 0).toLocaleString()}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">הוצאה בפועל</CardTitle>
+                        <TrendingDown className="h-4 w-4 text-red-600" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold text-red-600">
+                          ₪{tabarim.reduce((sum, t) => sum + (t.expense_actual || 0), 0).toLocaleString()}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">עודף/גירעון</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className={`text-2xl font-bold ${
+                          tabarim.reduce((sum, t) => sum + (t.surplus_deficit || 0), 0) >= 0 
+                            ? 'text-green-600' 
+                            : 'text-red-600'
+                        }`}>
+                          ₪{tabarim.reduce((sum, t) => sum + (t.surplus_deficit || 0), 0).toLocaleString()}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="charts" className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>ביצועי תב"רים לפי תחום</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {domainSummaryData.slice(0, 6).map((item) => (
+                            <div key={item.originalDomain} className="flex items-center justify-between p-3 rounded-lg border">
+                              <div className="space-y-1">
+                                <div className="font-medium">{item.domain}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {item.count} תב"רים • {item.budgetPercentage}% מהתקציב
+                                </div>
+                              </div>
+                              <div className="text-left">
+                                <div className="font-bold">₪{item.budgetThousand}K</div>
+                                <Badge variant="outline" className="text-xs">
+                                  {item.countPercentage}%
+                                </Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>ניתוח תב"רים בגירעון</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {tabarim
+                            .filter(t => t.surplus_deficit < 0)
+                            .sort((a, b) => a.surplus_deficit - b.surplus_deficit)
+                            .slice(0, 5)
+                            .map((tabar) => (
+                              <div key={tabar.id} className="flex items-center justify-between p-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/20">
+                                <div className="space-y-1">
+                                  <div className="font-medium text-sm">{tabar.tabar_name}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {domainLabels[tabar.domain] || tabar.domain}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-bold text-red-600 text-sm">
+                                    ₪{tabar.surplus_deficit.toLocaleString()}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {tabar.approved_budget > 0 ? 
+                                      Math.round((Math.abs(tabar.surplus_deficit) / tabar.approved_budget) * 100) + '%' 
+                                      : '0%'
+                                    }
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="data-table">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>נתוני תב"רים מפורטים</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="rounded-md border">
+                        <DataTable 
+                          columns={columns}
+                          data={filteredTabarim}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="ai-analysis">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Brain className="h-5 w-5 text-primary" />
+                        ניתוח AI מתקדם
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {analysisLoading || isAnalyzing ? (
+                        <div className="flex items-center justify-center p-8">
+                          <div className="flex flex-col items-center gap-2">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <p className="text-muted-foreground">מכין ניתוח מתקדם...</p>
+                          </div>
+                        </div>
+                      ) : analysis ? (
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                          <div className="whitespace-pre-wrap leading-relaxed">
+                            {analysis}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center p-8">
+                          <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-muted-foreground mb-4">
+                            לא נמצא ניתוח קודם. לחץ על "נתח מחדש" כדי ליצור ניתוח חדש.
+                          </p>
+                          <Button onClick={() => handleAnalyzeTabarim(false)}>
+                            צור ניתוח חדש
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
