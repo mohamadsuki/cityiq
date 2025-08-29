@@ -575,6 +575,16 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       mapped.annual_budget = parseFloat(normalizedRow.annual_budget || normalizedRow['תקציב שנתי'] || '0') || 0;
       mapped.relative_budget = parseFloat(normalizedRow.relative_budget || normalizedRow['תקציב יחסי'] || '0') || 0;
       mapped.actual_collection = parseFloat(normalizedRow.actual_collection || normalizedRow['גביה בפועל'] || '0') || 0;
+      
+      // Skip rows with empty property type and all zero values (invalid data)
+      if (!mapped.property_type || mapped.property_type.trim() === '') {
+        const hasAnyValue = mapped.annual_budget > 0 || mapped.relative_budget > 0 || mapped.actual_collection > 0;
+        if (!hasAnyValue) {
+          console.log('🚫 Skipping collection row with empty property_type and zero values:', mapped);
+          return null;
+        }
+      }
+      
       break;
       
     case 'tabarim':
@@ -1172,41 +1182,70 @@ export function DataUploader({ context = 'global', onUploadSuccess, onAnalysisTr
       console.log('🗂️ Processing rows for table:', detected.table);
       let insertedCount = 0;
       let skippedCount = 0;
+      const BATCH_SIZE = 100; // Process in batches for large datasets
 
       try {
+        // First pass: filter and map all rows to identify valid ones
+        const validRows: any[] = [];
+        
         for (let i = 0; i < rows.length; i++) {
           const row = rows[i];
-          console.log(`🗂️ Processing row ${i + 1}/${rows.length}`);
-          
           const mappedRow = mapRowToTable(detected.table, row, logs, headers);
           
           if (!mappedRow) {
-            console.log(`🚫 Skipping row ${i + 1} - returned null from mapping`);
             skippedCount++;
             continue;
           }
 
           // Add user_id and other metadata
           mappedRow.user_id = currentUserId;
+          validRows.push(mappedRow);
+        }
 
-          console.log('🐛 DEBUG: Attempting to insert mapped row:', mappedRow);
+        console.log(`🗂️ Found ${validRows.length} valid rows out of ${rows.length} total (${skippedCount} skipped)`);
+        addLog('info', `נמצאו ${validRows.length} שורות תקינות מתוך ${rows.length} (${skippedCount} דולגו)`);
+
+        // Second pass: insert in batches
+        for (let batchStart = 0; batchStart < validRows.length; batchStart += BATCH_SIZE) {
+          const batchEnd = Math.min(batchStart + BATCH_SIZE, validRows.length);
+          const batch = validRows.slice(batchStart, batchEnd);
+          
+          console.log(`🗂️ Processing batch ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(validRows.length / BATCH_SIZE)} (rows ${batchStart + 1}-${batchEnd})`);
+          addLog('info', `מעבד אצווה ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(validRows.length / BATCH_SIZE)} (שורות ${batchStart + 1}-${batchEnd})`);
 
           try {
             const { data, error } = await supabase
               .from(detected.table as any)
-              .insert(mappedRow)
+              .insert(batch)
               .select('*');
 
             if (error) {
-              console.error(`❌ Insert error for row ${i + 1}:`, error);
-              addLog('error', `שגיאה בהכנסת שורה ${i + 1}: ${error.message}`, { row: mappedRow, error });
+              console.error(`❌ Batch insert error for rows ${batchStart + 1}-${batchEnd}:`, error);
+              addLog('error', `שגיאה בהכנסת אצווה ${Math.floor(batchStart / BATCH_SIZE) + 1}: ${error.message}`);
+              
+              // Fallback: try inserting rows one by one
+              for (let j = 0; j < batch.length; j++) {
+                try {
+                  const { error: singleError } = await supabase
+                    .from(detected.table as any)
+                    .insert(batch[j]);
+                  
+                  if (!singleError) {
+                    insertedCount++;
+                  } else {
+                    console.error(`❌ Single row error:`, singleError);
+                  }
+                } catch (singleErr) {
+                  console.error(`❌ Single row exception:`, singleErr);
+                }
+              }
             } else {
-              console.log(`✅ Successfully inserted row ${i + 1}:`, data);
-              insertedCount++;
+              insertedCount += batch.length;
+              console.log(`✅ Successfully inserted batch of ${batch.length} rows`);
             }
-          } catch (insertErr) {
-            console.error(`❌ Insert exception for row ${i + 1}:`, insertErr);
-            addLog('error', `חריגה בהכנסת שורה ${i + 1}: ${insertErr}`, { row: mappedRow });
+          } catch (batchErr) {
+            console.error(`❌ Batch exception for rows ${batchStart + 1}-${batchEnd}:`, batchErr);
+            addLog('error', `חריגה באצווה ${Math.floor(batchStart / BATCH_SIZE) + 1}: ${batchErr}`);
           }
         }
 
