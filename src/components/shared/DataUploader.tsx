@@ -477,7 +477,25 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           /עד\s+\d+\/\d+/i
         ].some(pattern => pattern.test(header));
         
-        return !isPeriodInfo;
+        // Skip descriptive headers that are not actual data fields
+        const isDescriptiveHeader = [
+          /^מחצית\s+נתוני/i,
+          /^נתוני\s+.*באלפי/i,
+          /^סכומים\s+באלפי/i,
+          /^נתונים\s+.*ש״ח/i,
+          /^כל\s+הסכומים/i,
+          /^יחידות:\s*/i,
+          /^הערה:/i,
+          /^הערות:/i,
+          /^הסבר:/i,
+          /^הבהרה:/i,
+          /^שימו\s+לב/i,
+          /^לידיעה/i,
+          /באלפי\s+שקלים?$/i,
+          /באלפי\s+ש״ח$/i
+        ].some(pattern => pattern.test(header.trim()));
+        
+        return !isPeriodInfo && !isDescriptiveHeader;
       })
       .map(header => {
         const debugLogs: DebugLog[] = [];
