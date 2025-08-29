@@ -124,6 +124,38 @@ const detectDataType = (headers: string[], rows: Record<string, any>[], context?
     return { table: null, reason: 'לא נמצאו כותרות' };
   }
   
+  // If we have a context, prioritize it first
+  if (context && context in DATASET_DEFINITIONS) {
+    const contextDefinition = DATASET_DEFINITIONS[context as keyof typeof DATASET_DEFINITIONS];
+    console.log('🎯 Context provided:', context, 'checking match with:', contextDefinition);
+    
+    // Check if at least some headers match the context dataset
+    const synonymsMap = buildSynonymsMap(context);
+    let contextMatches = 0;
+    
+    for (const header of headers) {
+      const normalized = normalizeKey(header);
+      for (const [canonical, synonyms] of Object.entries(synonymsMap)) {
+        if (synonyms.some(syn => 
+          syn.toLowerCase().includes(header.toLowerCase()) || 
+          header.toLowerCase().includes(syn.toLowerCase())
+        )) {
+          contextMatches++;
+          break;
+        }
+      }
+    }
+    
+    // If we have at least 2 matching headers for the context, use it
+    if (contextMatches >= 2) {
+      console.log('✅ Context match found:', context, 'with', contextMatches, 'matching headers');
+      return { 
+        table: context, 
+        reason: `זוהה אוטומטי כ-${contextDefinition.name} (${contextMatches} כותרות תואמות)` 
+      };
+    }
+  }
+  
   // Score each dataset based on header matches
   const datasetScores: DatasetScore[] = [];
   
@@ -1281,6 +1313,9 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
             {(previewData.needsManualSelection || !previewData.detectedTable) && (
               <div>
                 <h3 className="text-lg font-medium mb-3">בחירת סוג נתונים</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  לא זוהה סוג נתונים אוטומטית. אנא בחר את סוג הנתונים המתאים:
+                </p>
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   {Object.entries(DATASET_DEFINITIONS).map(([key, definition]) => (
                     <Button
