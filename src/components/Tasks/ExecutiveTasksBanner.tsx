@@ -55,6 +55,24 @@ export default function ExecutiveTasksBanner({ department }: Props) {
     
     load();
     
+    // Real-time subscription for tasks
+    const channel = supabase
+      .channel('executive-tasks-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tasks'
+        },
+        (payload) => {
+          console.log('Tasks table changed:', payload);
+          // Reload tasks when any task is created, updated, or deleted
+          load();
+        }
+      )
+      .subscribe();
+    
     // Listen for task acknowledgements from the details modal
     const handleTaskAcknowledged = (event: CustomEvent) => {
       const { taskId } = event.detail;
@@ -65,6 +83,7 @@ export default function ExecutiveTasksBanner({ department }: Props) {
     
     return () => { 
       active = false; 
+      supabase.removeChannel(channel);
       window.removeEventListener('taskAcknowledged', handleTaskAcknowledged as EventListener);
     };
   }, [canSee, department, user?.id]);
