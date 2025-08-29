@@ -1077,12 +1077,15 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       const mappedRows: Record<string, any>[] = [];
       let skippedDuplicates = 0;
       let validationFailures = 0;
+      let processedCount = 0;
 
       for (const row of allMappedRows) {
+        processedCount++;
+        
         // Debug: Log first few rows to see what's actually in them
-        if (mappedRows.length < 3) {
+        if (processedCount <= 3) {
           console.log('🔍 Debug row data:', row);
-          addLog('info', `Debug שורה ${mappedRows.length + 1}: ${Object.keys(row).length} שדות - ${Object.keys(row).join(', ')}`);
+          addLog('info', `Debug שורה ${processedCount}: ${Object.keys(row).length} שדות - ${Object.keys(row).join(', ')}`);
         }
         
         // Validate row first
