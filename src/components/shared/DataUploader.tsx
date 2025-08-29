@@ -933,13 +933,23 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       
       // Helper function to create SHA-256 hash
       const createRowHash = async (row: Record<string, any>, canonicalFields: string[]): Promise<string> => {
-        const values = canonicalFields
-          .map(field => String(row[field] || '').trim())
-          .filter(value => value.length > 0)
+        // Include all non-empty fields in hash calculation, not just canonical fields
+        const allValues = Object.entries(row)
+          .filter(([key, value]) => 
+            key !== 'user_id' && 
+            value !== undefined && 
+            value !== null && 
+            String(value).trim() !== ''
+          )
+          .sort(([a], [b]) => a.localeCompare(b)) // Sort for consistency
+          .map(([key, value]) => `${key}:${String(value).trim()}`)
           .join('|');
         
+        // If no meaningful data, create hash based on row index
+        const dataToHash = allValues || `empty_row_${Math.random()}`;
+        
         const encoder = new TextEncoder();
-        const data = encoder.encode(values);
+        const data = encoder.encode(dataToHash);
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
