@@ -964,7 +964,9 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       for (const row of rows) {
         const normalizedRow: Record<string, any> = {
           user_id: currentUserId,
-          year: new Date().getFullYear() // Set current year as default
+          year: new Date().getFullYear(), // Set current year as default
+          category_type: 'expense', // Default to expense
+          category_name: 'כללי' // Default category name
         };
 
         // Map headers using the preview mappings if available
@@ -983,6 +985,21 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
                 if (!isNaN(numValue)) {
                   normalizedRow[targetField] = numValue;
                 }
+              } else if (targetField === 'category_type') {
+                // Map Hebrew category types to enum values
+                const categoryTypeMap: Record<string, string> = {
+                  'הכנסות': 'income',
+                  'הוצאות': 'expense',
+                  'הכנסה': 'income',
+                  'הוצאה': 'expense',
+                  'הכנסות עירייה': 'income',
+                  'הוצאות עירייה': 'expense',
+                  'income': 'income',
+                  'expense': 'expense'
+                };
+                const mappedValue = categoryTypeMap[cleanValue.toLowerCase()] || 
+                                  (cleanValue.includes('הכנס') ? 'income' : 'expense');
+                normalizedRow[targetField] = mappedValue;
               } else {
                 normalizedRow[targetField] = cleanValue;
               }
@@ -1005,6 +1022,21 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
                 } else {
                   normalizedRow[normalizedKey] = cleanValue;
                 }
+              } else if (normalizedKey === 'category_type') {
+                // Map Hebrew category types to enum values
+                const categoryTypeMap: Record<string, string> = {
+                  'הכנסות': 'income',
+                  'הוצאות': 'expense',
+                  'הכנסה': 'income',
+                  'הוצאה': 'expense',
+                  'הכנסות עירייה': 'income',
+                  'הוצאות עירייה': 'expense',
+                  'income': 'income',
+                  'expense': 'expense'
+                };
+                const mappedValue = categoryTypeMap[cleanValue.toLowerCase()] || 
+                                  (cleanValue.includes('הכנס') ? 'income' : 'expense');
+                normalizedRow[normalizedKey] = mappedValue;
               } else {
                 normalizedRow[normalizedKey] = cleanValue;
               }
