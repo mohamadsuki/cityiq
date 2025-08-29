@@ -18,11 +18,19 @@ import { useAuth } from "@/context/AuthContext";
 
 interface CollectionData {
   id: string;
-  property_type: string;
-  annual_budget: number;
-  relative_budget: number;
-  actual_collection: number;
-  surplus_deficit: number;
+  property_type: string; // סוג נכס
+  property_description: string; // תאור סוג נכס
+  source_year: number; // שנת מקור
+  service_description: string; // תאור סוג שרות
+  payer_id: string; // משלם
+  payer_name: string; // שם משלם
+  total_debt: number; // סהכ חובה
+  cash: number; // מזומן
+  interest: number; // ריבית
+  indexation: number; // הצמדה
+  nominal_balance: number; // יתרה נומינלית
+  real_balance: number; // יתרה ראלית
+  collection_percentage: number; // אחוז גביה
   year: number;
   created_at: string;
   excel_cell_ref?: string;
@@ -31,10 +39,12 @@ interface CollectionData {
 interface CollectionSummary {
   propertyType: string;
   count: number;
-  totalAnnualBudget: number;
-  totalRelativeBudget: number;
-  totalActualCollection: number;
-  totalSurplusDeficit: number;
+  totalDebt: number;
+  totalCash: number;
+  totalInterest: number;
+  totalIndexation: number;
+  totalNominalBalance: number;
+  totalRealBalance: number;
   averageCollectionRate: number;
 }
 
@@ -107,17 +117,25 @@ export default function CollectionPage() {
       // Process all records - keep individual payer records
       const processedData: CollectionData[] = (data || [])
         .filter(item => {
-          // Keep all records with any meaningful data - zeros are valid debts
+          // Keep all records with any meaningful data
           const hasValidData = item.property_type && item.property_type.trim() !== '';
           return hasValidData;
         })
         .map(item => ({
           id: item.id,
           property_type: item.property_type || 'לא מוגדר',
-          annual_budget: Number(item.annual_budget) || 0,
-          relative_budget: Number(item.relative_budget) || 0,
-          actual_collection: Number(item.actual_collection) || 0,
-          surplus_deficit: Number(item.surplus_deficit) || 0,
+          property_description: item.property_description || '',
+          source_year: Number(item.source_year) || new Date().getFullYear(),
+          service_description: item.service_description || '',
+          payer_id: item.payer_id || '',
+          payer_name: item.payer_name || '',
+          total_debt: Number(item.total_debt) || 0,
+          cash: Number(item.cash) || 0,
+          interest: Number(item.interest) || 0,
+          indexation: Number(item.indexation) || 0,
+          nominal_balance: Number(item.nominal_balance) || 0,
+          real_balance: Number(item.real_balance) || 0,
+          collection_percentage: Number(item.collection_percentage) || 0,
           year: item.year,
           created_at: item.created_at,
           excel_cell_ref: item.excel_cell_ref
@@ -151,27 +169,34 @@ export default function CollectionPage() {
         acc[propertyType] = {
           propertyType,
           count: 0,
-          totalAnnualBudget: 0,
-          totalRelativeBudget: 0,
-          totalActualCollection: 0,
-          totalSurplusDeficit: 0,
+          totalDebt: 0,
+          totalCash: 0,
+          totalInterest: 0,
+          totalIndexation: 0,
+          totalNominalBalance: 0,
+          totalRealBalance: 0,
           averageCollectionRate: 0
         };
       }
       
       acc[propertyType].count += 1;
-      acc[propertyType].totalAnnualBudget += item.annual_budget;
-      acc[propertyType].totalRelativeBudget += item.relative_budget;
-      acc[propertyType].totalActualCollection += item.actual_collection;
-      acc[propertyType].totalSurplusDeficit += item.surplus_deficit;
+      acc[propertyType].totalDebt += item.total_debt;
+      acc[propertyType].totalCash += item.cash;
+      acc[propertyType].totalInterest += item.interest;
+      acc[propertyType].totalIndexation += item.indexation;
+      acc[propertyType].totalNominalBalance += item.nominal_balance;
+      acc[propertyType].totalRealBalance += item.real_balance;
       
       return acc;
     }, {} as Record<string, CollectionSummary>);
 
     // Calculate average collection rates
     Object.values(grouped).forEach(summary => {
-      if (summary.totalRelativeBudget > 0) {
-        summary.averageCollectionRate = (summary.totalActualCollection / summary.totalRelativeBudget) * 100;
+      if (summary.count > 0) {
+        const totalCollectionPercentage = data
+          .filter(item => (PROPERTY_TYPE_LABELS[item.property_type] || item.property_type) === summary.propertyType)
+          .reduce((sum, item) => sum + item.collection_percentage, 0);
+        summary.averageCollectionRate = totalCollectionPercentage / summary.count;
       }
     });
 
@@ -182,11 +207,13 @@ export default function CollectionPage() {
   useEffect(() => {
     let filtered = collectionData;
 
-    // Search filter - search in property type and debt info
+    // Search filter - search in property type and payer info
     if (searchTerm) {
       filtered = filtered.filter(item => 
         item.property_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.payer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.payer_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.service_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.excel_cell_ref && item.excel_cell_ref.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
@@ -199,21 +226,21 @@ export default function CollectionPage() {
       });
     }
 
-    // Service type filter (additional filter for property descriptions)
+    // Service type filter (additional filter for service descriptions)
     if (selectedServiceType !== "all") {
       filtered = filtered.filter(item => 
-        item.property_type.toLowerCase().includes(selectedServiceType.toLowerCase())
+        item.service_description.toLowerCase().includes(selectedServiceType.toLowerCase())
       );
     }
 
     // Amount range filter (debt amount)
     if (minAmount) {
       const min = parseFloat(minAmount);
-      filtered = filtered.filter(item => Math.abs(item.surplus_deficit) >= min);
+      filtered = filtered.filter(item => item.total_debt >= min);
     }
     if (maxAmount) {
       const max = parseFloat(maxAmount);
-      filtered = filtered.filter(item => Math.abs(item.surplus_deficit) <= max);
+      filtered = filtered.filter(item => item.total_debt <= max);
     }
 
     setFilteredData(filtered);
@@ -287,18 +314,22 @@ export default function CollectionPage() {
     console.log('🚀 Starting collection analysis...');
     
     try {
-      const totalAnnualBudget = collectionData.reduce((sum, item) => sum + (item.annual_budget || 0), 0);
-      const totalRelativeBudget = collectionData.reduce((sum, item) => sum + (item.relative_budget || 0), 0);
-      const totalActualCollection = collectionData.reduce((sum, item) => sum + (item.actual_collection || 0), 0);
-      const totalSurplusDeficit = collectionData.reduce((sum, item) => sum + (item.surplus_deficit || 0), 0);
+      const totalDebt = collectionData.reduce((sum, item) => sum + (item.total_debt || 0), 0);
+      const totalCash = collectionData.reduce((sum, item) => sum + (item.cash || 0), 0);
+      const totalInterest = collectionData.reduce((sum, item) => sum + (item.interest || 0), 0);
+      const totalIndexation = collectionData.reduce((sum, item) => sum + (item.indexation || 0), 0);
+      const totalNominalBalance = collectionData.reduce((sum, item) => sum + (item.nominal_balance || 0), 0);
+      const totalRealBalance = collectionData.reduce((sum, item) => sum + (item.real_balance || 0), 0);
       
       const { data, error } = await supabase.functions.invoke('analyze-collection', {
         body: {
           collectionData: collectionData,
-          totalAnnualBudget,
-          totalRelativeBudget,
-          totalActualCollection,
-          totalSurplusDeficit
+          totalDebt,
+          totalCash,
+          totalInterest,
+          totalIndexation,
+          totalNominalBalance,
+          totalRealBalance
         }
       });
 
@@ -360,76 +391,111 @@ export default function CollectionPage() {
     });
   };
 
-  // Table columns - focus on individual payer data
-  const columns: ColumnDef<CollectionData>[] = [{
-    accessorKey: "property_type",
-    header: "סוג שירות / תיאור",
-    cell: ({ row }) => {
-      const propertyType = row.getValue("property_type") as string;
-      return (
-        <div className="max-w-xs">
-          <div className="font-medium">{PROPERTY_TYPE_LABELS[propertyType] || propertyType}</div>
-          {row.original.excel_cell_ref && (
-            <div className="text-xs text-muted-foreground">{row.original.excel_cell_ref}</div>
-          )}
-        </div>
-      );
+  // Table columns - specific columns as requested
+  const columns: ColumnDef<CollectionData>[] = [
+    {
+      accessorKey: "property_type",
+      header: "סוג נכס",
+      cell: ({ row }) => PROPERTY_TYPE_LABELS[row.getValue("property_type") as string] || row.getValue("property_type")
+    },
+    {
+      accessorKey: "property_description", 
+      header: "תאור סוג נכס",
+      cell: ({ row }) => row.getValue("property_description") || "-"
+    },
+    {
+      accessorKey: "source_year",
+      header: "שנת מקור", 
+      cell: ({ row }) => row.getValue("source_year")
+    },
+    {
+      accessorKey: "service_description",
+      header: "תאור סוג שרות",
+      cell: ({ row }) => row.getValue("service_description") || "-"
+    },
+    {
+      accessorKey: "payer_id",
+      header: "משלם",
+      cell: ({ row }) => row.getValue("payer_id") || "-"
+    },
+    {
+      accessorKey: "payer_name", 
+      header: "שם משלם",
+      cell: ({ row }) => row.getValue("payer_name") || "-"
+    },
+    {
+      accessorKey: "total_debt",
+      header: "סהכ חובה",
+      cell: ({ row }) => {
+        const debt = row.getValue<number>("total_debt") || 0;
+        return (
+          <span className={debt > 0 ? "text-red-600 font-medium" : "text-green-600"}>
+            {formatCurrency(debt)}
+          </span>
+        );
+      }
+    },
+    {
+      accessorKey: "cash",
+      header: "מזומן",
+      cell: ({ row }) => formatCurrency(row.getValue("cash"))
+    },
+    {
+      accessorKey: "interest",
+      header: "ריבית", 
+      cell: ({ row }) => formatCurrency(row.getValue("interest"))
+    },
+    {
+      accessorKey: "indexation",
+      header: "הצמדה",
+      cell: ({ row }) => formatCurrency(row.getValue("indexation"))
+    },
+    {
+      accessorKey: "nominal_balance",
+      header: "יתרה נומינלית",
+      cell: ({ row }) => formatCurrency(row.getValue("nominal_balance"))
+    },
+    {
+      accessorKey: "real_balance", 
+      header: "יתרה ראלית",
+      cell: ({ row }) => formatCurrency(row.getValue("real_balance"))
+    },
+    {
+      accessorKey: "collection_percentage",
+      header: "אחוז גביה",
+      cell: ({ row }) => {
+        const percentage = row.getValue<number>("collection_percentage") || 0;
+        return `${percentage.toFixed(1)}%`;
+      }
     }
-  }, {
-    accessorKey: "surplus_deficit",
-    header: "סה\"כ חובה",
-    cell: ({ row }) => {
-      const debt = Math.abs(row.getValue<number>("surplus_deficit") || 0);
-      const isDebt = (row.getValue<number>("surplus_deficit") || 0) < 0;
-      return (
-        <span className={isDebt ? "text-red-600 font-medium" : "text-green-600"}>
-          {formatCurrency(debt)}
-          {isDebt && " (חוב)"}
-        </span>
-      );
-    }
-  }, {
-    accessorKey: "annual_budget",
-    header: "תקציב שנתי",
-    cell: ({ row }) => formatCurrency(row.getValue("annual_budget"))
-  }, {
-    accessorKey: "relative_budget",
-    header: "תקציב יחסי",
-    cell: ({ row }) => formatCurrency(row.getValue("relative_budget"))
-  }, {
-    accessorKey: "actual_collection",
-    header: "גביה בפועל",
-    cell: ({ row }) => formatCurrency(row.getValue("actual_collection"))
-  }];
+  ];
 
-  // Prepare pie chart data by grouping by property type
-  const groupDataByPropertyType = (data: CollectionData[], valueField: keyof CollectionData) => {
+  // Prepare chart data by grouping by property type  
+  const groupDataByPropertyType = (data: CollectionData[], valueField: 'totalDebt' | 'totalCash' | 'totalNominalBalance' | 'totalRealBalance') => {
     const grouped: Record<string, number> = {};
-    data.forEach(item => {
-      const propertyType = PROPERTY_TYPE_LABELS[item.property_type] || item.property_type || 'לא מוגדר';
-      const value = Number(item[valueField]) || 0;
-      if (grouped[propertyType]) {
-        grouped[propertyType] += value;
-      } else {
-        grouped[propertyType] = value;
+    summaryData.forEach(summary => {
+      const value = Number(summary[valueField]) || 0;
+      if (value > 0) {
+        grouped[summary.propertyType] = value;
       }
     });
-    return Object.entries(grouped).filter(([_, value]) => value > 0).map(([name, value], index) => ({
+    return Object.entries(grouped).map(([name, value], index) => ({
       name,
       value,
       color: COLORS[index % COLORS.length]
     }));
   };
 
-  const annualBudgetChartData = groupDataByPropertyType(collectionData, 'annual_budget');
-  const relativeBudgetChartData = groupDataByPropertyType(collectionData, 'relative_budget');
-  const actualCollectionChartData = groupDataByPropertyType(collectionData, 'actual_collection');
+  const debtChartData = groupDataByPropertyType(collectionData, 'totalDebt');
+  const cashChartData = groupDataByPropertyType(collectionData, 'totalCash'); 
+  const nominalBalanceChartData = groupDataByPropertyType(collectionData, 'totalNominalBalance');
+  const realBalanceChartData = groupDataByPropertyType(collectionData, 'totalRealBalance');
 
-  // Calculate totals from grouped data
-  const totalAnnualBudget = annualBudgetChartData.reduce((sum, item) => sum + item.value, 0);
-  const totalRelativeBudget = relativeBudgetChartData.reduce((sum, item) => sum + item.value, 0);
-  const totalActualCollection = actualCollectionChartData.reduce((sum, item) => sum + item.value, 0);
-  const totalSurplusDeficit = totalActualCollection - totalRelativeBudget;
+  // Calculate totals from summary data
+  const totalDebt = summaryData.reduce((sum, item) => sum + item.totalDebt, 0);
+  const totalCash = summaryData.reduce((sum, item) => sum + item.totalCash, 0);
+  const totalNominalBalance = summaryData.reduce((sum, item) => sum + item.totalNominalBalance, 0);
+  const totalRealBalance = summaryData.reduce((sum, item) => sum + item.totalRealBalance, 0);
 
   const renderCustomTooltip = (props: any) => {
     if (props.active && props.payload && props.payload.length) {
@@ -507,19 +573,19 @@ export default function CollectionPage() {
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(totalAnnualBudget)}</div>
-                <p className="text-xs text-muted-foreground">סה"כ תקציב ארנונה שנתי</p>
+                <div className="text-2xl font-bold">{formatCurrency(totalCash)}</div>
+                <p className="text-xs text-muted-foreground">סה"כ מזומן</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">גביה בפועל</CardTitle>
+                <CardTitle className="text-sm font-medium">יתרה נומינלית</CardTitle>
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(totalActualCollection)}</div>
-                <p className="text-xs text-muted-foreground">סה"כ גביה בפועל</p>
+                <div className="text-2xl font-bold">{formatCurrency(totalNominalBalance)}</div>
+                <p className="text-xs text-muted-foreground">סה"כ יתרה נומינלית</p>
               </CardContent>
             </Card>
 
@@ -529,12 +595,10 @@ export default function CollectionPage() {
                 <TrendingDown className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className={`text-2xl font-bold ${totalSurplusDeficit < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {formatCurrency(Math.abs(totalSurplusDeficit))}
+                <div className="text-2xl font-bold text-red-600">
+                  {formatCurrency(totalDebt)}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {totalSurplusDeficit < 0 ? 'חוב כולל' : 'עודף כולל'}
-                </p>
+                <p className="text-xs text-muted-foreground">חוב כולל</p>
               </CardContent>
             </Card>
           </div>
@@ -581,7 +645,7 @@ export default function CollectionPage() {
                       <XAxis dataKey="propertyType" />
                       <YAxis />
                       <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'סה"כ חובות']} />
-                      <Bar dataKey="totalSurplusDeficit" fill="#ef4444" />
+                      <Bar dataKey="totalDebt" fill="#ef4444" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -630,11 +694,11 @@ export default function CollectionPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">כל התיאורים</SelectItem>
-                      {Array.from(new Set(collectionData.map(item => item.property_type)))
-                        .filter(type => type && type !== 'לא מוגדר')
+                      {Array.from(new Set(collectionData.map(item => item.service_description)))
+                        .filter(desc => desc && desc.trim() !== '')
                         .slice(0, 20)
-                        .map(type => (
-                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        .map(desc => (
+                          <SelectItem key={desc} value={desc}>{desc}</SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
@@ -656,7 +720,7 @@ export default function CollectionPage() {
                 </div>
                 
                 <div className="text-sm text-muted-foreground">
-                  מציג {filteredData.length.toLocaleString('he-IL')} מתוך {collectionData.length.toLocaleString('he-IL')} רשומות
+                  מציג {filteredData.length.toLocaleString('he-IL')} מתוך {collectionData.length.toLocaleString('he-IL')} רשומות משלמים
                 </div>
               </div>
             </CardContent>
@@ -749,7 +813,7 @@ export default function CollectionPage() {
                       <CardContent className="p-4">
                         <div className="text-center">
                           <div className="text-2xl font-bold text-red-600">
-                            {formatCurrency(Math.abs(totalSurplusDeficit))}
+                            {formatCurrency(totalDebt)}
                           </div>
                           <div className="text-sm text-muted-foreground">סה"כ חובות</div>
                         </div>
