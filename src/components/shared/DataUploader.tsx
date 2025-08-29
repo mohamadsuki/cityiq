@@ -647,26 +647,26 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       
       setDetected(detection);
       
+      // Always show preview dialog - either with detected table or for manual selection
+      const mappings = buildHeaderMappings(headersArray);
+      const sampleRows = rowObjects.slice(0, 10);
+      
+      setPreviewData({
+        mappings,
+        sampleRows,
+        detectedTable: detection.table,
+        detectionScores: detection.scores,
+        needsManualSelection: !detection.table || detection.needsManualSelection,
+        recommendation: detection.recommendation
+      });
+      
       if (detection.table) {
         addLog('success', detection.reason);
-        
-        // Build header mappings and show preview dialog
-        const mappings = buildHeaderMappings(headersArray);
-        const sampleRows = rowObjects.slice(0, 10);
-        
-        setPreviewData({
-          mappings,
-          sampleRows,
-          detectedTable: detection.table,
-          detectionScores: detection.scores,
-          needsManualSelection: detection.needsManualSelection,
-          recommendation: detection.recommendation
-        });
-        
-        setShowPreviewDialog(true);
       } else {
-        addLog('warning', detection.reason);
+        addLog('warning', detection.reason + ' - תוכל לבחור ידנית בתצוגה המקדימה');
       }
+      
+      setShowPreviewDialog(true);
       
     } catch (error) {
       console.error('Error reading file:', error);
@@ -1216,6 +1216,36 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           </DialogHeader>
           
           <div className="space-y-6">
+            {/* Dataset Selection - shown when no detection or manual selection needed */}
+            {(previewData.needsManualSelection || !previewData.detectedTable) && (
+              <div>
+                <h3 className="text-lg font-medium mb-3">בחירת סוג נתונים</h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {Object.entries(DATASET_DEFINITIONS).map(([key, definition]) => (
+                    <Button
+                      key={key}
+                      variant={previewData.detectedTable === key ? "default" : "outline"}
+                      className="justify-start h-auto p-4 text-right"
+                      onClick={() => {
+                        setPreviewData({
+                          ...previewData,
+                          detectedTable: key,
+                          needsManualSelection: false
+                        });
+                      }}
+                    >
+                      <div>
+                        <div className="font-medium">{definition.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {definition.description}
+                        </div>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Header Mappings Table */}
             <div>
               <h3 className="text-lg font-medium mb-3">מיפוי כותרות</h3>
@@ -1317,7 +1347,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
             </Button>
             <Button 
               onClick={confirmPreviewAndProceed}
-              disabled={unrecognizedCount > 0 && previewData.mappings.some(m => m.canonical === 'לא מזוהה')}
+              disabled={!previewData.detectedTable || (unrecognizedCount > 0 && previewData.mappings.some(m => m.canonical === 'לא מזוהה' && !m.manualOverride))}
             >
               אישור טעינה
             </Button>
