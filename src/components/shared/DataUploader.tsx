@@ -963,7 +963,8 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       }
       for (const row of rows) {
         const normalizedRow: Record<string, any> = {
-          user_id: currentUserId
+          user_id: currentUserId,
+          year: new Date().getFullYear() // Set current year as default
         };
 
         // Map headers using the preview mappings if available
@@ -977,7 +978,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
               let cleanValue = String(value).trim();
               
               // Convert to number for numeric fields
-              if (['allocated_amount', 'budget_year', 'amount', 'year', 'received_amount'].includes(targetField)) {
+              if (['allocated_amount', 'budget_year', 'amount', 'year', 'received_amount', 'budget_amount', 'actual_amount', 'cumulative_execution'].includes(targetField)) {
                 const numValue = parseFloat(cleanValue.replace(/[^\d.-]/g, ''));
                 if (!isNaN(numValue)) {
                   normalizedRow[targetField] = numValue;
@@ -997,7 +998,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
               let cleanValue = String(value).trim();
               
               // Convert to number for numeric fields
-              if (['allocated_amount', 'budget_year', 'amount', 'year', 'received_amount'].includes(normalizedKey)) {
+              if (['allocated_amount', 'budget_year', 'amount', 'year', 'received_amount', 'budget_amount', 'actual_amount', 'cumulative_execution'].includes(normalizedKey)) {
                 const numValue = parseFloat(cleanValue.replace(/[^\d.-]/g, ''));
                 if (!isNaN(numValue)) {
                   normalizedRow[normalizedKey] = numValue;
