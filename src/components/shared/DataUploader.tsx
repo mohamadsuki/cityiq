@@ -1289,74 +1289,101 @@ export function DataUploader({ context = 'global', onUploadSuccess, onAnalysisTr
         }
       }
 
-      // Process and insert data
+      // Process and insert data with improved performance
       console.log('🗂️ Processing rows for table:', detected.table);
       let insertedCount = 0;
       let skippedCount = 0;
-      const BATCH_SIZE = 100; // Process in batches for large datasets
+      const BATCH_SIZE = 500; // Larger batches for better performance
 
       try {
-        // First pass: filter and map all rows to identify valid ones
+        // Optimized processing: map and filter in chunks for better memory usage
         const validRows: any[] = [];
+        const CHUNK_SIZE = 1000;
         
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          const mappedRow = mapRowToTable(detected.table, row, logs, headers);
+        for (let chunkStart = 0; chunkStart < rows.length; chunkStart += CHUNK_SIZE) {
+          const chunkEnd = Math.min(chunkStart + CHUNK_SIZE, rows.length);
+          const chunk = rows.slice(chunkStart, chunkEnd);
           
-          if (!mappedRow) {
-            skippedCount++;
-            continue;
-          }
+          // Process chunk in parallel
+          const chunkResults = chunk.map((row, i) => {
+            const mappedRow = mapRowToTable(detected.table, row, logs, headers);
+            
+            if (!mappedRow) {
+              skippedCount++;
+              return null;
+            }
 
-          // Add user_id and other metadata
-          mappedRow.user_id = currentUserId;
-          validRows.push(mappedRow);
+            // Add user_id and other metadata
+            mappedRow.user_id = currentUserId;
+            return mappedRow;
+          });
+          
+          // Filter and add valid results
+          for (const result of chunkResults) {
+            if (result) {
+              validRows.push(result);
+            }
+          }
+          
+          console.log(`🔄 Processed chunk ${Math.floor(chunkStart / CHUNK_SIZE) + 1}/${Math.ceil(rows.length / CHUNK_SIZE)}`);
         }
 
         console.log(`🗂️ Found ${validRows.length} valid rows out of ${rows.length} total (${skippedCount} skipped)`);
         addLog('info', `נמצאו ${validRows.length} שורות תקינות מתוך ${rows.length} (${skippedCount} דולגו)`);
 
-        // Second pass: insert in batches
+        // Optimized batch insertion with parallel processing 
+        const batchPromises = [];
+        
         for (let batchStart = 0; batchStart < validRows.length; batchStart += BATCH_SIZE) {
           const batchEnd = Math.min(batchStart + BATCH_SIZE, validRows.length);
           const batch = validRows.slice(batchStart, batchEnd);
+          const batchNumber = Math.floor(batchStart / BATCH_SIZE) + 1;
+          const totalBatches = Math.ceil(validRows.length / BATCH_SIZE);
           
-          console.log(`🗂️ Processing batch ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(validRows.length / BATCH_SIZE)} (rows ${batchStart + 1}-${batchEnd})`);
-          addLog('info', `מעבד אצווה ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(validRows.length / BATCH_SIZE)} (שורות ${batchStart + 1}-${batchEnd})`);
+          console.log(`🗂️ Preparing batch ${batchNumber}/${totalBatches} (rows ${batchStart + 1}-${batchEnd})`);
+          addLog('info', `מכין אצווה ${batchNumber}/${totalBatches} (שורות ${batchStart + 1}-${batchEnd})`);
 
-          try {
-            const { data, error } = await supabase
-              .from(detected.table as any)
-              .insert(batch)
-              .select('*');
-
-            if (error) {
-              console.error(`❌ Batch insert error for rows ${batchStart + 1}-${batchEnd}:`, error);
-              addLog('error', `שגיאה בהכנסת אצווה ${Math.floor(batchStart / BATCH_SIZE) + 1}: ${error.message}`);
+          // Create promise for this batch with optimized query
+          const batchPromise = (async () => {
+            try {
+              const { data, error } = await supabase
+                .from(detected.table as any)
+                .insert(batch)
+                .select('id'); // Only select id for performance
               
-              // Fallback: try inserting rows one by one
-              for (let j = 0; j < batch.length; j++) {
-                try {
-                  const { error: singleError } = await supabase
-                    .from(detected.table as any)
-                    .insert(batch[j]);
-                  
-                  if (!singleError) {
-                    insertedCount++;
-                  } else {
-                    console.error(`❌ Single row error:`, singleError);
-                  }
-                } catch (singleErr) {
-                  console.error(`❌ Single row exception:`, singleErr);
-                }
+              if (error) {
+                console.error(`❌ Batch ${batchNumber} error:`, error);
+                addLog('error', `שגיאה באצווה ${batchNumber}: ${error.message}`);
+                return { success: false, count: 0, batchNumber };
+              } else {
+                console.log(`✅ Batch ${batchNumber} success: ${batch.length} rows`);
+                return { success: true, count: batch.length, batchNumber };
               }
-            } else {
-              insertedCount += batch.length;
-              console.log(`✅ Successfully inserted batch of ${batch.length} rows`);
+            } catch (batchErr) {
+              console.error(`❌ Batch ${batchNumber} exception:`, batchErr);
+              addLog('error', `חריגה באצווה ${batchNumber}: ${batchErr}`);
+              return { success: false, count: 0, batchNumber };
             }
-          } catch (batchErr) {
-            console.error(`❌ Batch exception for rows ${batchStart + 1}-${batchEnd}:`, batchErr);
-            addLog('error', `חריגה באצווה ${Math.floor(batchStart / BATCH_SIZE) + 1}: ${batchErr}`);
+          })();
+
+          batchPromises.push(batchPromise);
+          
+          // Execute in smaller parallel groups to avoid overwhelming the server
+          if (batchPromises.length >= 5 || batchEnd >= validRows.length) {
+            console.log(`🚀 Executing ${batchPromises.length} batches in parallel...`);
+            addLog('info', `מבצע ${batchPromises.length} אצוות במקביל...`);
+            
+            const results = await Promise.all(batchPromises);
+            const batchInserted = results.reduce((total, result) => total + (result.success ? result.count : 0), 0);
+            insertedCount += batchInserted;
+            
+            const failed = results.filter(r => !r.success).length;
+            if (failed > 0) {
+              console.log(`⚠️ ${failed} batches failed in this group`);
+            }
+            
+            // Clear promises for next group
+            batchPromises.length = 0;
           }
         }
 
@@ -1383,9 +1410,9 @@ export function DataUploader({ context = 'global', onUploadSuccess, onAnalysisTr
           onUploadSuccess();
         }
         
-        // Trigger analysis for regular budget data
-        if (detected.table === 'regular_budget' && onAnalysisTriggered) {
-          console.log('🧠 Triggering automatic analysis for budget data');
+        // Trigger analysis for budget and collection data
+        if ((detected.table === 'regular_budget' || detected.table === 'collection_data') && onAnalysisTriggered) {
+          console.log('🧠 Triggering automatic analysis for', detected.table);
           setTimeout(() => {
             onAnalysisTriggered();
           }, 1500); // Small delay to ensure data is loaded

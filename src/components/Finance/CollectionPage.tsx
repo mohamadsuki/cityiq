@@ -392,13 +392,24 @@ export default function CollectionPage() {
     }
   };
 
-  const handleUploadSuccess = () => {
+  const handleUploadSuccess = async () => {
     setImportDialogOpen(false);
-    loadCollectionData();
+    
+    // Reload data efficiently
+    await loadCollectionData();
+    
     toast({
       title: "הצלחה",
       description: "נתוני הגביה עודכנו בהצלחה"
     });
+  };
+
+  const handleAnalysisTriggered = () => {
+    console.log('🧠 Analysis triggered from upload');
+    // Trigger AI analysis automatically after successful upload
+    setTimeout(() => {
+      handleAnalyzeCollection(true); // silent analysis
+    }, 2000); // Delay to ensure data is fully loaded
   };
 
   // Table columns - specific columns as requested
@@ -546,7 +557,11 @@ export default function CollectionPage() {
               <DialogTitle>ייבוא נתוני גביה מטיוטת מאזן RAW</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <DataUploader context="collection" onUploadSuccess={handleUploadSuccess} />
+              <DataUploader 
+                context="collection" 
+                onUploadSuccess={handleUploadSuccess}
+                onAnalysisTriggered={handleAnalysisTriggered}
+              />
               <div className="mt-4 text-sm text-muted-foreground">
                 העלה קובץ "טיוטת מאזן RAW" עם נתוני הגביה לפי משלמים.
                 הקובץ צריך להכיל נתונים לפי סוגי שירותים ותיאורים.
