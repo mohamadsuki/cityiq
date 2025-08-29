@@ -196,14 +196,15 @@ serve(async (req) => {
             5. הימנע לחלוטין משימוש באימוג'י
             6. הדגש סיכונים פיננסיים וחוזקות בצורה פורמלית
             7. התייחס לתקופה הספציפית של הנתונים שזוהתה מהאקסל
-            8. הגבל את התשובה ל-400 מילים מקסימום
-            9. השתמש בנקודות תבליט לבהירות
-            10. התמקד רק במידע פרקטי ומעשי ותמציתי
-            11. התחל תמיד בציון התקופה הספציפית מהנתונים`
+            8. הגבל את התשובה ל-250 מילים מקסימום בלבד
+            9. השתמש בנקודות תבליט קצרות ומרוכזות
+            10. התמקד רק במידע החיוני והמעשי ביותר
+            11. התחל תמיד בציון התקופה הספציפית מהנתונים
+            12. כתוב ניתוח קצר וחד, ללא הרחבות מיותרות`
           },
           { role: 'user', content: prompt }
         ],
-        max_completion_tokens: 800 // Using max_completion_tokens for GPT-5 - shortened for concise analysis
+        max_completion_tokens: 600 // Using max_completion_tokens for GPT-5 - very short analysis
         // Note: temperature parameter is not supported in GPT-5
       }),
     });

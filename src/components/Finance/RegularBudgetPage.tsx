@@ -567,6 +567,57 @@ export default function RegularBudgetPage() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Data Period Display - Prominent */}
+      <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-xl p-6 mb-6">
+        <div className="text-center space-y-3">
+          <div className="text-sm font-medium text-primary/80 uppercase tracking-wide">תקופת הנתונים</div>
+          <div className="text-3xl font-bold text-foreground">
+            {(() => {
+              // Extract period from Excel data or budget data
+              const allTextData = budgetData.map(item => 
+                `${item.category_name || ''} ${item.excel_cell_ref || ''}`
+              ).join(' ');
+              
+              // Month/Year format detection (MM/YYYY, M/YYYY)
+              const monthYearPattern = /(\d{1,2})\/(\d{4})/g;
+              const monthYearMatches = [...allTextData.matchAll(monthYearPattern)];
+              
+              if (monthYearMatches.length > 0) {
+                const latestMatch = monthYearMatches[monthYearMatches.length - 1];
+                const month = parseInt(latestMatch[1]);
+                const year = latestMatch[2];
+                
+                // Determine quarter from month
+                let quarter = '';
+                if (month >= 1 && month <= 3) quarter = 'רבעון ראשון';
+                else if (month >= 4 && month <= 6) quarter = 'רבעון שני';
+                else if (month >= 7 && month <= 9) quarter = 'רבעון שלישי';
+                else if (month >= 10 && month <= 12) quarter = 'רבעון רביעי';
+                
+                return `${month}/${year} - ${quarter}`;
+              }
+              
+              // Quarter detection patterns
+              const quarterPatterns = [
+                { pattern: /רבעון ראשון|רבעון 1|Q1/i, quarter: 'רבעון ראשון' },
+                { pattern: /רבעון שני|רבעון 2|Q2/i, quarter: 'רבעון שני' },
+                { pattern: /רבעון שלישי|רבעון 3|Q3/i, quarter: 'רבעון שלישי' },
+                { pattern: /רבעון רביעי|רבעון 4|Q4/i, quarter: 'רבעון רביעי' }
+              ];
+              
+              for (const { pattern, quarter } of quarterPatterns) {
+                if (pattern.test(allTextData)) {
+                  return `${quarter} ${new Date().getFullYear()}`;
+                }
+              }
+              
+              return `שנת ${new Date().getFullYear()}`;
+            })()}
+          </div>
+          <div className="text-sm text-muted-foreground">מקור הנתונים: קובץ אקסל שהועלה למערכת</div>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-right">תקציב רגיל</h1>
         <div className="flex gap-2">
@@ -1367,67 +1418,48 @@ export default function RegularBudgetPage() {
               </div>
             </Card>
 
-            {/* Performance by Category Chart */}
+            {/* Performance by Category Chart - Vertical Layout */}
             <Card className="p-6 shadow-lg border-l-4 border-l-secondary">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-xl font-bold text-foreground">ביצועי תקציב לפי קטגורית</h4>
-                <Badge variant="outline" className="text-xs">top 6 קטגוריות</Badge>
-              </div>
-              <div className="h-96">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart 
-                    data={budgetData
-                      .filter(item => item.category_type === 'income' && isDetailRow(item))
-                      .slice(0, 6)
-                      .map(item => ({
-                        name: item.category_name.length > 12 ? item.category_name.substring(0, 12) + '...' : item.category_name,
-                        תקציב: item.budget_amount || 0,
-                        ביצוע: item.actual_amount || 0,
-                        אחוזביצוע: item.budget_amount ? ((item.actual_amount || 0) / item.budget_amount * 100) : 0,
-                        יעד: 100
-                      }))
-                    } 
-                    margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                    <XAxis 
-                      dataKey="name" 
-                      angle={-45} 
-                      textAnchor="end" 
-                      height={100}
-                      tick={{ fill: 'hsl(var(--foreground))', fontSize: 11 }}
-                    />
-                    <YAxis 
-                      yAxisId="left"
-                      tick={{ fill: 'hsl(var(--foreground))' }}
-                      tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
-                    />
-                    <YAxis 
-                      yAxisId="right" 
-                      orientation="right"
-                      tick={{ fill: 'hsl(var(--foreground))' }}
-                      tickFormatter={(value) => `${value}%`}
-                    />
-                    <Tooltip 
-                      formatter={(value, name) => {
-                        if (name === 'אחוזביצוע' || name === 'יעד') {
-                          return [`${Number(value).toFixed(1)}%`, name === 'אחוזביצוע' ? 'אחוז ביצוע' : 'יעד'];
-                        }
-                        return [`${Number(value).toLocaleString('he-IL')} ₪`, name === 'תקציב' ? 'תקציב מתוכנן' : 'ביצוע בפועל'];
-                      }}
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="תקציב" fill="hsl(var(--muted))" name="תקציב מתוכנן" radius={[2, 2, 0, 0]} />
-                    <Bar yAxisId="left" dataKey="ביצוע" fill="hsl(var(--primary))" name="ביצוע בפועל" radius={[2, 2, 0, 0]} />
-                    <Line yAxisId="right" type="monotone" dataKey="אחוזביצוע" stroke="hsl(var(--destructive))" strokeWidth={3} name="אחוז ביצוע" />
-                    <Line yAxisId="right" type="monotone" dataKey="יעד" stroke="hsl(var(--muted-foreground))" strokeWidth={2} strokeDasharray="5 5" name="יעד 100%" />
-                  </LineChart>
-                </ResponsiveContainer>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xl font-bold text-foreground">ביצועי תקציב לפי קטגורית</h4>
+                  <Badge variant="outline" className="text-xs">top 6 קטגוריות</Badge>
+                </div>
+                
+                {/* Vertical list layout instead of chart */}
+                <div className="space-y-3">
+                  {budgetData
+                    .filter(item => item.category_type === 'income' && isDetailRow(item))
+                    .slice(0, 6)
+                    .map((item, index) => {
+                      const percentage = item.budget_amount ? ((item.actual_amount || 0) / item.budget_amount * 100) : 0;
+                      return (
+                        <div key={index} className="bg-gradient-to-l from-card to-muted/10 p-4 rounded-lg border border-border">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="font-semibold text-foreground text-sm">
+                              {item.category_name}
+                            </div>
+                            <div className={`text-sm font-bold ${percentage >= 100 ? 'text-green-600' : percentage >= 80 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              {percentage.toFixed(1)}%
+                            </div>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                            <span>תקציב: {formatCurrency(item.budget_amount)}</span>
+                            <span>ביצוע: {formatCurrency(item.actual_amount)}</span>
+                          </div>
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full transition-all duration-300 ${
+                                percentage >= 100 ? 'bg-green-500' : 
+                                percentage >= 80 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(percentage, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             </Card>
 
@@ -1474,33 +1506,45 @@ export default function RegularBudgetPage() {
               </div>
             </Card>
 
-            {/* Budget Variance Analysis */}
+            {/* Budget Variance Analysis - Vertical Layout */}
             <Card className="p-6">
-              <h4 className="text-lg font-semibold mb-4 text-foreground">ניתוח חריגות תקציביות</h4>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
-                    data={budgetData.filter(item => isDetailRow(item) && Math.abs((item.actual_amount || 0) - (item.budget_amount || 0)) > 1000).slice(0, 8).map(item => ({
-                      name: item.category_name.length > 10 ? item.category_name.substring(0, 10) + '...' : item.category_name,
-                      חריגה: (item.actual_amount || 0) - (item.budget_amount || 0),
-                      אחוז_חריגה: item.budget_amount ? (((item.actual_amount || 0) - item.budget_amount) / item.budget_amount * 100) : 0
-                    }))}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                    <YAxis />
-                    <Tooltip 
-                      formatter={(value, name) => 
-                        name === 'אחוז_חריגה' ? `${Number(value).toFixed(1)}%` : `${Number(value).toLocaleString('he-IL')} ₪`
-                      }
-                    />
-                    <Legend />
-                    <Bar dataKey="חריגה">
-                    <Bar dataKey="חריגה" fill="hsl(var(--primary))" />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-foreground">ניתוח חריגות תקציביות</h4>
+                
+                {/* Vertical list layout for variance analysis */}
+                <div className="space-y-3">
+                  {budgetData
+                    .filter(item => isDetailRow(item) && Math.abs((item.actual_amount || 0) - (item.budget_amount || 0)) > 1000)
+                    .slice(0, 8)
+                    .map((item, index) => {
+                      const variance = (item.actual_amount || 0) - (item.budget_amount || 0);
+                      const variancePercentage = item.budget_amount ? (variance / item.budget_amount * 100) : 0;
+                      const isPositive = variance >= 0;
+                      
+                      return (
+                        <div key={index} className={`p-4 rounded-lg border ${
+                          isPositive ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800' : 
+                          'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800'
+                        }`}>
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="font-semibold text-foreground text-sm">
+                              {item.category_name}
+                            </div>
+                            <div className={`text-sm font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                              {variancePercentage.toFixed(1)}%
+                            </div>
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                            <span>תקציב: {formatCurrency(item.budget_amount)}</span>
+                            <span>ביצוע: {formatCurrency(item.actual_amount)}</span>
+                          </div>
+                          <div className={`text-sm font-medium ${isPositive ? 'text-green-700' : 'text-red-700'}`}>
+                            חריגה: {formatCurrency(variance)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
             </Card>
           </div>
