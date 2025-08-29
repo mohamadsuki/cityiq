@@ -19,18 +19,23 @@ import { useAuth } from "@/context/AuthContext";
 interface CollectionData {
   id: string;
   property_type: string; // סוג נכס
-  property_description: string; // תאור סוג נכס
-  source_year: number; // שנת מקור
-  service_description: string; // תאור סוג שרות
-  payer_id: string; // משלם
-  payer_name: string; // שם משלם
-  total_debt: number; // סהכ חובה
-  cash: number; // מזומן
-  interest: number; // ריבית
-  indexation: number; // הצמדה
-  nominal_balance: number; // יתרה נומינלית
-  real_balance: number; // יתרה ראלית
-  collection_percentage: number; // אחוז גביה
+  property_description?: string; // תאור סוג נכס
+  source_year?: number; // שנת מקור
+  service_description?: string; // תאור סוג שרות
+  payer_id?: string; // משלם
+  payer_name?: string; // שם משלם
+  total_debt?: number; // סהכ חובה
+  cash?: number; // מזומן
+  interest?: number; // ריבית
+  indexation?: number; // הצמדה
+  nominal_balance?: number; // יתרה נומינלית
+  real_balance?: number; // יתרה ראלית
+  collection_percentage?: number; // אחוז גביה
+  // Legacy fields for backward compatibility
+  annual_budget: number;
+  relative_budget: number;
+  actual_collection: number;
+  surplus_deficit: number;
   year: number;
   created_at: string;
   excel_cell_ref?: string;
@@ -129,13 +134,18 @@ export default function CollectionPage() {
           service_description: item.service_description || '',
           payer_id: item.payer_id || '',
           payer_name: item.payer_name || '',
-          total_debt: Number(item.total_debt) || 0,
+          total_debt: Number(item.total_debt) || Math.abs(Number(item.surplus_deficit)) || 0,
           cash: Number(item.cash) || 0,
           interest: Number(item.interest) || 0,
           indexation: Number(item.indexation) || 0,
           nominal_balance: Number(item.nominal_balance) || 0,
           real_balance: Number(item.real_balance) || 0,
           collection_percentage: Number(item.collection_percentage) || 0,
+          // Legacy fields
+          annual_budget: Number(item.annual_budget) || 0,
+          relative_budget: Number(item.relative_budget) || 0,
+          actual_collection: Number(item.actual_collection) || 0,
+          surplus_deficit: Number(item.surplus_deficit) || 0,
           year: item.year,
           created_at: item.created_at,
           excel_cell_ref: item.excel_cell_ref
@@ -180,12 +190,12 @@ export default function CollectionPage() {
       }
       
       acc[propertyType].count += 1;
-      acc[propertyType].totalDebt += item.total_debt;
-      acc[propertyType].totalCash += item.cash;
-      acc[propertyType].totalInterest += item.interest;
-      acc[propertyType].totalIndexation += item.indexation;
-      acc[propertyType].totalNominalBalance += item.nominal_balance;
-      acc[propertyType].totalRealBalance += item.real_balance;
+      acc[propertyType].totalDebt += item.total_debt || Math.abs(item.surplus_deficit) || 0;
+      acc[propertyType].totalCash += item.cash || 0;
+      acc[propertyType].totalInterest += item.interest || 0;
+      acc[propertyType].totalIndexation += item.indexation || 0;
+      acc[propertyType].totalNominalBalance += item.nominal_balance || 0;
+      acc[propertyType].totalRealBalance += item.real_balance || 0;
       
       return acc;
     }, {} as Record<string, CollectionSummary>);
@@ -195,7 +205,7 @@ export default function CollectionPage() {
       if (summary.count > 0) {
         const totalCollectionPercentage = data
           .filter(item => (PROPERTY_TYPE_LABELS[item.property_type] || item.property_type) === summary.propertyType)
-          .reduce((sum, item) => sum + item.collection_percentage, 0);
+          .reduce((sum, item) => sum + (item.collection_percentage || 0), 0);
         summary.averageCollectionRate = totalCollectionPercentage / summary.count;
       }
     });
@@ -211,9 +221,9 @@ export default function CollectionPage() {
     if (searchTerm) {
       filtered = filtered.filter(item => 
         item.property_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.payer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.payer_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.service_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.payer_name && item.payer_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.payer_id && item.payer_id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (item.service_description && item.service_description.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (item.excel_cell_ref && item.excel_cell_ref.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
@@ -229,18 +239,18 @@ export default function CollectionPage() {
     // Service type filter (additional filter for service descriptions)
     if (selectedServiceType !== "all") {
       filtered = filtered.filter(item => 
-        item.service_description.toLowerCase().includes(selectedServiceType.toLowerCase())
+        item.service_description && item.service_description.toLowerCase().includes(selectedServiceType.toLowerCase())
       );
     }
 
-    // Amount range filter (debt amount)
+    // Amount range filter (debt amount) 
     if (minAmount) {
       const min = parseFloat(minAmount);
-      filtered = filtered.filter(item => item.total_debt >= min);
+      filtered = filtered.filter(item => (item.total_debt || Math.abs(item.surplus_deficit) || 0) >= min);
     }
     if (maxAmount) {
       const max = parseFloat(maxAmount);
-      filtered = filtered.filter(item => item.total_debt <= max);
+      filtered = filtered.filter(item => (item.total_debt || Math.abs(item.surplus_deficit) || 0) <= max);
     }
 
     setFilteredData(filtered);
@@ -314,7 +324,7 @@ export default function CollectionPage() {
     console.log('🚀 Starting collection analysis...');
     
     try {
-      const totalDebt = collectionData.reduce((sum, item) => sum + (item.total_debt || 0), 0);
+      const totalDebt = collectionData.reduce((sum, item) => sum + (item.total_debt || Math.abs(item.surplus_deficit) || 0), 0);
       const totalCash = collectionData.reduce((sum, item) => sum + (item.cash || 0), 0);
       const totalInterest = collectionData.reduce((sum, item) => sum + (item.interest || 0), 0);
       const totalIndexation = collectionData.reduce((sum, item) => sum + (item.indexation || 0), 0);
@@ -427,7 +437,7 @@ export default function CollectionPage() {
       accessorKey: "total_debt",
       header: "סהכ חובה",
       cell: ({ row }) => {
-        const debt = row.getValue<number>("total_debt") || 0;
+        const debt = row.getValue<number>("total_debt") || Math.abs(row.original.surplus_deficit) || 0;
         return (
           <span className={debt > 0 ? "text-red-600 font-medium" : "text-green-600"}>
             {formatCurrency(debt)}
@@ -694,11 +704,10 @@ export default function CollectionPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">כל התיאורים</SelectItem>
-                      {Array.from(new Set(collectionData.map(item => item.service_description)))
-                        .filter(desc => desc && desc.trim() !== '')
+                      {Array.from(new Set(collectionData.map(item => item.service_description).filter(desc => desc && desc.trim() !== '')))
                         .slice(0, 20)
                         .map(desc => (
-                          <SelectItem key={desc} value={desc}>{desc}</SelectItem>
+                          <SelectItem key={desc} value={desc!}>{desc}</SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
