@@ -264,12 +264,24 @@ export type Database = {
         Row: {
           actual_collection: number | null
           annual_budget: number | null
+          cash: number | null
+          collection_percentage: number | null
           created_at: string
           excel_cell_ref: string | null
           id: string
+          indexation: number | null
+          interest: number | null
+          nominal_balance: number | null
+          payer_id: string | null
+          payer_name: string | null
+          property_description: string | null
           property_type: string
+          real_balance: number | null
           relative_budget: number | null
+          service_description: string | null
+          source_year: number | null
           surplus_deficit: number | null
+          total_debt: number | null
           updated_at: string
           user_id: string
           year: number
@@ -277,12 +289,24 @@ export type Database = {
         Insert: {
           actual_collection?: number | null
           annual_budget?: number | null
+          cash?: number | null
+          collection_percentage?: number | null
           created_at?: string
           excel_cell_ref?: string | null
           id?: string
+          indexation?: number | null
+          interest?: number | null
+          nominal_balance?: number | null
+          payer_id?: string | null
+          payer_name?: string | null
+          property_description?: string | null
           property_type: string
+          real_balance?: number | null
           relative_budget?: number | null
+          service_description?: string | null
+          source_year?: number | null
           surplus_deficit?: number | null
+          total_debt?: number | null
           updated_at?: string
           user_id: string
           year?: number
@@ -290,12 +314,24 @@ export type Database = {
         Update: {
           actual_collection?: number | null
           annual_budget?: number | null
+          cash?: number | null
+          collection_percentage?: number | null
           created_at?: string
           excel_cell_ref?: string | null
           id?: string
+          indexation?: number | null
+          interest?: number | null
+          nominal_balance?: number | null
+          payer_id?: string | null
+          payer_name?: string | null
+          property_description?: string | null
           property_type?: string
+          real_balance?: number | null
           relative_budget?: number | null
+          service_description?: string | null
+          source_year?: number | null
           surplus_deficit?: number | null
+          total_debt?: number | null
           updated_at?: string
           user_id?: string
           year?: number

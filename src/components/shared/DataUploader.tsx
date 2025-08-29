@@ -219,8 +219,22 @@ const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
     'תקציב': 'budget_amount',
     'ביצוע': 'actual_amount',
     
-    // Collection fields
+    // Collection fields - Enhanced for new structure
     'סוג נכס': 'property_type',
+    'תאור סוג נכס': 'property_description',
+    'שנת מקור': 'source_year',
+    'תאור סוג שרות': 'service_description',
+    'משלם': 'payer_id',
+    'שם משלם': 'payer_name',
+    'סהכ חובה': 'total_debt',
+    'מזומן': 'cash',
+    'ריבית': 'interest',
+    'הצמדה': 'indexation',
+    'יתרה נומינלית': 'nominal_balance',
+    'יתרה ראלית': 'real_balance',
+    'אחוז גביה': 'collection_percentage',
+    
+    // Legacy collection fields (keep for backward compatibility)
     'תקציב שנתי': 'annual_budget',
     'תקציב שנתי ארנונה': 'annual_budget',
     'תקציב יחסי': 'relative_budget',
@@ -577,46 +591,36 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       console.log('🔍 Collection data mapping - Raw row keys:', Object.keys(row));
       console.log('🔍 Collection data mapping - First few entries:', Object.entries(row).slice(0, 10));
       
-      // Check for property type in multiple potential locations
-      let propertyType = '';
-      const potentialPropertyKeys = [
-        'סוג נכס', 'property_type', 'type', 'נכס',
-        Object.keys(row)[0], // Sometimes the first column
-        Object.keys(row).find(key => !key.includes('EMPTY') && key.includes('סוג')) ||
-        Object.keys(row).find(key => !key.includes('EMPTY') && key.includes('נכס'))
-      ].filter(Boolean);
+      // Enhanced mapping for new collection structure
+      mapped.property_type = normalizedRow.property_type || normalizedRow['סוג נכס'] || row['סוג נכס'] || '';
+      mapped.property_description = normalizedRow.property_description || normalizedRow['תאור סוג נכס'] || row['תאור סוג נכס'] || '';
+      mapped.source_year = parseInt(String(normalizedRow.source_year || normalizedRow['שנת מקור'] || row['שנת מקור'] || new Date().getFullYear())) || new Date().getFullYear();
+      mapped.service_description = normalizedRow.service_description || normalizedRow['תאור סוג שרות'] || row['תאור סוג שרות'] || '';
+      mapped.payer_id = normalizedRow.payer_id || normalizedRow['משלם'] || row['משלם'] || '';
+      mapped.payer_name = normalizedRow.payer_name || normalizedRow['שם משלם'] || row['שם משלם'] || '';
       
-      for (const key of potentialPropertyKeys) {
-        if (row[key] && String(row[key]).trim() && String(row[key]) !== 'null') {
-          propertyType = String(row[key]).trim();
-          console.log(`🏠 Found property type "${propertyType}" in key "${key}"`);
-          break;
-        }
-      }
+      // New financial fields
+      mapped.total_debt = parseFloat(String(normalizedRow.total_debt || normalizedRow['סהכ חובה'] || row['סהכ חובה'] || '0').replace(/,/g, '')) || 0;
+      mapped.cash = parseFloat(String(normalizedRow.cash || normalizedRow['מזומן'] || row['מזומן'] || '0').replace(/,/g, '')) || 0;
+      mapped.interest = parseFloat(String(normalizedRow.interest || normalizedRow['ריבית'] || row['ריבית'] || '0').replace(/,/g, '')) || 0;
+      mapped.indexation = parseFloat(String(normalizedRow.indexation || normalizedRow['הצמדה'] || row['הצמדה'] || '0').replace(/,/g, '')) || 0;
+      mapped.nominal_balance = parseFloat(String(normalizedRow.nominal_balance || normalizedRow['יתרה נומינלית'] || row['יתרה נומינלית'] || '0').replace(/,/g, '')) || 0;
+      mapped.real_balance = parseFloat(String(normalizedRow.real_balance || normalizedRow['יתרה ראלית'] || row['יתרה ראלית'] || '0').replace(/,/g, '')) || 0;
+      mapped.collection_percentage = parseFloat(String(normalizedRow.collection_percentage || normalizedRow['אחוז גביה'] || row['אחוז גביה'] || '0').replace(/,/g, '')) || 0;
       
-      mapped.property_type = propertyType;
+      // Legacy fields for backward compatibility - fallback to __EMPTY columns
+      mapped.annual_budget = parseFloat(String(normalizedRow.annual_budget || normalizedRow['תקציב שנתי ארנונה'] || row['__EMPTY_1'] || row['__EMPTY_2'] || '0').replace(/,/g, '')) || 0;
+      mapped.relative_budget = parseFloat(String(normalizedRow.relative_budget || normalizedRow['תקציב יחסי ארנונה'] || row['__EMPTY_3'] || row['__EMPTY_4'] || '0').replace(/,/g, '')) || 0;
+      mapped.actual_collection = parseFloat(String(normalizedRow.actual_collection || normalizedRow['גביה בפועל'] || row['__EMPTY_5'] || row['__EMPTY_6'] || '0').replace(/,/g, '')) || 0;
+      mapped.surplus_deficit = mapped.actual_collection - mapped.relative_budget;
+
+      console.log('🔍 Enhanced Collection mapping result:', mapped);
       
-      // Map numeric columns - check Excel format with EMPTY columns
-      const annualBudget = row['__EMPTY_1'] || row['__EMPTY_2'] || normalizedRow['תקציב שנתי ארנונה'] || normalizedRow.annual_budget || '0';
-      const relativeBudget = row['__EMPTY_3'] || row['__EMPTY_4'] || normalizedRow['תקציב יחסי ארנונה'] || normalizedRow.relative_budget || '0';
-      const actualCollection = row['__EMPTY_5'] || row['__EMPTY_6'] || normalizedRow['גביה בפועל'] || normalizedRow.actual_collection || '0';
-      
-      mapped.annual_budget = parseFloat(String(annualBudget).replace(/,/g, '')) || 0;
-      mapped.relative_budget = parseFloat(String(relativeBudget).replace(/,/g, '')) || 0;
-      mapped.actual_collection = parseFloat(String(actualCollection).replace(/,/g, '')) || 0;
-      
-      console.log('🔍 Collection mapping result:', {
-        property_type: mapped.property_type,
-        annual_budget: mapped.annual_budget,
-        relative_budget: mapped.relative_budget,
-        actual_collection: mapped.actual_collection
-      });
-      
-      // Skip rows with empty property type and all zero values (invalid data)
+      // Skip rows without meaningful data
       if (!mapped.property_type || mapped.property_type.trim() === '') {
-        const hasAnyValue = mapped.annual_budget > 0 || mapped.relative_budget > 0 || mapped.actual_collection > 0;
+        const hasAnyValue = mapped.total_debt > 0 || mapped.cash > 0 || mapped.annual_budget > 0 || mapped.relative_budget > 0 || mapped.actual_collection > 0;
         if (!hasAnyValue) {
-          console.log('🚫 Skipping collection row with empty property_type and zero values:', mapped);
+          console.log('🚫 Skipping collection row with empty property_type and no values:', mapped);
           return null;
         }
       }
