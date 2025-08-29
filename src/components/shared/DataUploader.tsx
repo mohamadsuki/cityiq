@@ -973,7 +973,18 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
             const targetField = mapping.manualOverride || mapping.canonical;
             
             if (targetField !== 'לא מזוהה' && value !== undefined && value !== null && value !== '') {
-              normalizedRow[targetField] = value;
+              // Clean and convert the value based on target field type
+              let cleanValue = String(value).trim();
+              
+              // Convert to number for numeric fields
+              if (['allocated_amount', 'budget_year', 'amount', 'year', 'received_amount'].includes(targetField)) {
+                const numValue = parseFloat(cleanValue.replace(/[^\d.-]/g, ''));
+                if (!isNaN(numValue)) {
+                  normalizedRow[targetField] = numValue;
+                }
+              } else {
+                normalizedRow[targetField] = cleanValue;
+              }
             }
           });
         } else {
@@ -983,7 +994,19 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
             
             const normalizedKey = normalizeKey(key, undefined, detected.table!);
             if (value !== undefined && value !== null && value !== '') {
-              normalizedRow[normalizedKey] = value;
+              let cleanValue = String(value).trim();
+              
+              // Convert to number for numeric fields
+              if (['allocated_amount', 'budget_year', 'amount', 'year', 'received_amount'].includes(normalizedKey)) {
+                const numValue = parseFloat(cleanValue.replace(/[^\d.-]/g, ''));
+                if (!isNaN(numValue)) {
+                  normalizedRow[normalizedKey] = numValue;
+                } else {
+                  normalizedRow[normalizedKey] = cleanValue;
+                }
+              } else {
+                normalizedRow[normalizedKey] = cleanValue;
+              }
             }
           });
         }
