@@ -28,6 +28,7 @@ interface RegularBudgetItem {
   year: number;
   budget_deviation: number; // סטיה מהתקציב
   budget_deviation_percentage: number; // סטיה מהתקציב ב%
+  excel_cell_ref?: string; // אופציונלי - הפניה לתא באקסל
 }
 
 export default function RegularBudgetPage() {
@@ -1051,9 +1052,49 @@ export default function RegularBudgetPage() {
                         <div className="text-xl font-bold text-indigo-800 dark:text-indigo-200">{new Date().getFullYear()}</div>
                       </div>
                       <div className="bg-white/60 dark:bg-gray-800/60 p-3 rounded-lg">
-                        <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400">עדכון אחרון</div>
+                        <div className="text-sm font-medium text-indigo-600 dark:text-indigo-400">תקופת הנתונים</div>
                         <div className="text-sm font-bold text-indigo-800 dark:text-indigo-200">
-                          {budgetData.length > 0 ? new Date().toLocaleDateString('he-IL') : 'לא זמין'}
+                          {(() => {
+                            // Extract period from Excel data or budget data
+                            const allTextData = budgetData.map(item => 
+                              `${item.category_name || ''} ${item.excel_cell_ref || ''}`
+                            ).join(' ');
+                            
+                            // Month/Year format detection (MM/YYYY, M/YYYY)
+                            const monthYearPattern = /(\d{1,2})\/(\d{4})/g;
+                            const monthYearMatches = [...allTextData.matchAll(monthYearPattern)];
+                            
+                            if (monthYearMatches.length > 0) {
+                              const latestMatch = monthYearMatches[monthYearMatches.length - 1];
+                              const month = parseInt(latestMatch[1]);
+                              const year = latestMatch[2];
+                              
+                              // Determine quarter from month
+                              let quarter = '';
+                              if (month >= 1 && month <= 3) quarter = 'רבעון ראשון';
+                              else if (month >= 4 && month <= 6) quarter = 'רבעון שני';
+                              else if (month >= 7 && month <= 9) quarter = 'רבעון שלישי';
+                              else if (month >= 10 && month <= 12) quarter = 'רבעון רביעי';
+                              
+                              return `${month}/${year} ${quarter}`;
+                            }
+                            
+                            // Quarter detection patterns
+                            const quarterPatterns = [
+                              { pattern: /רבעון ראשון|רבעון 1|Q1/i, quarter: 'רבעון ראשון' },
+                              { pattern: /רבעון שני|רבעון 2|Q2/i, quarter: 'רבעון שני' },
+                              { pattern: /רבעון שלישי|רבעון 3|Q3/i, quarter: 'רבעון שלישי' },
+                              { pattern: /רבעון רביעי|רבעון 4|Q4/i, quarter: 'רבעון רביעי' }
+                            ];
+                            
+                            for (const { pattern, quarter } of quarterPatterns) {
+                              if (pattern.test(allTextData)) {
+                                return `${quarter} ${new Date().getFullYear()}`;
+                              }
+                            }
+                            
+                            return 'לא זוהתה תקופה ספציפית';
+                          })()}
                         </div>
                       </div>
                     </div>

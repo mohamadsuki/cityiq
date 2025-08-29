@@ -61,13 +61,23 @@ serve(async (req) => {
     let detectedMonth = '';
     let detectedQuarter = '';
     
-    // Enhanced quarter detection patterns
+    // Enhanced quarter detection patterns with month-based detection
     const quarterPatterns = [
       { pattern: /רבעון ראשון|רבעון 1|Q1|קוורטר 1/i, quarter: 'רבעון ראשון' },
       { pattern: /רבעון שני|רבעון 2|Q2|קוורטר 2/i, quarter: 'רבעון שני' },
       { pattern: /רבעון שלישי|רבעון 3|Q3|קוורטר 3/i, quarter: 'רבעון שלישי' },
       { pattern: /רבעון רביעי|רבעון 4|Q4|קוורטר 4/i, quarter: 'רבעון רביעי' }
     ];
+    
+    // Month to quarter mapping
+    const monthToQuarter = (month) => {
+      const monthNum = parseInt(month);
+      if (monthNum >= 1 && monthNum <= 3) return 'רבעון ראשון';
+      if (monthNum >= 4 && monthNum <= 6) return 'רבעון שני';
+      if (monthNum >= 7 && monthNum <= 9) return 'רבעון שלישי';
+      if (monthNum >= 10 && monthNum <= 12) return 'רבעון רביעי';
+      return '';
+    };
     
     // Enhanced year detection
     const yearPattern = /20\d{2}/g;
@@ -105,12 +115,14 @@ serve(async (req) => {
       }
     });
     
-    // Build comprehensive period string
+    // Build comprehensive period string with automatic quarter detection
     if (detectedQuarter && detectedYear) {
       detectedPeriod = `${detectedQuarter} ${detectedYear}`;
     } else if (detectedMonth && detectedYear) {
-      const monthName = detectedHebrewMonth || `חודש ${detectedMonth}`;
-      detectedPeriod = `${monthName} ${detectedYear}`;
+      // Automatically determine quarter from month
+      const quarterFromMonth = monthToQuarter(detectedMonth);
+      const monthName = detectedHebrewMonth || `${detectedMonth}`;
+      detectedPeriod = `${monthName}/${detectedYear} ${quarterFromMonth}`;
     } else if (detectedYear) {
       detectedPeriod = `שנת ${detectedYear}`;
     } else {
@@ -133,68 +145,32 @@ serve(async (req) => {
 מקור הנתונים: קובץ אקסל שהועלה למערכת
 
 **סיכום כספי מרכזי לתקופה:**
-- סה"כ הכנסות מתוכננות לתקופה: ${totalIncome?.toLocaleString('he-IL')} ₪
-- סה"כ הוצאות מתוכננות לתקופה: ${totalExpenses?.toLocaleString('he-IL')} ₪
-- סטיית הכנסות (ביצוע מול תוכנית): ${incomeDeviation?.toLocaleString('he-IL')} ₪
-- סטיית הוצאות (ביצוע מול תוכנית): ${expenseDeviation?.toLocaleString('he-IL')} ₪
-- יחס מאזן הכנסות/הוצאות: ${balanceRatio}%
+- סה"כ הכנסות מתוכננות: ${totalIncome?.toLocaleString('he-IL')} ₪
+- סה"כ הוצאות מתוכננות: ${totalExpenses?.toLocaleString('he-IL')} ₪
+- סטיית הכנסות: ${incomeDeviation?.toLocaleString('he-IL')} ₪
+- סטיית הוצאות: ${expenseDeviation?.toLocaleString('he-IL')} ₪
 - מאזן תקופתי: ${((totalIncome || 0) - (totalExpenses || 0)).toLocaleString('he-IL')} ₪
 
-**פילוח קטגוריות מהקובץ:**
-- סה"כ פריטי תקציב: ${totalItems}
-- קטגוריות הכנסות: ${incomeItems}
-- קטגוריות הוצאות: ${expenseItems}
-- חריגות משמעותיות (מעל 15%): ${highDeviations}
+**ספק ניתוח תמציתי הכולל:**
 
-**אנא ספק ניתוח מקיף ומעמיק הכולל:**
+## תקופת הדיווח: ${detectedPeriod}
 
-## סיכום מנהלים מתקדם
-תמונת מצב כללית של התקציב בתקופה ${detectedPeriod} - האם הרשות במצב פיננסי טוב, אילו אתגרים עיקריים קיימים ומה המסקנות החשובות ביותר לקבלת החלטות.
+## מצב פיננסי כללי
+תמונת מצב קצרה של התקציב - האם הרשות במצב טוב או דורש התערבות.
 
-## ניתוח הכנסות מפורט
-- ביצועי גבייה לעומת תוכנית התקופה הספציפית
-- הערכת יעילות מקורות הכנסה שונים
-- זיהוי הזדמנויות לשיפור הגבייה
-- השוואה לביצועים צפויים בתקופה זו
+## ממצאים מרכזיים
+• רמת הכנסות - האם תקינה או דורשת שיפור
+• שליטה בהוצאות - האם יש חריגות משמעותיות
+• סעיפים בולטים הדורשים תשומת לב
 
-## ניתוח הוצאות ובקרה תקציבית
-- רמת שליטה בהוצאות יחסית לתוכנית התקופתית
-- זיהוי סעיפים עם חריגות משמעותיות והסברים
-- הערכת יעילות הוצאות לעומת השירותים הניתנים
-- אזהרות על סיכונים פיננסיים
-
-## נקודות דורשות תשומת לב מיידית
-רשימה ממוקדת של סעיפים/תחומים הדורשים התערבות מיידית או ניטור צמוד, כולל הסבר הסיבות והשלכות אפשריות.
-
-## המלצות מעשיות ליישום מיידי
-5-6 המלצות קונקרטיות וניתנות ליישום:
-- פעולות לשיפור גבייה בתקופה הקרובה
-- אמצעי בקרת הוצאות מותאמים לעונה
-- שיפורי תהליכים דחופים
-- הכנות ספציפיות לתקופות הבאות
-
-## תחזית והשלכות עתידיות
-- השלכות המצב הנוכחי על המשך השנה הכספית
-- הערכת סיכונים ואתגרים צפויים לרבעון הבא
-- הזדמנויות לשיפור הביצוע בהתבסס על המגמות הנוכחיות
-
-## תובנות נוספות מנתוני האקסל
-- דפוסים מעניינים שנמצאו בנתונים
-- השוואות בין קטגוריות שונות
-- מדדי ביצוע מרכזיים למעקב עתידי
+## המלצות מיידיות (מקסימום 4)
+המלצות קונקרטיות לפעולות הנדרשות:
+• פעולות גבייה ספציפיות
+• בקרת הוצאות חיונית
+• אזהרות על סיכונים
 
 התקציב הכולל: ${(totalIncome || 0).toLocaleString('he-IL')} ₪ הכנסות, ${(totalExpenses || 0).toLocaleString('he-IL')} ₪ הוצאות
-סטטוס כללי: ${totalIncome > totalExpenses ? 'עודף תקציבי' : totalIncome < totalExpenses ? 'גירעון תקציבי' : 'מאוזן'}
-
-## המלצות לויזואליזציות נתונים מתקדמות
-בהתבסס על נתוני התקציב שנותחו, המלץ על הגרפים הטובים ביותר:
-- איזה סוגי גרפים יציגו בצורה הטובה ביותר את הנתונים הללו
-- איזה צבעים ועיצוב יתאימו למצגת מקצועית
-- איזה מדדים וקטגוריות חשוב להדגיש בכל גרף
-- כיצד לארגן את הנתונים בצורה הכי ברורה ומשמעותית למקבלי החלטות
-- המלצות על אנימציות ואינטראקטיביות שיכולות לעזור להבנה
-
-פרט באופן מקצועי את הגרפים המומלצים לפי סדר חשיבות עם הסבר מדוע כל אחד חיוני לניהול פיננסי יעיל.`;
+סטטוס: ${totalIncome > totalExpenses ? 'עודף תקציבי' : totalIncome < totalExpenses ? 'גירעון תקציבי' : 'מאוזן'}`;
 
     console.log('Calling OpenAI API...');
 
@@ -219,14 +195,15 @@ serve(async (req) => {
             4. ספק המלצות מעשיות קצרות ותכליתיות
             5. הימנע לחלוטין משימוש באימוג'י
             6. הדגש סיכונים פיננסיים וחוזקות בצורה פורמלית
-            7. התייחס לתקופה של הנתונים
-            8. הגבל את התשובה ל-600 מילים מקסימום
+            7. התייחס לתקופה הספציפית של הנתונים שזוהתה מהאקסל
+            8. הגבל את התשובה ל-400 מילים מקסימום
             9. השתמש בנקודות תבליט לבהירות
-            10. התמקד רק במידע פרקטי ומעשי`
+            10. התמקד רק במידע פרקטי ומעשי ותמציתי
+            11. התחל תמיד בציון התקופה הספציפית מהנתונים`
           },
           { role: 'user', content: prompt }
         ],
-        max_completion_tokens: 1500 // Using max_completion_tokens for GPT-5
+        max_completion_tokens: 800 // Using max_completion_tokens for GPT-5 - shortened for concise analysis
         // Note: temperature parameter is not supported in GPT-5
       }),
     });
