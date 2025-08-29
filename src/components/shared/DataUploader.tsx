@@ -591,45 +591,107 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       console.log('🔍 Collection data mapping - Raw row keys:', Object.keys(row));
       console.log('🔍 Collection data mapping - First few entries:', Object.entries(row).slice(0, 10));
       
-      // Enhanced mapping for new collection structure
-      mapped.property_type = normalizedRow.property_type || normalizedRow['סוג נכס'] || row['סוג נכס'] || '';
-      mapped.property_description = normalizedRow.property_description || normalizedRow['תאור סוג נכס'] || row['תאור סוג נכס'] || '';
+      // Get the first column value which contains the data
+      const firstColumn = Object.keys(row)[0];
+      const firstColumnValue = row[firstColumn];
+      
+      console.log('🔍 First column info:', { key: firstColumn, value: firstColumnValue });
+      
+      // Parse the pattern: "תנועות מקובעות ותשלומים עתידיים" 
+      // This appears to be the main data column that contains service codes
+      if (firstColumnValue && typeof firstColumnValue === 'string') {
+        // Extract service information from patterns like "משרות:0", "עד שרות:999", "ממשלם:0"
+        const serviceMatch = firstColumnValue.match(/(.*?):(.*)/);
+        if (serviceMatch) {
+          const serviceType = serviceMatch[1].trim();
+          const serviceValue = serviceMatch[2].trim();
+          
+          console.log('🔍 Service match found:', { serviceType, serviceValue });
+          
+          // Map service types to property types
+          if (serviceType.includes('משרות')) {
+            mapped.property_type = 'משרות';
+            mapped.service_description = 'שירותי משרות';
+          } else if (serviceType.includes('שרות')) {
+            mapped.property_type = 'שירותי עירייה';
+            mapped.service_description = 'שירותים עירוניים';
+          } else if (serviceType.includes('משלם')) {
+            mapped.property_type = 'ארנונה';
+            mapped.service_description = 'תשלומי ארנונה';
+          } else {
+            mapped.property_type = serviceType || 'אחר';
+            mapped.service_description = serviceType || '';
+          }
+          
+          mapped.payer_id = serviceValue || '';
+          mapped.property_description = firstColumnValue;
+        } else {
+          // If no pattern match, try to extract meaningful data
+          mapped.property_type = firstColumnValue.includes('תנועות') ? 'תנועות פיננסיות' : firstColumnValue.substring(0, 20);
+          mapped.property_description = firstColumnValue;
+          mapped.service_description = 'תנועות כלליות';
+        }
+      } else {
+        // Fallback to old mapping for properly structured files
+        mapped.property_type = normalizedRow.property_type || normalizedRow['סוג נכס'] || row['סוג נכס'] || '';
+        mapped.property_description = normalizedRow.property_description || normalizedRow['תאור סוג נכס'] || row['תאור סוג נכס'] || '';
+        mapped.service_description = normalizedRow.service_description || normalizedRow['תאור סוג שרות'] || row['תאור סוג שרות'] || '';
+      }
+      
       mapped.source_year = parseInt(String(normalizedRow.source_year || normalizedRow['שנת מקור'] || row['שנת מקור'] || new Date().getFullYear())) || new Date().getFullYear();
-      mapped.service_description = normalizedRow.service_description || normalizedRow['תאור סוג שרות'] || row['תאור סוג שרות'] || '';
-      mapped.payer_id = normalizedRow.payer_id || normalizedRow['משלם'] || row['משלם'] || '';
       mapped.payer_name = normalizedRow.payer_name || normalizedRow['שם משלם'] || row['שם משלם'] || '';
       
-      // New financial fields
-      mapped.total_debt = parseFloat(String(normalizedRow.total_debt || normalizedRow['סהכ חובה'] || row['סהכ חובה'] || '0').replace(/,/g, '')) || 0;
-      mapped.cash = parseFloat(String(normalizedRow.cash || normalizedRow['מזומן'] || row['מזומן'] || '0').replace(/,/g, '')) || 0;
-      mapped.interest = parseFloat(String(normalizedRow.interest || normalizedRow['ריבית'] || row['ריבית'] || '0').replace(/,/g, '')) || 0;
-      mapped.indexation = parseFloat(String(normalizedRow.indexation || normalizedRow['הצמדה'] || row['הצמדה'] || '0').replace(/,/g, '')) || 0;
-      mapped.nominal_balance = parseFloat(String(normalizedRow.nominal_balance || normalizedRow['יתרה נומינלית'] || row['יתרה נומינלית'] || '0').replace(/,/g, '')) || 0;
-      mapped.real_balance = parseFloat(String(normalizedRow.real_balance || normalizedRow['יתרה ראלית'] || row['יתרה ראלית'] || '0').replace(/,/g, '')) || 0;
-      mapped.collection_percentage = parseFloat(String(normalizedRow.collection_percentage || normalizedRow['אחוז גביה'] || row['אחוז גביה'] || '0').replace(/,/g, '')) || 0;
+      // Try to extract numeric values from various columns
+      const columns = Object.keys(row);
+      let numericValues = [];
       
-      // Legacy fields for backward compatibility - fallback to __EMPTY columns
-      mapped.annual_budget = parseFloat(String(normalizedRow.annual_budget || normalizedRow['תקציב שנתי ארנונה'] || row['__EMPTY_1'] || row['__EMPTY_2'] || '0').replace(/,/g, '')) || 0;
-      mapped.relative_budget = parseFloat(String(normalizedRow.relative_budget || normalizedRow['תקציב יחסי ארנונה'] || row['__EMPTY_3'] || row['__EMPTY_4'] || '0').replace(/,/g, '')) || 0;
-      mapped.actual_collection = parseFloat(String(normalizedRow.actual_collection || normalizedRow['גביה בפועל'] || row['__EMPTY_5'] || row['__EMPTY_6'] || '0').replace(/,/g, '')) || 0;
-      mapped.surplus_deficit = mapped.actual_collection - mapped.relative_budget;
+      // Extract all numeric values from the row
+      columns.forEach((col, index) => {
+        const value = row[col];
+        if (value && typeof value === 'string') {
+          const numericMatch = value.match(/[\d,]+\.?\d*/);
+          if (numericMatch) {
+            const parsedValue = parseFloat(numericMatch[0].replace(/,/g, ''));
+            if (!isNaN(parsedValue) && parsedValue > 0) {
+              numericValues.push({ column: col, value: parsedValue, index });
+            }
+          }
+        }
+      });
+      
+      console.log('🔍 Extracted numeric values:', numericValues);
+      
+      // Assign numeric values to fields based on typical Excel structure
+      if (numericValues.length > 0) {
+        mapped.total_debt = numericValues[0]?.value || 0;
+        mapped.cash = numericValues[1]?.value || 0;
+        mapped.interest = numericValues[2]?.value || 0;
+        mapped.indexation = numericValues[3]?.value || 0;
+        mapped.nominal_balance = numericValues[4]?.value || 0;
+        mapped.real_balance = numericValues[5]?.value || 0;
+        mapped.annual_budget = numericValues[0]?.value || 0; // Legacy field
+      }
+      
+      // Calculate derived values
+      mapped.collection_percentage = mapped.total_debt > 0 ? (mapped.cash / mapped.total_debt) * 100 : 0;
+      mapped.actual_collection = mapped.cash;
+      mapped.relative_budget = mapped.total_debt;
+      mapped.surplus_deficit = mapped.cash - mapped.total_debt;
 
       console.log('🔍 Enhanced Collection mapping result:', mapped);
       
-      // Skip rows without meaningful data
+      // Skip rows without meaningful data - be more permissive for pattern-based extraction
       if (!mapped.property_type || mapped.property_type.trim() === '') {
-        const hasAnyValue = mapped.total_debt > 0 || mapped.cash > 0 || mapped.annual_budget > 0 || mapped.relative_budget > 0 || mapped.actual_collection > 0;
-        if (!hasAnyValue) {
-          console.log('🚫 Skipping collection row with empty property_type and no values:', mapped);
-          return null;
-        }
+        console.log('🚫 Skipping collection row with empty property_type:', mapped);
+        return null;
       }
       
-      // Skip header rows
+      // Skip header rows and summary rows
       if (mapped.property_type.includes('סוג נכס') || 
           mapped.property_type.includes('טיוטת מאזן') ||
           mapped.property_type.includes('סה"כ') ||
-          mapped.property_type.length < 2) {
+          mapped.property_type.includes('דו"ח') ||
+          mapped.property_type.length < 3) {
         console.log('🚫 Skipping header/summary row:', mapped.property_type);
         return null;
       }
