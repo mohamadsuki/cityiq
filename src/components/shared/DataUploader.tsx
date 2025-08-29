@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { validateRowData } from "@/validation";
-import synonymsData from "@/mappings/synonyms.json";
+import synonymsJson from "@/mappings/synonyms.json";
 
 type ImportOption = {
   mode: 'replace' | 'append';
@@ -237,11 +237,17 @@ const resolveCanonicalHeader = (header: string, synonymsMap: Record<string, stri
 
 // Function to build synonyms map for a specific dataset
 const buildSynonymsMap = (datasetKey: string): Record<string, string[]> => {
-  const datasetSynonyms = synonymsData[datasetKey as keyof typeof synonymsData] || {};
-  const commonSynonyms = synonymsData.common || {};
-  
-  // Merge dataset-specific synonyms with common ones
-  return { ...commonSynonyms, ...datasetSynonyms };
+  try {
+    const synonymsData = synonymsJson as any;
+    const datasetSynonyms = synonymsData[datasetKey] || {};
+    const commonSynonyms = synonymsData.common || {};
+    
+    // Merge dataset-specific synonyms with common ones
+    return { ...commonSynonyms, ...datasetSynonyms };
+  } catch (error) {
+    console.warn('Failed to load synonyms, using fallback', error);
+    return getFallbackSynonymsMap();
+  }
 };
 
 // Fallback synonyms map for backward compatibility
