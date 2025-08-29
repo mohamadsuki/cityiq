@@ -1480,18 +1480,6 @@ export default function TabarimPage() {
                   <Brain className="h-6 w-6 text-primary" />
                   <CardTitle>ניתוח חכם של התב"רים</CardTitle>
                 </div>
-                <Button 
-                  onClick={() => handleAnalyzeTabarim(false)}
-                  disabled={isAnalyzing}
-                  className="flex items-center gap-2"
-                >
-                  {isAnalyzing ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <BarChart3 className="h-4 w-4" />
-                  )}
-                  {isAnalyzing ? "מנתח..." : "נתח מחדש"}
-                </Button>
               </div>
               {reportingPeriod && (
                 <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
