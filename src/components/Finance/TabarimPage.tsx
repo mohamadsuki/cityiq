@@ -1505,12 +1505,12 @@ export default function TabarimPage() {
               )}
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="financial-summary" className="w-full">
+              <Tabs defaultValue="ai-analysis" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="ai-analysis">ניתוח AI</TabsTrigger>
                   <TabsTrigger value="financial-summary">סיכום כספי</TabsTrigger>
                   <TabsTrigger value="charts">גרפים</TabsTrigger>
                   <TabsTrigger value="data-table">טבלת נתונים</TabsTrigger>
-                  <TabsTrigger value="ai-analysis">ניתוח AI</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="financial-summary" className="space-y-4">
@@ -1666,13 +1666,13 @@ export default function TabarimPage() {
                             <p className="text-muted-foreground">מכין ניתוח מתקדם...</p>
                           </div>
                         </div>
-                      ) : analysis ? (
-                        <div className="prose prose-sm max-w-none dark:prose-invert">
-                          <div className="whitespace-pre-wrap leading-relaxed">
-                            {analysis}
-                          </div>
-                        </div>
-                      ) : (
+                       ) : analysis ? (
+                         <div className="prose prose-sm max-w-none dark:prose-invert text-right" dir="rtl">
+                           <div className="whitespace-pre-wrap leading-relaxed">
+                             {analysis.replace(/[*#]/g, '')}
+                           </div>
+                         </div>
+                       ) : (
                         <div className="text-center p-8">
                           <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                           <p className="text-muted-foreground mb-4">
