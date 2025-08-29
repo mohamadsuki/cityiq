@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Upload, Plus, Pencil } from "lucide-react";
+import { Trash2, Upload, Plus, Pencil, Brain, Loader2, BarChart3 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -11,6 +11,7 @@ import { DataTable } from "@/components/shared/DataTable";
 import { DataUploader } from "@/components/shared/DataUploader";
 import { ColumnDef } from "@tanstack/react-table";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, ComposedChart, Line, LineChart, ReferenceLine } from 'recharts';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AddTabarDialog from "./AddTabarDialog";
 import {
   AlertDialog,
@@ -56,6 +57,10 @@ export default function TabarimPage() {
   const [balanceFilter, setBalanceFilter] = useState<'all' | 'deficit' | 'surplus'>('all');
   const [domainFilter, setDomainFilter] = useState<string>('all');
   const [fundingSourceFilter, setFundingSourceFilter] = useState<string>('all');
+  const [analysis, setAnalysis] = useState<string>("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [detectedPeriod, setDetectedPeriod] = useState<string>("");
   const { toast } = useToast();
   const tableRef = useRef<HTMLDivElement>(null);
 
@@ -96,6 +101,121 @@ export default function TabarimPage() {
   useEffect(() => {
     loadTabarim();
   }, []);
+
+  // Load saved analysis when tabarim data is loaded
+  useEffect(() => {
+    if (tabarim.length > 0 && !analysis) {
+      loadSavedAnalysis();
+    }
+  }, [tabarim]);
+
+  const loadSavedAnalysis = async () => {
+    setAnalysisLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('tabarim_analysis')
+        .select('analysis_text, created_at')
+        .eq('year', new Date().getFullYear())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data && !error) {
+        setAnalysis(data.analysis_text);
+        console.log('Loaded saved tabarim analysis from:', data.created_at);
+      } else if (tabarim.length > 0) {
+        // If no saved analysis, generate new one automatically
+        console.log('No saved tabarim analysis found, generating new one...');
+        handleAnalyzeTabarim(true); // silent generation
+      }
+    } catch (error) {
+      console.error('Error loading saved tabarim analysis:', error);
+      // Try to generate new analysis
+      if (tabarim.length > 0) {
+        handleAnalyzeTabarim(true);
+      }
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
+  const handleAnalyzeTabarim = async (silent = false) => {
+    if (!tabarim || tabarim.length === 0) {
+      if (!silent) toast({
+        title: "שגיאה",
+        description: "אין נתוני תב\"רים לניתוח",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    console.log('🚀 Starting tabarim analysis...');
+    
+    try {
+      const totalApprovedBudget = tabarim.reduce((sum, item) => sum + (item.approved_budget || 0), 0);
+      const totalIncomeActual = tabarim.reduce((sum, item) => sum + (item.income_actual || 0), 0);
+      const totalExpenseActual = tabarim.reduce((sum, item) => sum + (item.expense_actual || 0), 0);
+      const totalSurplusDeficit = tabarim.reduce((sum, item) => sum + (item.surplus_deficit || 0), 0);
+      
+      const { data, error } = await supabase.functions.invoke('analyze-tabarim', {
+        body: {
+          tabarimData: tabarim,
+          totalApprovedBudget,
+          totalIncomeActual,
+          totalExpenseActual,
+          totalSurplusDeficit
+        }
+      });
+
+      if (error) {
+        console.error("Error analyzing tabarim:", error);
+        if (!silent) toast({
+          title: "שגיאה",
+          description: `שגיאה בניתוח התב\"רים: ${error.message || 'שגיאה לא ידועה'}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.error) {
+        console.error("OpenAI API error:", data.error);
+        if (!silent) toast({
+          title: "שגיאה",
+          description: `שגיאה ב-OpenAI: ${data.error}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (data?.analysis && data.analysis.trim()) {
+        setAnalysis(data.analysis);
+        if (data.period) {
+          setDetectedPeriod(data.period);
+        }
+        if (!silent) toast({
+          title: "הצלחה",
+          description: "ניתוח התב\"רים הושלם בהצלחה",
+        });
+      } else {
+        console.error("No valid analysis in response:", data);
+        if (!silent) toast({
+          title: "שגיאה",
+          description: "לא התקבל ניתוח תקין מהשרת",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      if (!silent) toast({
+        title: "שגיאה",
+        description: `שגיאה בניתוח התב\"רים: ${error.message || 'שגיאה לא ידועה'}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const handleTabarSaved = () => {
     setShowAddDialog(false);
