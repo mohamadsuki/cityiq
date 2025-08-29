@@ -109,22 +109,9 @@ export default function TabarimPage() {
     
     setAnalysisLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('tabarim_analysis')
-        .select('analysis_text, created_at')
-        .eq('user_id', user.id)
-        .eq('year', new Date().getFullYear())
-        .eq('analysis_type', 'tabarim')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (data && !error) {
-        setAnalysis(data.analysis_text);
-        console.log('Loaded saved tabarim analysis from:', data.created_at);
-      } else if (tabarim.length > 0) {
-        // If no saved analysis, generate new one automatically
-        console.log('No saved tabarim analysis found, generating new one...');
+      // Temporarily skip loading from tabarim_analysis until TypeScript types are updated
+      console.log('Skipping saved analysis load, generating new one...');
+      if (tabarim.length > 0) {
         handleAnalyzeTabarim(true); // silent generation
       }
     } catch (error) {
