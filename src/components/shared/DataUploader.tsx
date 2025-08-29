@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { FileUp, Upload, AlertCircle, CheckCircle, Database, Download } from "lucide-react";
+import { FileUp, Upload, AlertCircle, CheckCircle, Database, Download, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import * as XLSX from 'xlsx';
 import Fuse from 'fuse.js';
@@ -22,7 +22,7 @@ type ImportOption = {
 
 type DataUploaderProps = {
   context?: string;
-  onComplete?: () => void;
+  onComplete?: (data?: any, periodInfo?: string | null) => void;
   onUploadSuccess?: () => void | Promise<void>;
   onAnalysisTriggered?: () => Promise<void>;
 };
@@ -56,6 +56,7 @@ type PreviewData = {
   detectionScores?: DatasetScore[];
   needsManualSelection?: boolean;
   recommendation?: string;
+  periodInfo?: string | null;
 };
 
 type DatasetSelectionData = {
@@ -568,6 +569,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       // Find the first row with actual field headers (not title rows)
       let headerRowIndex = 0;
       let headersArray: string[] = [];
+      let periodInfo: string | null = null;
       
       // Look for the row that contains the most meaningful field headers
       for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
@@ -579,9 +581,37 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
         
         if (potentialHeaders.length === 0) continue;
         
-        // Skip obvious title rows (single cell or very generic content)
+        // Check for period information in title rows
         if (potentialHeaders.length === 1) {
-          addLog('info', `מדלג על שורת כותרת: "${potentialHeaders[0]}"`);
+          const titleText = potentialHeaders[0];
+          const periodMatches = [
+            /נכון\s+לחודש\s+(\d+)\/(\d+)/i,
+            /לחודש\s+(\d+)\/(\d+)/i,
+            /רבעון\s+(\d+)\s+(\d+)/i,
+            /תקופה[:\s]+([^,]+)/i,
+            /עד\s+(\d+)\/(\d+)/i
+          ];
+          
+          for (const pattern of periodMatches) {
+            const match = titleText.match(pattern);
+            if (match) {
+              if (pattern.source.includes('חודש')) {
+                const month = parseInt(match[1]);
+                const year = parseInt(match[2]);
+                const quarter = Math.ceil(month / 3);
+                periodInfo = `רבעון ${quarter} ${year} (עד חודש ${month}/${year})`;
+                addLog('info', `זוהתה תקופה: ${periodInfo}`);
+              } else if (pattern.source.includes('רבעון')) {
+                periodInfo = `רבעון ${match[1]} ${match[2]}`;
+                addLog('info', `זוהתה תקופה: ${periodInfo}`);
+              } else {
+                periodInfo = match[1];
+                addLog('info', `זוהתה תקופה: ${periodInfo}`);
+              }
+              break;
+            }
+          }
+          addLog('info', `מדלג על שורת כותרת: "${titleText}"`);
           continue;
         }
         
@@ -604,6 +634,9 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           headersArray = potentialHeaders;
           headerRowIndex = i;
           addLog('info', `מצא שורת כותרות בשורה ${i + 1}: ${headersArray.join(', ')}`);
+          if (periodInfo) {
+            addLog('success', `תקופת נתונים: ${periodInfo}`);
+          }
           break;
         }
       }
@@ -657,7 +690,8 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
         detectedTable: detection.table,
         detectionScores: detection.scores,
         needsManualSelection: !detection.table || detection.needsManualSelection,
-        recommendation: detection.recommendation
+        recommendation: detection.recommendation,
+        periodInfo
       });
       
       if (detection.table) {
@@ -690,7 +724,8 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
         mappings,
         sampleRows,
         detectedTable: selectedDataset,
-        detectionScores: datasetSelectionData?.scores
+        detectionScores: datasetSelectionData?.scores,
+        periodInfo: null
       });
       
       setShowPreviewDialog(true);
@@ -1022,7 +1057,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           description: `${insertedCount} שורות נטענו בהצלחה${skippedDuplicates > 0 ? `. נמנעו כפילויות: ${skippedDuplicates}` : ''}${validationFailures > 0 ? `. שורות שנפסלו ע"י ולידציה: ${validationFailures}` : ''}${errorCount > 0 ? ` (${errorCount} שגיאות)` : ''}`,
         });
         
-        onComplete?.();
+        onComplete?.(null, previewData?.periodInfo || null);
         onUploadSuccess?.();
       } else {
         throw new Error('לא נטענו נתונים');
@@ -1216,6 +1251,19 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           </DialogHeader>
           
           <div className="space-y-6">
+            {/* Period Information */}
+            {previewData.periodInfo && (
+              <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <h3 className="text-lg font-medium text-blue-800 dark:text-blue-200">תקופת הנתונים</h3>
+                </div>
+                <p className="text-blue-700 dark:text-blue-300 mt-2 font-medium">
+                  {previewData.periodInfo}
+                </p>
+              </div>
+            )}
+
             {/* Dataset Selection - shown when no detection or manual selection needed */}
             {(previewData.needsManualSelection || !previewData.detectedTable) && (
               <div>
