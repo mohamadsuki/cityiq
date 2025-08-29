@@ -222,8 +222,11 @@ const normalizeKey = (k: string, debugLogs?: DebugLog[]) => {
     // Collection fields
     'סוג נכס': 'property_type',
     'תקציב שנתי': 'annual_budget',
+    'תקציב שנתי ארנונה': 'annual_budget',
     'תקציב יחסי': 'relative_budget',
+    'תקציב יחסי ארנונה': 'relative_budget',
     'גביה בפועל': 'actual_collection',
+    'ביצוע מצטבר': 'actual_collection',
     
     // Tabarim fields
     'שם תב"ר': 'tabar_name',
@@ -571,10 +574,43 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
       break;
       
     case 'collection_data':
-      mapped.property_type = normalizedRow.property_type || normalizedRow['סוג נכס'] || '';
-      mapped.annual_budget = parseFloat(normalizedRow.annual_budget || normalizedRow['תקציב שנתי'] || '0') || 0;
-      mapped.relative_budget = parseFloat(normalizedRow.relative_budget || normalizedRow['תקציב יחסי'] || '0') || 0;
-      mapped.actual_collection = parseFloat(normalizedRow.actual_collection || normalizedRow['גביה בפועל'] || '0') || 0;
+      console.log('🔍 Collection data mapping - Raw row keys:', Object.keys(row));
+      console.log('🔍 Collection data mapping - First few entries:', Object.entries(row).slice(0, 10));
+      
+      // Check for property type in multiple potential locations
+      let propertyType = '';
+      const potentialPropertyKeys = [
+        'סוג נכס', 'property_type', 'type', 'נכס',
+        Object.keys(row)[0], // Sometimes the first column
+        Object.keys(row).find(key => !key.includes('EMPTY') && key.includes('סוג')) ||
+        Object.keys(row).find(key => !key.includes('EMPTY') && key.includes('נכס'))
+      ].filter(Boolean);
+      
+      for (const key of potentialPropertyKeys) {
+        if (row[key] && String(row[key]).trim() && String(row[key]) !== 'null') {
+          propertyType = String(row[key]).trim();
+          console.log(`🏠 Found property type "${propertyType}" in key "${key}"`);
+          break;
+        }
+      }
+      
+      mapped.property_type = propertyType;
+      
+      // Map numeric columns - check Excel format with EMPTY columns
+      const annualBudget = row['__EMPTY_1'] || row['__EMPTY_2'] || normalizedRow['תקציב שנתי ארנונה'] || normalizedRow.annual_budget || '0';
+      const relativeBudget = row['__EMPTY_3'] || row['__EMPTY_4'] || normalizedRow['תקציב יחסי ארנונה'] || normalizedRow.relative_budget || '0';
+      const actualCollection = row['__EMPTY_5'] || row['__EMPTY_6'] || normalizedRow['גביה בפועל'] || normalizedRow.actual_collection || '0';
+      
+      mapped.annual_budget = parseFloat(String(annualBudget).replace(/,/g, '')) || 0;
+      mapped.relative_budget = parseFloat(String(relativeBudget).replace(/,/g, '')) || 0;
+      mapped.actual_collection = parseFloat(String(actualCollection).replace(/,/g, '')) || 0;
+      
+      console.log('🔍 Collection mapping result:', {
+        property_type: mapped.property_type,
+        annual_budget: mapped.annual_budget,
+        relative_budget: mapped.relative_budget,
+        actual_collection: mapped.actual_collection
+      });
       
       // Skip rows with empty property type and all zero values (invalid data)
       if (!mapped.property_type || mapped.property_type.trim() === '') {
@@ -583,6 +619,15 @@ const mapRowToTable = (table: string, row: Record<string, any>, debugLogs?: Debu
           console.log('🚫 Skipping collection row with empty property_type and zero values:', mapped);
           return null;
         }
+      }
+      
+      // Skip header rows
+      if (mapped.property_type.includes('סוג נכס') || 
+          mapped.property_type.includes('טיוטת מאזן') ||
+          mapped.property_type.includes('סה"כ') ||
+          mapped.property_type.length < 2) {
+        console.log('🚫 Skipping header/summary row:', mapped.property_type);
+        return null;
       }
       
       break;
