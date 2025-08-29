@@ -86,7 +86,7 @@ const DATASET_DEFINITIONS = {
   },
   'regular_budget': {
     name: 'תקציב רגיל',
-    coreFields: ['category_name', 'budget_amount', 'actual_amount', 'category_type'],
+    coreFields: ['year', 'category_name', 'category_type'],
     description: 'תקציב רגיל לפי קטגוריות'
   },
   'collection_data': {
