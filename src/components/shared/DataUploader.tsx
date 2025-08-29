@@ -124,7 +124,7 @@ const detectDataType = (headers: string[], rows: Record<string, any>[], context?
     return { table: null, reason: 'לא נמצאו כותרות' };
   }
   
-  // If we have a context, prioritize it first
+  // If we have a context, prioritize it first and be more aggressive about using it
   if (context && context in DATASET_DEFINITIONS) {
     const contextDefinition = DATASET_DEFINITIONS[context as keyof typeof DATASET_DEFINITIONS];
     console.log('🎯 Context provided:', context, 'checking match with:', contextDefinition);
@@ -146,12 +146,12 @@ const detectDataType = (headers: string[], rows: Record<string, any>[], context?
       }
     }
     
-    // If we have at least 2 matching headers for the context, use it
-    if (contextMatches >= 2) {
+    // Be more aggressive - if we have ANY matching headers or if headers look relevant, use context
+    if (contextMatches >= 1 || headers.length <= 10) { // Most Excel files are small and focused
       console.log('✅ Context match found:', context, 'with', contextMatches, 'matching headers');
       return { 
         table: context, 
-        reason: `זוהה אוטומטי כ-${contextDefinition.name} (${contextMatches} כותרות תואמות)` 
+        reason: `זוהה אוטומטי כ-${contextDefinition.name} (מתאים לדף)` 
       };
     }
   }
