@@ -5,8 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { FileSpreadsheet, Upload, Calendar, Brain, Loader2, BarChart3 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { FileSpreadsheet, Upload, Calendar, Brain, Loader2, BarChart3, TrendingUp, TrendingDown, Filter, Search, Download, Eye } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, LineChart, Line, XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { DataTable } from "@/components/shared/DataTable";
@@ -22,8 +24,26 @@ interface CollectionData {
   surplus_deficit: number;
   year: number;
   created_at: string;
+  excel_cell_ref?: string;
 }
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+interface CollectionSummary {
+  propertyType: string;
+  count: number;
+  totalAnnualBudget: number;
+  totalRelativeBudget: number;
+  totalActualCollection: number;
+  totalSurplusDeficit: number;
+  averageCollectionRate: number;
+}
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82ca9d', '#ffc658', '#ff7c7c'];
+const COLLECTION_RATE_COLORS = {
+  excellent: '#10b981', // green-500
+  good: '#3b82f6',      // blue-500 
+  fair: '#f59e0b',      // amber-500
+  poor: '#ef4444'       // red-500
+};
 const PROPERTY_TYPE_LABELS: Record<string, string> = {
   'מגורים': 'מגורים',
   'מסחר': 'מסחר',
@@ -44,6 +64,8 @@ export default function CollectionPage() {
     toast
   } = useToast();
   const [collectionData, setCollectionData] = useState<CollectionData[]>([]);
+  const [filteredData, setFilteredData] = useState<CollectionData[]>([]);
+  const [summaryData, setSummaryData] = useState<CollectionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -52,6 +74,11 @@ export default function CollectionPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [reportingPeriod, setReportingPeriod] = useState<string>("");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPropertyType, setSelectedPropertyType] = useState<string>("all");
+  const [minAmount, setMinAmount] = useState<string>("");
+  const [maxAmount, setMaxAmount] = useState<string>("");
 
   // Generate year options (current year and 10 years back)
   const currentYear = new Date().getFullYear();
@@ -69,11 +96,11 @@ export default function CollectionPage() {
       setLoading(true);
       console.log('🔍 Starting to load collection data...');
 
-      // Load all data without any filtering for now
+      // Load all data - don't consolidate, show individual records
       const { data, error } = await supabase
         .from('collection_data')
         .select('*')
-        .order('property_type');
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('❌ Error loading collection data:', error);
@@ -83,63 +110,35 @@ export default function CollectionPage() {
       console.log('📊 Raw collection data from database:', data);
       console.log('📊 Number of records:', data?.length || 0);
 
-      // Convert to proper format and clean up property types
+      // Convert to proper format but keep individual records
       const processedData: CollectionData[] = (data || [])
         .filter(item => {
-          // Filter out empty records (records with no property type and all values are 0)
-          const hasPropertyType = item.property_type && item.property_type.trim() !== '';
-          const hasValues = (item.annual_budget > 0 || item.relative_budget > 0 || item.actual_collection > 0);
-          const isValid = hasPropertyType || hasValues;
-          
-          if (!isValid) {
-            console.log('🚫 Filtering out empty record:', item);
-          }
-          return isValid;
+          // Filter out completely empty records
+          const hasAnyData = item.property_type || 
+                           (item.annual_budget && item.annual_budget > 0) || 
+                           (item.relative_budget && item.relative_budget > 0) || 
+                           (item.actual_collection && item.actual_collection > 0);
+          return hasAnyData;
         })
-        .map(item => {
-          console.log('🔧 Processing valid item:', item);
-          return {
-            id: item.id,
-            property_type: item.property_type || 'לא מוגדר',
-            annual_budget: Number(item.annual_budget) || 0,
-            relative_budget: Number(item.relative_budget) || 0,
-            actual_collection: Number(item.actual_collection) || 0,
-            surplus_deficit: Number(item.surplus_deficit) || 0,
-            year: item.year,
-            created_at: item.created_at
-          };
-        });
+        .map(item => ({
+          id: item.id,
+          property_type: item.property_type || 'לא מוגדר',
+          annual_budget: Number(item.annual_budget) || 0,
+          relative_budget: Number(item.relative_budget) || 0,
+          actual_collection: Number(item.actual_collection) || 0,
+          surplus_deficit: Number(item.surplus_deficit) || 0,
+          year: item.year,
+          created_at: item.created_at,
+          excel_cell_ref: item.excel_cell_ref
+        }));
 
-      console.log('🔧 Processed collection data (after filtering):', processedData);
-
-      // Consolidate duplicate property types by summing their values
-      const consolidatedData: Record<string, CollectionData> = {};
-      processedData.forEach(item => {
-        const standardizedType = PROPERTY_TYPE_LABELS[item.property_type] || item.property_type;
-        console.log(`🏠 Processing property type: ${item.property_type} -> ${standardizedType}`);
-        
-        if (consolidatedData[standardizedType]) {
-          // Merge with existing entry
-          consolidatedData[standardizedType].annual_budget += item.annual_budget;
-          consolidatedData[standardizedType].relative_budget += item.relative_budget;
-          consolidatedData[standardizedType].actual_collection += item.actual_collection;
-          consolidatedData[standardizedType].surplus_deficit += item.surplus_deficit;
-          console.log(`➕ Merged with existing ${standardizedType}`);
-        } else {
-          // Create new entry
-          consolidatedData[standardizedType] = {
-            ...item,
-            property_type: standardizedType
-          };
-          console.log(`✨ Created new entry for ${standardizedType}`);
-        }
-      });
+      console.log('🔧 Processed collection data:', processedData);
+      setCollectionData(processedData);
       
-      const finalData = Object.values(consolidatedData);
-      console.log('✅ Final consolidated collection data:', finalData);
-      console.log('✅ Final data length:', finalData.length);
+      // Generate summary data by property type
+      const summary = generateSummaryData(processedData);
+      setSummaryData(summary);
       
-      setCollectionData(finalData);
     } catch (error) {
       console.error('💥 Error in loadCollectionData:', error);
       toast({
@@ -151,6 +150,74 @@ export default function CollectionPage() {
       setLoading(false);
     }
   };
+
+  const generateSummaryData = (data: CollectionData[]): CollectionSummary[] => {
+    const grouped = data.reduce((acc, item) => {
+      const propertyType = PROPERTY_TYPE_LABELS[item.property_type] || item.property_type;
+      
+      if (!acc[propertyType]) {
+        acc[propertyType] = {
+          propertyType,
+          count: 0,
+          totalAnnualBudget: 0,
+          totalRelativeBudget: 0,
+          totalActualCollection: 0,
+          totalSurplusDeficit: 0,
+          averageCollectionRate: 0
+        };
+      }
+      
+      acc[propertyType].count += 1;
+      acc[propertyType].totalAnnualBudget += item.annual_budget;
+      acc[propertyType].totalRelativeBudget += item.relative_budget;
+      acc[propertyType].totalActualCollection += item.actual_collection;
+      acc[propertyType].totalSurplusDeficit += item.surplus_deficit;
+      
+      return acc;
+    }, {} as Record<string, CollectionSummary>);
+
+    // Calculate average collection rates
+    Object.values(grouped).forEach(summary => {
+      if (summary.totalRelativeBudget > 0) {
+        summary.averageCollectionRate = (summary.totalActualCollection / summary.totalRelativeBudget) * 100;
+      }
+    });
+
+    return Object.values(grouped);
+  };
+
+  // Filter data based on search and filters
+  useEffect(() => {
+    let filtered = collectionData;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(item => 
+        item.property_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.id.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Property type filter
+    if (selectedPropertyType !== "all") {
+      filtered = filtered.filter(item => {
+        const standardizedType = PROPERTY_TYPE_LABELS[item.property_type] || item.property_type;
+        return standardizedType === selectedPropertyType;
+      });
+    }
+
+    // Amount range filter
+    if (minAmount) {
+      const min = parseFloat(minAmount);
+      filtered = filtered.filter(item => item.actual_collection >= min);
+    }
+    if (maxAmount) {
+      const max = parseFloat(maxAmount);
+      filtered = filtered.filter(item => item.actual_collection <= max);
+    }
+
+    setFilteredData(filtered);
+  }, [collectionData, searchTerm, selectedPropertyType, minAmount, maxAmount]);
   useEffect(() => {
     loadCollectionData();
   }, [selectedYear, selectedEndYear]);
@@ -373,6 +440,11 @@ export default function CollectionPage() {
         <div>
           <h1 className="text-3xl font-bold mb-2">גביה</h1>
           <p className="text-muted-foreground">ניהול נתוני גביה מקובץ "טיוטת מאזן RAW"</p>
+          {collectionData.length > 0 && (
+            <div className="mt-2 text-sm text-green-600">
+              {collectionData.length.toLocaleString('he-IL')} רשומות בטבלה
+            </div>
+          )}
         </div>
         <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
           <DialogTrigger asChild>
@@ -396,274 +468,501 @@ export default function CollectionPage() {
         </Dialog>
       </div>
 
-      {/* Year Selection */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <Label htmlFor="year-select">שנה:</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Select value={selectedYear.toString()} onValueChange={value => setSelectedYear(parseInt(value))}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="בחר שנה" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearOptions.map(year => <SelectItem key={year} value={year.toString()}>
-                      {year}
-                    </SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Label htmlFor="end-year-select">עד שנה (אופציונלי):</Label>
-              <Select value={selectedEndYear?.toString() || "none"} onValueChange={value => setSelectedEndYear(value === "none" ? null : parseInt(value))}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="בחר שנת סיום" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">ללא</SelectItem>
-                  {yearOptions.filter(year => year !== selectedYear).map(year => <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">סקירה כללית</TabsTrigger>
+          <TabsTrigger value="detailed">נתונים מפורטים</TabsTrigger>
+          <TabsTrigger value="analytics">ניתוח ומגמות</TabsTrigger>
+          <TabsTrigger value="ai-insights">תובנות AI</TabsTrigger>
+        </TabsList>
 
-            {selectedEndYear && <Button variant="outline" size="sm" onClick={() => setSelectedEndYear(null)}>
-                איפוס טווח
-              </Button>}
-            
-            <div className="text-sm text-muted-foreground">
-              {selectedEndYear && selectedEndYear !== selectedYear ? `מציג נתונים לשנים ${Math.min(selectedYear, selectedEndYear)}-${Math.max(selectedYear, selectedEndYear)}` : `מציג נתונים לשנת ${selectedYear}`}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary Cards */}
-      <div className="grid md:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">סה"כ תקציב שנתי</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {formatCurrency(totalAnnualBudget)}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">סה"כ תקציב יחסי</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {formatCurrency(totalRelativeBudget)}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">סה"כ גביה בפועל</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(totalActualCollection)}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">עודף/גירעון כולל</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className={`text-2xl font-bold ${totalSurplusDeficit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {formatCurrency(totalSurplusDeficit)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Data Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>טבלת נתוני גביה</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? <div className="text-center py-8 text-muted-foreground">
-              טוען נתונים...
-            </div> : collectionData.length === 0 ? <div className="text-center py-8 text-muted-foreground">
-              אין נתוני גביה להצגה. יש לייבא קובץ "טיוטת מאזן RAW".
-            </div> : <DataTable columns={columns} data={collectionData} searchableColumnIds={["property_type"]} searchPlaceholder="חפש סוג נכס..." />}
-        </CardContent>
-      </Card>
-
-      {/* Pie Charts */}
-      {collectionData.length > 0 && <div className="grid md:grid-cols-3 gap-6">
-          {/* Annual Budget Pie Chart */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Year Selection */}
           <Card>
-            <CardHeader>
-              <CardTitle>תקציב שנתי ארנונה לפי סיווגים</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                סה"כ: {formatCurrency(totalAnnualBudget)}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={annualBudgetChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
-                      {annualBudgetChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip content={renderCustomTooltip} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <Label htmlFor="year-select">שנה:</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Select value={selectedYear.toString()} onValueChange={value => setSelectedYear(parseInt(value))}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="בחר שנה" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {yearOptions.map(year => <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="end-year-select">עד שנה (אופציונלי):</Label>
+                  <Select value={selectedEndYear?.toString() || "none"} onValueChange={value => setSelectedEndYear(value === "none" ? null : parseInt(value))}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="בחר שנת סיום" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">ללא</SelectItem>
+                      {yearOptions.filter(year => year !== selectedYear).map(year => <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          {/* Relative Budget Pie Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>תקציב יחסי ארנונה לפי סיווגים</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                סה"כ: {formatCurrency(totalRelativeBudget)}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={relativeBudgetChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
-                      {relativeBudgetChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip content={renderCustomTooltip} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Actual Collection Pie Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>גביה בפועל לפי סיווגים</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                סה"כ: {formatCurrency(totalActualCollection)}
-              </p>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={actualCollectionChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
-                      {actualCollectionChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip content={renderCustomTooltip} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>}
-
-      {/* AI Analysis Section */}
-      <div className="space-y-6">
-        <Card className="border border-border/50 shadow-lg">
-          <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5 border-b border-border/50">
-            <CardTitle className="flex items-center gap-3 text-xl font-bold text-foreground">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Brain className="h-6 w-6 text-primary" />
-              </div>
-              ניתוח AI מתקדם - נתוני גביה
-              {reportingPeriod && (
-                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                  {reportingPeriod}
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <BarChart3 className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  ניתוח מבוסס בינה מלאכותית של נתוני הגביה
-                </span>
-              </div>
-              <Button
-                onClick={() => handleAnalyzeCollection()}
-                disabled={isAnalyzing || collectionData.length === 0}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    מנתח...
-                  </>
-                ) : (
-                  <>
-                    <Brain className="mr-2 h-4 w-4" />
-                    נתח נתוני גביה
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {analysisLoading && (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <span className="mr-2 text-muted-foreground">טוען ניתוח קיים...</span>
-              </div>
-            )}
-
-            {analysis && (
-              <div className="mt-6 p-6 bg-secondary/30 rounded-lg border border-border/30">
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <div className="whitespace-pre-wrap text-foreground leading-relaxed">
-                    {analysis}
-                  </div>
+                {selectedEndYear && <Button variant="outline" size="sm" onClick={() => setSelectedEndYear(null)}>
+                    איפוס טווח
+                  </Button>}
+                
+                <div className="text-sm text-muted-foreground">
+                  {selectedEndYear && selectedEndYear !== selectedYear ? `מציג נתונים לשנים ${Math.min(selectedYear, selectedEndYear)}-${Math.max(selectedYear, selectedEndYear)}` : `מציג נתונים לשנת ${selectedYear}`}
                 </div>
               </div>
-            )}
+            </CardContent>
+          </Card>
 
-            {!analysis && !analysisLoading && !isAnalyzing && collectionData.length > 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Brain className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>לחץ על "נתח נתוני גביה" לקבלת ניתוח מתקדם</p>
-              </div>
-            )}
-
-            {!analysis && !analysisLoading && !isAnalyzing && collectionData.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>העלה נתוני גביה כדי לקבל ניתוח מתקדם</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Other Income Section (In Development) */}
-      <Card>
-        <CardHeader>
-          <CardTitle>הכנסות אחרות שלא מארנונה</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <p className="mb-2">בפיתוח</p>
-            <p className="text-sm">בקרוב יתווספו נתונים על הכנסות נוספות מלבד ארנונה</p>
+          {/* Summary Cards */}
+          <div className="grid md:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">סה"כ תקציב שנתי</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(totalAnnualBudget)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ממוצע לרשומה: {formatCurrency(collectionData.length > 0 ? totalAnnualBudget / collectionData.length : 0)}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">סה"כ תקציב יחסי</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600">
+                  {formatCurrency(totalRelativeBudget)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ממוצע לרשומה: {formatCurrency(collectionData.length > 0 ? totalRelativeBudget / collectionData.length : 0)}
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">סה"כ גביה בפועל</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(totalActualCollection)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  אחוז גביה: {totalRelativeBudget > 0 ? ((totalActualCollection / totalRelativeBudget) * 100).toFixed(1) : 0}%
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">עודף/גירעון כולל</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${totalSurplusDeficit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(totalSurplusDeficit)}
+                </div>
+                <div className="flex items-center mt-1">
+                  {totalSurplusDeficit >= 0 ? 
+                    <TrendingUp className="h-4 w-4 text-green-600 mr-1" /> : 
+                    <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
+                  }
+                  <p className="text-xs text-muted-foreground">
+                    {totalSurplusDeficit >= 0 ? 'עודף' : 'גירעון'}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Summary by Property Type */}
+          <Card>
+            <CardHeader>
+              <CardTitle>סיכום לפי סוג נכס</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-right p-2">סוג נכס</th>
+                      <th className="text-right p-2">מספר רשומות</th>
+                      <th className="text-right p-2">תקציב שנתי</th>
+                      <th className="text-right p-2">תקציב יחסי</th>
+                      <th className="text-right p-2">גביה בפועל</th>
+                      <th className="text-right p-2">אחוז גביה</th>
+                      <th className="text-right p-2">עודף/גירעון</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summaryData.map((summary, index) => (
+                      <tr key={index} className="border-b hover:bg-muted/50">
+                        <td className="p-2 font-medium">{summary.propertyType}</td>
+                        <td className="p-2">{summary.count.toLocaleString('he-IL')}</td>
+                        <td className="p-2">{formatCurrency(summary.totalAnnualBudget)}</td>
+                        <td className="p-2">{formatCurrency(summary.totalRelativeBudget)}</td>
+                        <td className="p-2">{formatCurrency(summary.totalActualCollection)}</td>
+                        <td className="p-2">
+                          <span className={`font-medium ${
+                            summary.averageCollectionRate >= 90 ? 'text-green-600' : 
+                            summary.averageCollectionRate >= 70 ? 'text-blue-600' : 
+                            summary.averageCollectionRate >= 50 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {summary.averageCollectionRate.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="p-2">
+                          <span className={summary.totalSurplusDeficit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                            {formatCurrency(summary.totalSurplusDeficit)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Pie Charts */}
+          {collectionData.length > 0 && <div className="grid md:grid-cols-3 gap-6">
+              {/* Annual Budget Pie Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>תקציב שנתי ארנונה לפי סיווגים</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    סה"כ: {formatCurrency(totalAnnualBudget)}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={annualBudgetChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
+                          {annualBudgetChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                        </Pie>
+                        <Tooltip content={renderCustomTooltip} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Relative Budget Pie Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>תקציב יחסי ארנונה לפי סיווגים</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    סה"כ: {formatCurrency(totalRelativeBudget)}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={relativeBudgetChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
+                          {relativeBudgetChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                        </Pie>
+                        <Tooltip content={renderCustomTooltip} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Actual Collection Pie Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>גביה בפועל לפי סיווגים</CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    סה"כ: {formatCurrency(totalActualCollection)}
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={actualCollectionChartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
+                          {actualCollectionChartData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                        </Pie>
+                        <Tooltip content={renderCustomTooltip} />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>}
+        </TabsContent>
+
+        <TabsContent value="detailed" className="space-y-6">
+          {/* Filters */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Filter className="h-5 w-5" />
+                פילטרים וחיפוש
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="search">חיפוש:</Label>
+                  <div className="relative">
+                    <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="search"
+                      type="text"
+                      placeholder="חפש לפי סוג נכס או ID..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pr-10"
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="property-type">סוג נכס:</Label>
+                  <Select value={selectedPropertyType} onValueChange={setSelectedPropertyType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="בחר סוג נכס" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">כל הסוגים</SelectItem>
+                      {Array.from(new Set(summaryData.map(s => s.propertyType))).map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="min-amount">סכום מינימלי:</Label>
+                  <Input
+                    id="min-amount"
+                    type="number"
+                    placeholder="0"
+                    value={minAmount}
+                    onChange={(e) => setMinAmount(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="max-amount">סכום מקסימלי:</Label>
+                  <Input
+                    id="max-amount"
+                    type="number"
+                    placeholder="ללא הגבלה"
+                    value={maxAmount}
+                    onChange={(e) => setMaxAmount(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              {(searchTerm || selectedPropertyType !== "all" || minAmount || maxAmount) && (
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    מציג {filteredData.length.toLocaleString('he-IL')} מתוך {collectionData.length.toLocaleString('he-IL')} רשומות
+                  </span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setSearchTerm("");
+                      setSelectedPropertyType("all");
+                      setMinAmount("");
+                      setMaxAmount("");
+                    }}
+                  >
+                    נקה פילטרים
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Data Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>טבלת נתוני גביה מפורטת</span>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <Download className="h-4 w-4 mr-2" />
+                    ייצא לאקסל
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4 mr-2" />
+                    תצוגה מפורטת
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? 
+                <div className="text-center py-8 text-muted-foreground">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                  טוען נתונים...
+                </div> : 
+                filteredData.length === 0 ? 
+                <div className="text-center py-8 text-muted-foreground">
+                  {collectionData.length === 0 ? 
+                    "אין נתוני גביה להצגה. יש לייבא קובץ \"טיוטת מאזן RAW\"." :
+                    "אין רשומות המתאימות לפילטרים שנבחרו."
+                  }
+                </div> : 
+                <DataTable 
+                  columns={columns} 
+                  data={filteredData} 
+                  searchableColumnIds={["property_type"]} 
+                  searchPlaceholder="חפש סוג נכס..." 
+                />
+              }
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          {/* Collection Rate Analysis */}
+          <Card>
+            <CardHeader>
+              <CardTitle>ניתוח שיעורי גביה</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={summaryData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="propertyType" />
+                    <YAxis />
+                    <Tooltip formatter={(value: number) => `${value.toFixed(1)}%`} />
+                    <Bar dataKey="averageCollectionRate" fill="#8884d8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Trends (placeholder for future development) */}
+          <Card>
+            <CardHeader>
+              <CardTitle>מגמות לאורך זמן</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="mb-2">בפיתוח</p>
+                <p className="text-sm">בקרוב יתווספו גרפי מגמות והשוואות בין שנים</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ai-insights" className="space-y-6">
+          {/* AI Analysis Section */}
+          <Card className="border border-border/50 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5 border-b border-border/50">
+              <CardTitle className="flex items-center gap-3 text-xl font-bold text-foreground">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Brain className="h-6 w-6 text-primary" />
+                </div>
+                ניתוח AI מתקדם - נתוני גביה
+                {reportingPeriod && (
+                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                    {reportingPeriod}
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    ניתוח מבוסס בינה מלאכותית של נתוני הגביה
+                  </span>
+                </div>
+                <Button
+                  onClick={() => handleAnalyzeCollection()}
+                  disabled={isAnalyzing || collectionData.length === 0}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      מנתח...
+                    </>
+                  ) : (
+                    <>
+                      <Brain className="mr-2 h-4 w-4" />
+                      נתח נתוני גביה
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {analysisLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="mr-2 text-muted-foreground">טוען ניתוח קיים...</span>
+                </div>
+              )}
+
+              {analysis && (
+                <div className="mt-6 p-6 bg-secondary/30 rounded-lg border border-border/30">
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <div className="whitespace-pre-wrap text-foreground leading-relaxed">
+                      {analysis}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!analysis && !analysisLoading && !isAnalyzing && collectionData.length > 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Brain className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>לחץ על "נתח נתוני גביה" לקבלת ניתוח מתקדם</p>
+                </div>
+              )}
+
+              {!analysis && !analysisLoading && !isAnalyzing && collectionData.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>העלה נתוני גביה כדי לקבל ניתוח מתקדם</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Other Income Section (In Development) */}
+          <Card>
+            <CardHeader>
+              <CardTitle>הכנסות אחרות שלא מארנונה</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8 text-muted-foreground">
+                <p className="mb-2">בפיתוח</p>
+                <p className="text-sm">בקרוב יתווספו נתונים על הכנסות נוספות מלבד ארנונה</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>;
 }
