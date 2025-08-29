@@ -945,6 +945,11 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           .map(([key, value]) => `${key}:${String(value).trim()}`)
           .join('|');
         
+        // Debug: Log hash input for first few rows
+        if (hashSet.size < 3) {
+          console.log('🔍 Hash input:', allValues);
+        }
+        
         // If no meaningful data, create hash based on row index
         const dataToHash = allValues || `empty_row_${Math.random()}`;
         
@@ -952,7 +957,14 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
         const data = encoder.encode(dataToHash);
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        // Debug: Log hash for first few rows
+        if (hashSet.size < 3) {
+          console.log('🔍 Generated hash:', hash.substring(0, 16) + '...');
+        }
+        
+        return hash;
       };
 
       // Get canonical fields for the detected table
@@ -1067,6 +1079,12 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       let validationFailures = 0;
 
       for (const row of allMappedRows) {
+        // Debug: Log first few rows to see what's actually in them
+        if (mappedRows.length < 3) {
+          console.log('🔍 Debug row data:', row);
+          addLog('info', `Debug שורה ${mappedRows.length + 1}: ${Object.keys(row).length} שדות - ${Object.keys(row).join(', ')}`);
+        }
+        
         // Validate row first
         const validation = validateRowData(row, detected.table!);
         if (!validation.isValid) {
@@ -1079,6 +1097,9 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
         
         if (hashSet.has(hash)) {
           skippedDuplicates++;
+          if (skippedDuplicates <= 3) {
+            addLog('info', `כפילות נמצאה עבור שורה: ${JSON.stringify(row).substring(0, 100)}...`);
+          }
           continue;
         }
         
