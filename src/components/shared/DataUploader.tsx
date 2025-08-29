@@ -480,6 +480,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
         // Skip descriptive headers that are not actual data fields
         const isDescriptiveHeader = [
           /^מחצית\s+נתוני/i,
+          /^חציצית\s+נתוני/i,
           /^נתוני\s+.*באלפי/i,
           /^סכומים\s+באלפי/i,
           /^נתונים\s+.*ש״ח/i,
@@ -491,8 +492,13 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
           /^הבהרה:/i,
           /^שימו\s+לב/i,
           /^לידיעה/i,
+          /התקציב\s+הרגיל\s+באלפי/i,
+          /^.*התקציב.*באלפי.*$/i,
           /באלפי\s+שקלים?$/i,
-          /באלפי\s+ש״ח$/i
+          /באלפי\s+ש״ח$/i,
+          /^מידע\s+כללי/i,
+          /^כותרת/i,
+          /^תיאור/i
         ].some(pattern => pattern.test(header.trim()));
         
         return !isPeriodInfo && !isDescriptiveHeader;
