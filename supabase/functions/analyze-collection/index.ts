@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.54.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,105 +16,107 @@ serve(async (req) => {
   try {
     console.log('Starting collection analysis...');
     
+    // Get OpenAI API key
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
+    // Get Supabase credentials
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    if (!openAIApiKey) {
-      console.error('OpenAI API key not found');
-      return new Response(JSON.stringify({ 
-        error: 'OpenAI API key not configured' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error('Supabase credentials not configured');
     }
 
-    // Get auth header
-    const authHeader = req.headers.get('Authorization');
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get user ID from authorization header if available
+    const authHeader = req.headers.get('authorization');
     let userId = null;
     
-    if (authHeader && supabaseUrl && supabaseServiceKey) {
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      const token = authHeader.replace('Bearer ', '');
-      const { data: { user } } = await supabase.auth.getUser(token);
-      userId = user?.id;
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const { data: { user } } = await supabase.auth.getUser(token);
+        userId = user?.id;
+      } catch (error) {
+        console.log('Could not get user from token:', error);
+      }
     }
 
-    const requestBody = await req.json();
-    const { collectionData, totalAnnualBudget, totalRelativeBudget, totalActualCollection, totalSurplusDeficit } = requestBody;
+    // Parse request body
+    const { 
+      collectionData, 
+      totalDebt = 0, 
+      totalCash = 0, 
+      totalInterest = 0, 
+      totalIndexation = 0,
+      totalNominalBalance = 0,
+      totalRealBalance = 0
+    } = await req.json();
 
     console.log('Collection data received:', {
-      collectionDataLength: collectionData?.length,
-      totalAnnualBudget,
-      totalRelativeBudget,
-      totalActualCollection,
-      totalSurplusDeficit,
+      collectionDataLength: collectionData?.length || 0,
+      totalDebt,
+      totalCash,
+      totalInterest,
+      totalIndexation,
+      totalNominalBalance,
+      totalRealBalance,
       hasUserId: !!userId
     });
 
+    if (!collectionData || collectionData.length === 0) {
+      throw new Error('לא התקבלו נתוני גביה לניתוח');
+    }
+
     // Detect reporting period from data
-    const allTextData = collectionData.map(item => 
-      `${item.property_type || ''} ${item.excel_cell_ref || ''} ${JSON.stringify(item)}`
-    ).join(' ');
-    
-    let detectedPeriod = '';
-    let detectedYear = '';
-    
-    // Enhanced year detection
-    const yearPattern = /20\d{2}/g;
-    const yearMatches = allTextData.match(yearPattern);
-    if (yearMatches) {
-      detectedYear = yearMatches[yearMatches.length - 1];
-    }
-    
-    // Build period string
-    if (detectedYear) {
-      detectedPeriod = `שנת ${detectedYear}`;
-    } else {
-      detectedPeriod = `שנת ${new Date().getFullYear()}`;
-    }
-    
-    // Calculate collection performance metrics
-    const collectionRate = totalRelativeBudget > 0 ? ((totalActualCollection / totalRelativeBudget) * 100).toFixed(1) : '0';
-    const surplusRate = totalRelativeBudget > 0 ? ((totalSurplusDeficit / totalRelativeBudget) * 100).toFixed(1) : '0';
-    const propertyTypes = collectionData?.length || 0;
-    
-    // Identify problematic property types
-    const problematicTypes = collectionData?.filter(item => 
-      (item.surplus_deficit || 0) < 0 && Math.abs(item.surplus_deficit || 0) > (item.relative_budget || 0) * 0.1
-    ).length || 0;
-    
-    // Identify high performing types
-    const highPerformingTypes = collectionData?.filter(item => 
-      (item.surplus_deficit || 0) > (item.relative_budget || 0) * 0.1
-    ).length || 0;
+    const years = collectionData
+      .map(item => item.source_year || item.year)
+      .filter(year => year && year > 2020 && year <= new Date().getFullYear());
+    const uniqueYears = [...new Set(years)];
+    const detectedPeriod = uniqueYears.length > 0 ? 
+      uniqueYears.sort().join('-') : 
+      new Date().getFullYear().toString();
 
-    const prompt = `אתה אנליסט פיננסי מומחה. נתח את נתוני הגביה הבאים:
+    // Enhanced collection rate calculation based on new structure
+    const collectionRate = totalNominalBalance > 0 ? ((totalCash / totalNominalBalance) * 100).toFixed(1) : '0.0';
+    const surplusRate = totalNominalBalance > 0 ? (((totalCash - totalDebt) / totalNominalBalance) * 100).toFixed(1) : '0.0';
+    
+    // Create enhanced collection analysis prompt
+    const prompt = `נתח את נתוני הגביה הבאים:
 
-**תקופת דיווח:** ${detectedPeriod}
+**נתונים כלליים:**
+- מספר רשומות משלמים: ${collectionData?.length || 0}
+- סה"כ חובות: ₪${totalDebt.toLocaleString('he-IL')}
+- סה"כ מזומן שנגבה: ₪${totalCash.toLocaleString('he-IL')}
+- סה"כ ריבית: ₪${totalInterest.toLocaleString('he-IL')}
+- סה"כ הצמדה: ₪${totalIndexation.toLocaleString('he-IL')}
+- יתרה נומינלית: ₪${totalNominalBalance.toLocaleString('he-IL')}
+- יתרה ריאלית: ₪${totalRealBalance.toLocaleString('he-IL')}
+- שיעור גביה: ${collectionRate}%
 
-**סיכום נתונים:**
-- תקציב שנתי: ${totalAnnualBudget?.toLocaleString('he-IL')} ₪
-- תקציב יחסי: ${totalRelativeBudget?.toLocaleString('he-IL')} ₪
-- גביה בפועל: ${totalActualCollection?.toLocaleString('he-IL')} ₪
-- עודף/גירעון: ${totalSurplusDeficit?.toLocaleString('he-IL')} ₪
-- אחוז ביצוע: ${collectionRate}%
+**ניתוח מתקדם:**
+${collectionData?.slice(0, 50).map(item => 
+  `• ${item.payer_name || 'לא צוין'} (${item.service_description || item.property_type}): חוב ₪${(item.total_debt || 0).toLocaleString('he-IL')}, מזומן ₪${(item.cash || 0).toLocaleString('he-IL')}`
+).join('\n')}
 
-**סוגי נכסים:** ${propertyTypes} | בעיות: ${problematicTypes} | ביצועים גבוהים: ${highPerformingTypes}
+אנא ספק ניתוח מקצועי וחד הכולל:
+1. **מצב כללי** - סיכום של מצב הגביה והחובות
+2. **ניתוח לפי סוגי שירותים** - זיהוי סוגי שירותים עם חובות גבוהים
+3. **ניתוח משלמים** - זיהוי משלמים עם חובות משמעותיים
+4. **מגמות וביצועים** - השוואת שיעור הגביה והמזומן שנגבה
+5. **המלצות פעולה** - צעדים קונקרטיים לשיפור הגביה
 
-ספק ניתוח קצר בעברית עם המלצות קונקרטיות לשיפור הגביה.`;
-
-    const systemPrompt = `אתה אנליסט פיננסי עירוני. 
-כתוב בעברית. 
-הגבל ל-300 מילים.
-התמקד במידע החיוני לשיפור הגביה.
-השתמש בנקודות קצרות.
-התחל עם התקופה.`;
+**חשוב:** הציג את הניתוח בצורה מקצועית ומובנה עם נתונים רלוונטיים בעברית.`;
 
     console.log('Calling OpenAI API...');
-
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    
+    // Call OpenAI API with enhanced prompt
+    const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
@@ -122,85 +124,74 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-4.1-mini-2025-04-14',
-        max_tokens: 1500,
         messages: [
-          { 
-            role: 'system', 
-            content: systemPrompt
+          {
+            role: 'system',
+            content: 'אתה מומחה לניתוח נתונים פיננסיים ועירוניים. ספק ניתוחים מקצועיים, מדויקים ומובנים בעברית.'
           },
-          { role: 'user', content: prompt }
+          {
+            role: 'user',
+            content: prompt
+          }
         ],
+        max_tokens: 1500,
+        temperature: 0.7
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, errorText);
-      return new Response(JSON.stringify({ 
-        error: `OpenAI API error: ${response.status}`,
-        details: errorText
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const data = await response.json();
     console.log('OpenAI response received:', {
-      status: response.status,
-      hasChoices: !!data.choices,
-      choicesLength: data.choices?.length || 0,
-      hasContent: !!data.choices?.[0]?.message?.content,
-      contentLength: data.choices?.[0]?.message?.content?.length || 0,
-      finishReason: data.choices?.[0]?.finish_reason
+      status: openAIResponse.status,
+      hasChoices: !!openAIResponse,
+      choicesLength: openAIResponse ? 'unknown' : 0,
+      hasContent: !!openAIResponse,
+      contentLength: openAIResponse ? 'unknown' : 0,
+      finishReason: 'unknown'
     });
 
-    if (!data.choices || data.choices.length === 0) {
-      console.error('No choices in OpenAI response:', data);
-      return new Response(JSON.stringify({ 
-        error: 'לא התקבל תוכן מהמודל' 
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (!openAIResponse.ok) {
+      const errorData = await openAIResponse.json();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
     }
 
-    const analysis = data.choices[0].message.content;
-    
-    // Handle empty content or finish_reason issues
-    if (!analysis || analysis.trim() === '' || data.choices[0].finish_reason === 'length') {
-      console.error('Empty content or length limit exceeded:', {
-        analysis: analysis,
-        finishReason: data.choices[0].finish_reason,
-        usage: data.usage
-      });
-      return new Response(JSON.stringify({ 
-        error: 'התוכן שהתקבל ריק או חתוך - נסה שוב',
-        debug: { finishReason: data.choices[0].finish_reason, usage: data.usage }
-      }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const openAIData = await openAIResponse.json();
+
+    if (!openAIData.choices || openAIData.choices.length === 0) {
+      throw new Error('לא התקבלה תגובה תקינה מ-OpenAI');
     }
+
+    const analysis = openAIData.choices[0].message.content;
+
+    if (!analysis || analysis.trim().length === 0) {
+      throw new Error('התקבל ניתוח ריק מ-OpenAI');
+    }
+
+    console.log('Analysis generated successfully, length:', analysis.length);
 
     // Save analysis to database if user is authenticated
-    if (userId && supabaseUrl && supabaseServiceKey) {
-      console.log('Saving collection analysis to database...');
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    if (userId) {
+      console.log('Saving analysis to database for user:', userId);
       
       const analysisData = {
         user_id: userId,
+        year: new Date().getFullYear(),
         analysis_text: analysis,
         analysis_type: 'collection',
-        total_approved_budget: totalAnnualBudget,
-        total_income_actual: totalActualCollection,
-        total_expense_actual: totalRelativeBudget,
-        total_surplus_deficit: totalSurplusDeficit,
+        total_approved_budget: totalNominalBalance,
+        total_income_actual: totalCash,
+        total_expense_actual: totalDebt,
+        total_surplus_deficit: totalCash - totalDebt,
         analysis_data: {
-          collection_data: collectionData,
+          enhanced_collection_data: collectionData,
           timestamp: new Date().toISOString(),
           collection_rate: parseFloat(collectionRate),
-          reporting_period: detectedPeriod
+          reporting_period: detectedPeriod,
+          total_debt: totalDebt,
+          total_cash: totalCash,
+          total_interest: totalInterest,
+          total_indexation: totalIndexation,
+          total_nominal_balance: totalNominalBalance,
+          total_real_balance: totalRealBalance
         }
       };
 
