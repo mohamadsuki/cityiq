@@ -433,22 +433,35 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
     return Object.keys(synonymsMap);
   };
 
-  const buildHeaderMappings = (headers: string[]): HeaderMapping[] => {
-    return headers.map(header => {
-      const debugLogs: DebugLog[] = [];
-      const normalized = normalizeKey(header, debugLogs);
-      
-      // Check if it was successfully mapped
-      if (normalized === header.toLowerCase().trim()) {
-        // Not mapped, try fuzzy matching
-        const synonymsMap: Record<string, string[]> = {
-          'institution_name': ['שם המוסד', 'שם מוסד', 'מוסד'],
-          'address': ['כתובת', 'מען', 'כתובת המוסד'],
-          'phone': ['טלפון', 'טל', 'מספר טלפון'],
-          'institution_type': ['סוג המוסד', 'סוג מוסד', 'קטגוריה'],
-          'business_name': ['שם העסק', 'שם עסק', 'עסק'],
-          'license_holder': ['בעל הרישיון', 'בעל רישיון', 'בעלים'],
-          'license_number': ['מספר רישיון', 'מס רישיון', 'מס\' רישיון'],
+  const buildHeaderMappings = (headers: string[], periodInfo?: string | null): HeaderMapping[] => {
+    return headers
+      .filter(header => {
+        // Skip headers that are actually period information
+        const isPeriodInfo = [
+          /נכון\s+לחודש\s+\d+\/\d+/i,
+          /לחודש\s+\d+\/\d+/i,
+          /רבעון\s+\d+\s+\d+/i,
+          /תקופה[:\s]+/i,
+          /עד\s+\d+\/\d+/i
+        ].some(pattern => pattern.test(header));
+        
+        return !isPeriodInfo;
+      })
+      .map(header => {
+        const debugLogs: DebugLog[] = [];
+        const normalized = normalizeKey(header, debugLogs);
+        
+        // Check if it was successfully mapped
+        if (normalized === header.toLowerCase().trim()) {
+          // Not mapped, try fuzzy matching
+          const synonymsMap: Record<string, string[]> = {
+            'institution_name': ['שם המוסד', 'שם מוסד', 'מוסד'],
+            'address': ['כתובת', 'מען', 'כתובת המוסד'],
+            'phone': ['טלפון', 'טל', 'מספר טלפון'],
+            'institution_type': ['סוג המוסד', 'סוג מוסד', 'קטגוריה'],
+            'business_name': ['שם העסק', 'שם עסק', 'עסק'],
+            'license_holder': ['בעל הרישיון', 'בעל רישיון', 'בעלים'],
+            'license_number': ['מספר רישיון', 'מס רישיון', 'מס\' רישיון'],
           'license_type': ['סוג הרישיון', 'סוג רישיון', 'קטגוריית רישיון'],
           'issue_date': ['תאריך הנפקה', 'תאריך נפקה', 'הונפק ב'],
           'expiry_date': ['תאריך תפוגה', 'תפוגה', 'פוגה ב'],
@@ -681,7 +694,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
       setDetected(detection);
       
       // Always show preview dialog - either with detected table or for manual selection
-      const mappings = buildHeaderMappings(headersArray);
+      const mappings = buildHeaderMappings(headersArray, periodInfo);
       const sampleRows = rowObjects.slice(0, 10);
       
       setPreviewData({
@@ -717,7 +730,7 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
     
     // Continue with preview
     if (headers.length > 0) {
-      const mappings = buildHeaderMappings(headers);
+      const mappings = buildHeaderMappings(headers, null);
       const sampleRows = rows.slice(0, 10);
       
       setPreviewData({
