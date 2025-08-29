@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { FileSpreadsheet, Upload, Calendar } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { FileSpreadsheet, Upload, Calendar, Brain, Loader2, BarChart3 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -47,6 +48,10 @@ export default function CollectionPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedEndYear, setSelectedEndYear] = useState<number | null>(null);
+  const [analysis, setAnalysis] = useState<string>("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [reportingPeriod, setReportingPeriod] = useState<string>("");
 
   // Generate year options (current year and 10 years back)
   const currentYear = new Date().getFullYear();
@@ -149,6 +154,134 @@ export default function CollectionPage() {
   useEffect(() => {
     loadCollectionData();
   }, [selectedYear, selectedEndYear]);
+
+  // Load saved analysis when collection data is loaded
+  useEffect(() => {
+    if (collectionData.length > 0 && user && !analysis) {
+      loadSavedAnalysis();
+    }
+  }, [collectionData, user]);
+
+  const loadSavedAnalysis = async () => {
+    if (!user) return;
+    
+    setAnalysisLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('tabarim_analysis')
+        .select('analysis_text, created_at')
+        .eq('user_id', user.id)
+        .eq('year', new Date().getFullYear())
+        .eq('analysis_type', 'collection')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data && !error) {
+        setAnalysis(data.analysis_text);
+        console.log('Loaded saved collection analysis from:', data.created_at);
+      } else if (collectionData.length > 0) {
+        // If no saved analysis, generate new one automatically
+        console.log('No saved collection analysis found, generating new one...');
+        handleAnalyzeCollection(true); // silent generation
+      }
+    } catch (error) {
+      console.error('Error loading saved collection analysis:', error);
+      // Try to generate new analysis
+      if (collectionData.length > 0) {
+        handleAnalyzeCollection(true);
+      }
+    } finally {
+      setAnalysisLoading(false);
+    }
+  };
+
+  const handleAnalyzeCollection = async (silent = false) => {
+    if (!collectionData || collectionData.length === 0) {
+      if (!silent) toast({
+        title: "שגיאה",
+        description: "אין נתוני גביה לניתוח",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user?.id) {
+      if (!silent) toast({
+        title: "שגיאה",
+        description: "יש להתחבר כדי לבצע ניתוח",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    console.log('🚀 Starting collection analysis...');
+    
+    try {
+      const totalAnnualBudget = collectionData.reduce((sum, item) => sum + (item.annual_budget || 0), 0);
+      const totalRelativeBudget = collectionData.reduce((sum, item) => sum + (item.relative_budget || 0), 0);
+      const totalActualCollection = collectionData.reduce((sum, item) => sum + (item.actual_collection || 0), 0);
+      const totalSurplusDeficit = collectionData.reduce((sum, item) => sum + (item.surplus_deficit || 0), 0);
+      
+      const { data, error } = await supabase.functions.invoke('analyze-collection', {
+        body: {
+          collectionData: collectionData,
+          totalAnnualBudget,
+          totalRelativeBudget,
+          totalActualCollection,
+          totalSurplusDeficit
+        }
+      });
+
+      if (error) {
+        console.error("Error analyzing collection:", error);
+        if (!silent) toast({
+          title: "שגיאה",
+          description: `שגיאה בניתוח הגביה: ${error.message || 'שגיאה לא ידועה'}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data?.error) {
+        console.error("OpenAI API error:", data.error);
+        if (!silent) toast({
+          title: "שגיאה",
+          description: `שגיאה ב-OpenAI: ${data.error}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (data?.analysis && data.analysis.trim()) {
+        setAnalysis(data.analysis);
+        if (data.reportingPeriod) {
+          setReportingPeriod(data.reportingPeriod);
+        }
+        if (!silent) toast({
+          title: "הצלחה",
+          description: "ניתוח הגביה הושלם בהצלחה",
+        });
+      } else {
+        console.error("No valid analysis in response:", data);
+        if (!silent) toast({
+          title: "שגיאה",
+          description: "לא התקבל ניתוח תקין מהשרת",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      if (!silent) toast({
+        title: "שגיאה",
+        description: `שגיאה בניתוח הגביה: ${error.message || 'שגיאה לא ידועה'}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
   const handleUploadSuccess = () => {
     setImportDialogOpen(false);
     loadCollectionData();
@@ -442,6 +575,83 @@ export default function CollectionPage() {
             </CardContent>
           </Card>
         </div>}
+
+      {/* AI Analysis Section */}
+      <div className="space-y-6">
+        <Card className="border border-border/50 shadow-lg">
+          <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5 border-b border-border/50">
+            <CardTitle className="flex items-center gap-3 text-xl font-bold text-foreground">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Brain className="h-6 w-6 text-primary" />
+              </div>
+              ניתוח AI מתקדם - נתוני גביה
+              {reportingPeriod && (
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                  {reportingPeriod}
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">
+                  ניתוח מבוסס בינה מלאכותית של נתוני הגביה
+                </span>
+              </div>
+              <Button
+                onClick={() => handleAnalyzeCollection()}
+                disabled={isAnalyzing || collectionData.length === 0}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    מנתח...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="mr-2 h-4 w-4" />
+                    נתח נתוני גביה
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {analysisLoading && (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <span className="mr-2 text-muted-foreground">טוען ניתוח קיים...</span>
+              </div>
+            )}
+
+            {analysis && (
+              <div className="mt-6 p-6 bg-secondary/30 rounded-lg border border-border/30">
+                <div className="prose prose-sm max-w-none dark:prose-invert">
+                  <div className="whitespace-pre-wrap text-foreground leading-relaxed">
+                    {analysis}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!analysis && !analysisLoading && !isAnalyzing && collectionData.length > 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Brain className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>לחץ על "נתח נתוני גביה" לקבלת ניתוח מתקדם</p>
+              </div>
+            )}
+
+            {!analysis && !analysisLoading && !isAnalyzing && collectionData.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <BarChart3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>העלה נתוני גביה כדי לקבל ניתוח מתקדם</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Other Income Section (In Development) */}
       <Card>
