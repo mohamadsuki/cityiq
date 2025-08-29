@@ -138,6 +138,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: 'gpt-5-nano-2025-08-07',
+        max_completion_tokens: 2000, // Increased token limit
         messages: [
           { 
             role: 'system', 
@@ -152,7 +153,7 @@ serve(async (req) => {
             5. הימנע לחלוטין משימוש באימוג'י
             6. הדגש בעיות גביה וחוזקות בצורה פורמלית
             7. התייחס לתקופה הספציפית של נתוני הגביה
-            8. הגבל את התשובה ל-250 מילים מקסימום בלבד
+            8. הגבל את התשובה ל-400 מילים מקסימום בלבד
             9. השתמש בנקודות תבליט קצרות ומרוכזות
             10. התמקד רק במידע החיוני לשיפור הגביה
             11. התחל תמיד בציון התקופה הספציפית מהנתונים
@@ -160,7 +161,6 @@ serve(async (req) => {
           },
           { role: 'user', content: prompt }
         ],
-        max_completion_tokens: 600
       }),
     });
 
@@ -180,18 +180,34 @@ serve(async (req) => {
     console.log('OpenAI response received:', {
       status: response.status,
       hasChoices: !!data.choices,
-      choicesLength: data.choices?.length,
+      choicesLength: data.choices?.length || 0,
       hasContent: !!data.choices?.[0]?.message?.content,
-      contentLength: data.choices?.[0]?.message?.content?.length
+      contentLength: data.choices?.[0]?.message?.content?.length || 0,
+      finishReason: data.choices?.[0]?.finish_reason
     });
-    
-    const analysis = data.choices?.[0]?.message?.content;
-    
-    if (!analysis || analysis.trim().length === 0) {
-      console.error('No valid analysis content:', { analysis, data });
+
+    if (!data.choices || data.choices.length === 0) {
+      console.error('No choices in OpenAI response:', data);
       return new Response(JSON.stringify({ 
-        error: 'No analysis content received',
-        debug: { hasData: !!data, hasChoices: !!data.choices, response: data }
+        error: 'לא התקבל תוכן מהמודל' 
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const analysis = data.choices[0].message.content;
+    
+    // Handle empty content or finish_reason issues
+    if (!analysis || analysis.trim() === '' || data.choices[0].finish_reason === 'length') {
+      console.error('Empty content or length limit exceeded:', {
+        analysis: analysis,
+        finishReason: data.choices[0].finish_reason,
+        usage: data.usage
+      });
+      return new Response(JSON.stringify({ 
+        error: 'התוכן שהתקבל ריק או חתוך - נסה שוב',
+        debug: { finishReason: data.choices[0].finish_reason, usage: data.usage }
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
