@@ -565,18 +565,54 @@ function DataUploader({ context, onComplete, onUploadSuccess, onAnalysisTriggere
         return;
       }
       
-      // Find the first non-empty row as headers
+      // Find the first row with actual field headers (not title rows)
       let headerRowIndex = 0;
-      while (headerRowIndex < jsonData.length && (!jsonData[headerRowIndex] || (jsonData[headerRowIndex] as any[]).length === 0)) {
-        headerRowIndex++;
+      let headersArray: string[] = [];
+      
+      // Look for the row that contains the most meaningful field headers
+      for (let i = 0; i < Math.min(jsonData.length, 10); i++) {
+        const row = jsonData[i] as any[];
+        if (!row || row.length === 0) continue;
+        
+        // Convert to strings and clean
+        const potentialHeaders = row.map(h => String(h || '').trim()).filter(h => h);
+        
+        if (potentialHeaders.length === 0) continue;
+        
+        // Skip obvious title rows (single cell or very generic content)
+        if (potentialHeaders.length === 1) {
+          addLog('info', `מדלג על שורת כותרת: "${potentialHeaders[0]}"`);
+          continue;
+        }
+        
+        // Check if this looks like a header row by testing synonyms matching
+        let matchCount = 0;
+        const synonymsMap = buildSynonymsMap(context || '');
+        
+        for (const header of potentialHeaders) {
+          // Check if header matches any known field
+          for (const [canonical, synonyms] of Object.entries(synonymsMap)) {
+            if (synonyms.some(syn => syn.includes(header) || header.includes(syn))) {
+              matchCount++;
+              break;
+            }
+          }
+        }
+        
+        // If we found some matches, this is likely our header row
+        if (matchCount > 0 || i > 3) { // After row 3, take what we get
+          headersArray = potentialHeaders;
+          headerRowIndex = i;
+          addLog('info', `מצא שורת כותרות בשורה ${i + 1}: ${headersArray.join(', ')}`);
+          break;
+        }
       }
       
-      if (headerRowIndex >= jsonData.length) {
-        addLog('error', 'לא נמצאה שורת כותרות');
+      if (headersArray.length === 0) {
+        addLog('error', 'לא נמצאה שורת כותרות תקינה');
         return;
       }
       
-      const headersArray = jsonData[headerRowIndex] as string[];
       const dataRows = jsonData.slice(headerRowIndex + 1) as any[];
       
       addLog('info', `נמצאו ${headersArray.length} כותרות ו-${dataRows.length} שורות נתונים`);
