@@ -1046,6 +1046,51 @@ export type Database = {
         }
         Relationships: []
       }
+      tabarim_analysis: {
+        Row: {
+          analysis_data: Json | null
+          analysis_text: string
+          analysis_type: string | null
+          created_at: string
+          id: string
+          total_approved_budget: number | null
+          total_expense_actual: number | null
+          total_income_actual: number | null
+          total_surplus_deficit: number | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          analysis_data?: Json | null
+          analysis_text: string
+          analysis_type?: string | null
+          created_at?: string
+          id?: string
+          total_approved_budget?: number | null
+          total_expense_actual?: number | null
+          total_income_actual?: number | null
+          total_surplus_deficit?: number | null
+          updated_at?: string
+          user_id: string
+          year?: number
+        }
+        Update: {
+          analysis_data?: Json | null
+          analysis_text?: string
+          analysis_type?: string | null
+          created_at?: string
+          id?: string
+          total_approved_budget?: number | null
+          total_expense_actual?: number | null
+          total_income_actual?: number | null
+          total_surplus_deficit?: number | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       task_acknowledgements: {
         Row: {
           created_at: string

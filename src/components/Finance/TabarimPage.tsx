@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Upload, Plus, Pencil, Brain, Loader2, BarChart3 } from "lucide-react";
+import { Trash2, Upload, Plus, Pencil, Brain, Loader2, BarChart3, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
@@ -602,821 +602,259 @@ export default function TabarimPage() {
     });
   }, [tabarim, balanceFilter, domainFilter, fundingSourceFilter]);
 
-  // Debug logs
-  console.log("🔍 Filters state:", { balanceFilter, domainFilter, uniqueDomains: uniqueDomains.length });
-
-  // מטפלי אירועים לסינון מהגרפים
-  const handleDomainChartClick = (domain: string) => {
-    setDomainFilter(domain);
-    setBalanceFilter('all');
-    setFundingSourceFilter('all');
-    // גלילה לטבלה
-    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleDeficitChartClick = (tabarName: string) => {
-    setBalanceFilter('deficit');
-    setDomainFilter('all');
-    setFundingSourceFilter('all');
-    // גלילה לטבלה
-    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleFundingSourceChartClick = (fundingSource: string) => {
-    setFundingSourceFilter(fundingSource);
-    setBalanceFilter('deficit');
-    setDomainFilter('all');
-    // גלילה לטבלה
-    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleAllFundingSourceChartClick = (fundingSource: string) => {
-    setFundingSourceFilter(fundingSource);
-    setBalanceFilter('all');
-    setDomainFilter('all');
-    // גלילה לטבלה
-    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  // חישוב סטטיסטיקות למקורות תקציב של כל התב"רים
-  const allFundingStats = tabarim.reduce((acc, tabar) => {
-    // מקור תקציב 1
-    if (tabar.funding_source1) {
-      const source = tabar.funding_source1;
-      if (!acc[source]) {
-        acc[source] = { count: 0, budget: 0 };
-      }
-      acc[source].count += 1;
-      acc[source].budget += tabar.approved_budget || 0;
-    }
-    
-    // מקור תקציב 2
-    if (tabar.funding_source2) {
-      const source = tabar.funding_source2;
-      if (!acc[source]) {
-        acc[source] = { count: 0, budget: 0 };
-      }
-      // אל תוסף לספירה (כדי לא לספור תב"ר פעמיים), רק לתקציב
-      acc[source].budget += tabar.approved_budget || 0;
-    }
-    
-    // מקור תקציב 3
-    if (tabar.funding_source3) {
-      const source = tabar.funding_source3;
-      if (!acc[source]) {
-        acc[source] = { count: 0, budget: 0 };
-      }
-      // אל תוסף לספירה (כדי לא לספור תב"ר פעמיים), רק לתקציב
-      acc[source].budget += tabar.approved_budget || 0;
-    }
-    
-    return acc;
-  }, {} as Record<string, { count: number; budget: number }>);
-
-  // חישוב סטטיסטיקות למקורות תקציב של תב"רים בגירעון
-  const fundingStats = deficitTabarim.reduce((acc, tabar) => {
-    // מקור תקציב 1
-    if (tabar.funding_source1) {
-      const source = tabar.funding_source1;
-      if (!acc[source]) {
-        acc[source] = { count: 0, budget: 0 };
-      }
-      acc[source].count += 1;
-      acc[source].budget += tabar.approved_budget || 0;
-    }
-    
-    // מקור תקציב 2
-    if (tabar.funding_source2) {
-      const source = tabar.funding_source2;
-      if (!acc[source]) {
-        acc[source] = { count: 0, budget: 0 };
-      }
-      // אל תוסף לספירה (כדי לא לספור תב"ר פעמיים), רק לתקציב
-      acc[source].budget += tabar.approved_budget || 0;
-    }
-    
-    // מקור תקציב 3
-    if (tabar.funding_source3) {
-      const source = tabar.funding_source3;
-      if (!acc[source]) {
-        acc[source] = { count: 0, budget: 0 };
-      }
-      // אל תוסף לספירה (כדי לא לספור תב"ר פעמיים), רק לתקציב
-      acc[source].budget += tabar.approved_budget || 0;
-    }
-    
-    return acc;
-  }, {} as Record<string, { count: number; budget: number }>);
-
-  const totalDeficitBudget = deficitTabarim.reduce((sum, tabar) => sum + tabar.approved_budget, 0);
-  const totalAllBudget = tabarim.reduce((sum, tabar) => sum + tabar.approved_budget, 0);
-
-  // נתונים עבור הגרף של כל התב"רים - עמודות צהובות
-  const allFundingSummaryData = Object.entries(allFundingStats)
-    .map(([source, stats]) => ({
-      source: fundingLabelsForChart[source] || source,
-      originalSource: source,
-      count: stats.count,
-      budget: stats.budget,
-      budgetThousand: Math.round(stats.budget / 1000),
-      countPercentage: tabarim.length > 0 ? Math.round((stats.count / tabarim.length) * 100) : 0,
-      budgetPercentage: totalAllBudget > 0 ? Math.round((stats.budget / totalAllBudget) * 100) : 0,
-      color: "hsl(45, 93%, 47%)" // צבע צהוב לכל העמודות
-    }))
-    .sort((a, b) => {
-      if (fundingSortBy === 'count') {
-        return fundingSortOrder === 'desc' ? b.count - a.count : a.count - b.count;
-      } else {
-        return fundingSortOrder === 'desc' ? b.budget - a.budget : a.budget - b.budget;
-      }
-    })
-    .slice(0, 24); // לקיחת טופ 24
-
-  // נתונים עבור הגרף - מיון לפי הבחירה של המשתמש ולקיחת טופ 12
-  const fundingSummaryData = Object.entries(fundingStats)
-    .map(([source, stats]) => ({
-      source: fundingLabelsForChart[source] || source,
-      originalSource: source,
-      count: stats.count,
-      budget: stats.budget,
-      budgetThousand: Math.round(stats.budget / 1000),
-      countPercentage: deficitTabarim.length > 0 ? Math.round((stats.count / deficitTabarim.length) * 100) : 0,
-      budgetPercentage: totalDeficitBudget > 0 ? Math.round((stats.budget / totalDeficitBudget) * 100) : 0,
-      color: fundingColors[source] || "hsl(var(--muted-foreground))"
-    }))
-    .sort((a, b) => {
-      if (fundingSortBy === 'count') {
-        return fundingSortOrder === 'desc' ? b.count - a.count : a.count - b.count;
-      } else {
-        return fundingSortOrder === 'desc' ? b.budget - a.budget : a.budget - b.budget;
-      }
-    })
-    .slice(0, 24); // לקיחת טופ 24
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">טוען נתוני תברים...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6" dir="rtl">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">תב"רים</h1>
-          <p className="text-muted-foreground">
-            ניהול תב"רים עירוניים - הוספה, עריכה ומעקב
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => setShowUploader(true)}
-          >
-            <Upload className="h-4 w-4 ml-2" />
-            העלה קובץ אקסל
+    <div className="container mx-auto px-4 py-8 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-3xl font-bold">ניהול תברים</h1>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setShowAddDialog(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            הוסף תבר
           </Button>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 ml-2" />
-            הוסף תב"ר
+          <Button variant="outline" onClick={() => setShowUploader(true)} className="flex items-center gap-2">
+            <Upload className="h-4 w-4" />
+            העלה נתונים
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-6">
-        {/* Summary Card - Full Width with Better Design */}
-        <Card className="bg-gradient-to-l from-background to-muted/20">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl text-primary">סיכום תקציבי כללי</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-              <div className="bg-background rounded-lg p-4 border shadow-sm">
-                <div className="text-2xl font-bold text-primary">{tabarim.length}</div>
-                <div className="text-sm text-muted-foreground">תב"רים פעילים</div>
-              </div>
-              <div className="bg-background rounded-lg p-4 border shadow-sm">
-                <div className="text-lg font-bold text-blue-600">
-                  {formatCurrency(totalBudget)} <span className="text-[10px] text-muted-foreground opacity-70">{getCurrencyUnit(totalBudget)}</span>
-                </div>
-                <div className="text-sm text-muted-foreground">תקציב מאושר</div>
-              </div>
-              <div className="bg-background rounded-lg p-4 border shadow-sm">
-                <div className="text-lg font-bold text-green-600">
-                  {formatCurrency(totalIncome)} <span className="text-[10px] text-muted-foreground opacity-70">{getCurrencyUnit(totalIncome)}</span>
-                </div>
-                <div className="text-sm text-muted-foreground">הכנסות בפועל</div>
-              </div>
-              <div className="bg-background rounded-lg p-4 border shadow-sm">
-                <div className="text-lg font-bold text-red-600">
-                  {formatCurrency(totalExpense)} <span className="text-[10px] text-muted-foreground opacity-70">{getCurrencyUnit(totalExpense)}</span>
-                </div>
-                <div className="text-sm text-muted-foreground">הוצאות בפועל</div>
-              </div>
-              <div 
-                className="bg-background rounded-lg p-4 border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                onClick={scrollToTableWithDeficitSort}
-              >
-                <div className={`text-lg font-bold ${(totalIncome - totalExpense) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatCurrency(totalIncome - totalExpense)} <span className="text-[10px] text-muted-foreground opacity-70">{getCurrencyUnit(totalIncome - totalExpense)}</span>
-                </div>
-                <div className="text-sm text-muted-foreground">עודף/גירעון</div>
-              </div>
-              <div 
-                className="bg-background rounded-lg p-4 border shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                onClick={scrollToTableWithDeficitSort}
-              >
-                <div className="text-lg font-bold text-red-600">{tabarim.filter(tabar => tabar.surplus_deficit < 0).length}</div>
-                <div className="text-sm text-muted-foreground">תב"רים בגירעון</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Two Cards Row */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-lg">תב"רים לפי תחום</CardTitle>
-                <div className="flex gap-2 text-xs">
-                  <Button
-                    variant={sortBy === 'count' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSortBy('count')}
-                    className="h-7 text-xs"
-                  >
-                    לפי מספר
-                  </Button>
-                  <Button
-                    variant={sortBy === 'budget' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSortBy('budget')}
-                    className="h-7 text-xs"
-                  >
-                    לפי תקציב
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
-                    className="h-7 text-xs w-7 p-0"
-                  >
-                    {sortOrder === 'desc' ? '↓' : '↑'}
-                  </Button>
-                </div>
-              </div>
+      {/* AI Analysis Section */}
+      <div className="space-y-6 mt-8">
+        {detectedPeriod && (
+          <Card className="border-2 border-primary/20 shadow-lg">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
+              <CardTitle className="text-2xl font-bold text-center text-primary">
+                תקופת הנתונים: {detectedPeriod}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              {tabarim.length > 0 ? (
-                <div className="space-y-1">
-                  {domainSummaryData.map((item, index) => {
-                    // חישוב רוחב העמודה היחסי
-                    const maxValue = Math.max(...domainSummaryData.map(d => sortBy === 'count' ? d.count : d.budget));
-                    const currentValue = sortBy === 'count' ? item.count : item.budget;
-                    const barWidth = (currentValue / maxValue) * 100;
-                    
-                    return (
-                      <div 
-                        key={item.originalDomain} 
-                        className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative cursor-pointer"
-                        onClick={() => handleDomainChartClick(item.domain)}
-                      >
-                        {/* עמודת רקע יחסית */}
-                        <div 
-                          className="absolute inset-0 bg-muted-foreground/20 rounded-sm transition-all duration-300 pointer-events-none"
-                          style={{ width: `${barWidth}%` }}
-                        />
-                        
-                        {/* תוכן קיים */}
-                        <div className="relative z-10 flex items-center w-full">
-                          {/* סוגר שמאלי צבעוני */}
-                          <div className="flex items-center ml-2">
-                            <div 
-                              className="w-1 h-6 rounded-sm"
-                              style={{ backgroundColor: item.color }}
-                            />
-                          </div>
-                          
-                          {/* תקציב */}
-                          <div className="min-w-[85px] text-left">
-                            <span className="text-sm font-medium text-muted-foreground">
-                              {formatCurrency(item.budget)} <span className="text-[10px] opacity-70">{getCurrencyUnit(item.budget)}</span>
-                            </span>
-                          </div>
-                          
-                          {/* מספר תב"רים */}
-                          <div className="min-w-[30px] text-left ml-4">
-                            <span className="text-base font-semibold">
-                              {item.count}
-                            </span>
-                          </div>
-                          
-                          {/* שם התחום */}
-                          <div className="flex-1 ml-4">
-                            <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                              {item.domain}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {/* פרטי hover */}
-                        <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 min-w-[200px]">
-                          <div className="text-xs space-y-1">
-                            <div className="flex justify-between">
-                              <span>מספר תב"רים:</span>
-                              <span className="font-medium">{item.count} ({item.countPercentage}%)</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>תקציב:</span>
-                              <span className="font-medium"><span className="text-[10px] text-muted-foreground">אלש"ח</span> {item.budget.toLocaleString()} ({item.budgetPercentage}%)</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>תקציב ממוצע לתב"ר:</span>
-                              <span className="font-medium"><span className="text-[10px] text-muted-foreground">אלש"ח</span> {Math.round(item.budget / item.count).toLocaleString()}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-muted-foreground text-sm">
-                  אין נתונים להצגה
-                </div>
-              )}
-            </CardContent>
           </Card>
+        )}
 
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-lg">תב"רים בגירעון</CardTitle>
-                <div className="flex gap-2 text-xs">
-                  <span className="text-xs text-muted-foreground mr-2">טופ 12</span>
-                  <Button
-                    variant={deficitSortBy === 'amount' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setDeficitSortBy('amount')}
-                    className="h-7 text-xs"
-                  >
-                    לפי סכום
-                  </Button>
-                  <Button
-                    variant={deficitSortBy === 'percentage' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setDeficitSortBy('percentage')}
-                    className="h-7 text-xs"
-                  >
-                    לפי אחוז
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeficitSortOrder(deficitSortOrder === 'desc' ? 'asc' : 'desc')}
-                    className="h-7 text-xs w-7 p-0"
-                  >
-                    {deficitSortOrder === 'desc' ? '↓' : '↑'}
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {tabarim.length > 0 ? (
-                <div className="space-y-1">
-                  {(() => {
-                    const deficitTabarim = tabarim
-                      .filter(tabar => tabar.surplus_deficit < 0)
-                      .map(tabar => ({
-                        ...tabar,
-                        deficitPercentage: tabar.income_actual > 0 
-                          ? Math.round(((tabar.expense_actual - tabar.income_actual) / tabar.income_actual) * 100)
-                          : 0
-                      }))
-                      .sort((a, b) => {
-                        if (deficitSortBy === 'amount') {
-                          return deficitSortOrder === 'desc' 
-                            ? a.surplus_deficit - b.surplus_deficit 
-                            : b.surplus_deficit - a.surplus_deficit;
-                        } else {
-                          return deficitSortOrder === 'desc' 
-                            ? b.deficitPercentage - a.deficitPercentage 
-                            : a.deficitPercentage - b.deficitPercentage;
-                        }
-                      })
-                      .slice(0, 12);
+        <Tabs defaultValue="summary" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="summary">סיכום כספי</TabsTrigger>
+            <TabsTrigger value="charts">גרפים ותרשימים</TabsTrigger>
+            <TabsTrigger value="table">טבלת נתונים</TabsTrigger>
+            <TabsTrigger value="analysis">ניתוח AI</TabsTrigger>
+          </TabsList>
 
-                    // חישוב הערך המקסימלי לחישוב היחס
-                    const maxValue = deficitSortBy === 'amount'
-                      ? Math.max(...deficitTabarim.map(t => Math.abs(t.surplus_deficit)))
-                      : Math.max(...deficitTabarim.map(t => t.deficitPercentage));
+          <TabsContent value="summary" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">סה"כ תקציב מאושר</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">₪{totalBudget.toLocaleString()}</div>
+                </CardContent>
+              </Card>
 
-                    return deficitTabarim.map((tabar, index) => {
-                      // חישוב רוחב העמודה היחסי
-                      const currentValue = deficitSortBy === 'amount' 
-                        ? Math.abs(tabar.surplus_deficit)
-                        : tabar.deficitPercentage;
-                      const barWidth = maxValue > 0 ? (currentValue / maxValue) * 100 : 0;
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">סה"כ הכנסה בפועל</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">₪{totalIncome.toLocaleString()}</div>
+                </CardContent>
+              </Card>
 
-                      return (
-                        <div 
-                          key={tabar.id} 
-                          className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative cursor-pointer"
-                          onClick={() => handleDeficitChartClick(tabar.tabar_name)}
-                        >
-                          {/* עמודת רקע יחסית */}
-                          <div 
-                            className="absolute inset-0 bg-red-100 rounded-sm transition-all duration-300 pointer-events-none"
-                            style={{ width: `${barWidth}%` }}
-                          />
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">סה"כ הוצאה בפועל</CardTitle>
+                  <TrendingDown className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">₪{totalExpense.toLocaleString()}</div>
+                </CardContent>
+              </Card>
 
-                          {/* תוכן קיים */}
-                          <div className="relative z-10 flex items-center w-full">
-                            {/* סוגר שמאלי אדום */}
-                            <div className="flex items-center ml-2">
-                              <div 
-                                className="w-1 h-6 rounded-sm bg-red-500"
-                              />
-                            </div>
-                            
-                            {/* גירעון */}
-                            <div className="min-w-[85px] text-left">
-                              <span className="text-sm font-medium text-red-600">
-                                {formatCurrency(Math.abs(tabar.surplus_deficit))}- <span className="text-[10px] opacity-70">{getCurrencyUnit(Math.abs(tabar.surplus_deficit))}</span>
-                              </span>
-                            </div>
-                            
-                            {/* אחוז גירעון */}
-                            <div className="min-w-[45px] text-left ml-2">
-                              <span className="text-xs font-medium text-orange-600">
-                                {tabar.deficitPercentage}%
-                              </span>
-                            </div>
-                            
-                            {/* שם התב"ר */}
-                            <div className="flex-1 ml-4">
-                              <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                                {tabar.tabar_name}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* פרטי hover */}
-                          <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 min-w-[280px]">
-                            <div className="text-xs space-y-1">
-                              <div className="flex justify-between">
-                                <span>מספר תב"ר:</span>
-                                <span className="font-medium">{tabar.tabar_number}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>תחום:</span>
-                                <span className="font-medium">{domainLabels[tabar.domain] || tabar.domain}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>תקציב מאושר:</span>
-                                <span className="font-medium"><span className="text-[10px] text-muted-foreground">אלש"ח</span> {tabar.approved_budget.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>הכנסה בפועל:</span>
-                                <span className="font-medium text-green-600"><span className="text-[10px] text-muted-foreground">אלש"ח</span> {tabar.income_actual.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>הוצאה בפועל:</span>
-                                <span className="font-medium text-red-600"><span className="text-[10px] text-muted-foreground">אלש"ח</span> {tabar.expense_actual.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between border-t pt-1">
-                                <span>גירעון:</span>
-                                <span className="font-bold text-red-600"><span className="text-[10px] text-muted-foreground">אלש"ח</span> {tabar.surplus_deficit.toLocaleString()}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>אחוז גירעון:</span>
-                                <span className="font-bold text-orange-600">{tabar.deficitPercentage}%</span>
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-1 pt-1 border-t">
-                                אחוז הגירעון = (הוצאה - הכנסה) / הכנסה
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-muted-foreground text-sm">
-                  אין נתונים להצגה
-                </div>
-              )}
-              {tabarim.filter(tabar => tabar.surplus_deficit < 0).length === 0 && tabarim.length > 0 && (
-                <div className="text-center py-4 text-green-600 text-sm">
-                  🎉 אין תב"רים בגירעון
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Funding Sources Chart for All Tabarim */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg">מקורות תקציב של כל התב"רים</CardTitle>
-              <div className="flex gap-2 text-xs">
-                <span className="text-xs text-muted-foreground mr-2">טופ 24</span>
-                <Button
-                  variant={fundingSortBy === 'count' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFundingSortBy('count')}
-                  className="h-7 text-xs"
-                >
-                  לפי מספר
-                </Button>
-                <Button
-                  variant={fundingSortBy === 'budget' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFundingSortBy('budget')}
-                  className="h-7 text-xs"
-                >
-                  לפי תקציב
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFundingSortOrder(fundingSortOrder === 'desc' ? 'asc' : 'desc')}
-                  className="h-7 text-xs w-7 p-0"
-                >
-                  {fundingSortOrder === 'desc' ? '↓' : '↑'}
-                </Button>
-              </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">מאזן כולל</CardTitle>
+                  <Badge variant={totalIncome - totalExpense >= 0 ? "default" : "destructive"}>
+                    {totalIncome - totalExpense >= 0 ? "עודף" : "גירעון"}
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${totalIncome - totalExpense >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    ₪{Math.abs(totalIncome - totalExpense).toLocaleString()}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {tabarim.length > 0 ? (
-              <div className="grid grid-cols-2 gap-x-6">
-                {allFundingSummaryData.map((item, index) => {
-                  // חישוב רוחב העמודה היחסי
-                  const maxValue = Math.max(...allFundingSummaryData.map(d => fundingSortBy === 'count' ? d.count : d.budget));
-                  const currentValue = fundingSortBy === 'count' ? item.count : item.budget;
-                  const barWidth = (currentValue / maxValue) * 100;
-                  
-                  return (
-                    <div 
-                      key={item.originalSource} 
-                      className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative cursor-pointer"
-                      onClick={() => handleAllFundingSourceChartClick(item.source)}
-                    >
-                       {/* עמודת רקע יחסית - צהובה */}
-                       <div 
-                         className="absolute inset-0 bg-yellow-100 rounded-sm transition-all duration-300 pointer-events-none"
-                         style={{ width: `${barWidth}%` }}
-                       />
-                      
-                      {/* תוכן קיים */}
-                      <div className="relative z-10 flex items-center w-full">
-                        {/* סוגר שמאלי צבעוני */}
-                        <div className="flex items-center ml-2">
-                          <div 
-                            className="w-1 h-6 rounded-sm bg-yellow-500"
-                          />
-                        </div>
-                        
-                        {/* תקציב */}
-                        <div className="min-w-[85px] text-left">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {formatCurrency(item.budget)} <span className="text-[10px] opacity-70">{getCurrencyUnit(item.budget)}</span>
-                          </span>
-                        </div>
-                        
-                        {/* מספר תב"רים */}
-                        <div className="min-w-[30px] text-left ml-4">
-                          <span className="text-base font-semibold">
-                            {item.count}
-                          </span>
-                        </div>
-                        
-                        {/* שם המקור */}
-                        <div className="flex-1 ml-4">
-                          <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                            {item.source}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* פרטי hover */}
-                      <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 min-w-[200px]">
-                        <div className="text-xs space-y-1">
-                          <div className="flex justify-between">
-                            <span>מספר תב"רים:</span>
-                            <span className="font-bold">{item.count}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>סכום תקציב:</span>
-                            <span className="font-bold">{formatCurrency(item.budget)} ₪</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>אחוז מכל התב"רים:</span>
-                            <span className="font-bold text-yellow-600">{item.countPercentage}%</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>אחוז מהתקציב הכולל:</span>
-                            <span className="font-bold text-yellow-600">{item.budgetPercentage}%</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-4 text-muted-foreground text-sm">
-                אין נתונים להצגה
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          </TabsContent>
 
-        {/* Funding Sources Chart for Deficit Tabarim */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-lg">מקורות תקציב של תב"רים בגירעון</CardTitle>
-              <div className="flex gap-2 text-xs">
-              <span className="text-xs text-muted-foreground mr-2">טופ 24</span>
-                <Button
-                  variant={fundingSortBy === 'count' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFundingSortBy('count')}
-                  className="h-7 text-xs"
-                >
-                  לפי מספר
-                </Button>
-                <Button
-                  variant={fundingSortBy === 'budget' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setFundingSortBy('budget')}
-                  className="h-7 text-xs"
-                >
-                  לפי תקציב
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setFundingSortOrder(fundingSortOrder === 'desc' ? 'asc' : 'desc')}
-                  className="h-7 text-xs w-7 p-0"
-                >
-                  {fundingSortOrder === 'desc' ? '↓' : '↑'}
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {deficitTabarim.length > 0 ? (
-              <div className="grid grid-cols-2 gap-x-6">
-                {fundingSummaryData.map((item, index) => {
-                  // חישוב רוחב העמודה היחסי
-                  const maxValue = Math.max(...fundingSummaryData.map(d => fundingSortBy === 'count' ? d.count : d.budget));
-                  const currentValue = fundingSortBy === 'count' ? item.count : item.budget;
-                  const barWidth = (currentValue / maxValue) * 100;
-                  
-                  return (
-                    <div 
-                      key={item.originalSource} 
-                      className="flex items-center group hover:bg-accent/20 rounded-sm transition-colors duration-200 py-1 px-2 relative cursor-pointer"
-                      onClick={() => handleFundingSourceChartClick(item.source)}
-                    >
-                       {/* עמודת רקע יחסית */}
-                       <div 
-                         className="absolute inset-0 bg-blue-100 rounded-sm transition-all duration-300 pointer-events-none"
-                         style={{ width: `${barWidth}%` }}
-                       />
-                      
-                      {/* תוכן קיים */}
-                      <div className="relative z-10 flex items-center w-full">
-                        {/* סוגר שמאלי צבעוני */}
-                        <div className="flex items-center ml-2">
-                          <div 
-                            className="w-1 h-6 rounded-sm"
-                            style={{ backgroundColor: item.color }}
-                          />
+          <TabsContent value="charts" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>ביצועי תב"רים לפי תחום</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {domainSummaryData.map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex-1">
+                          <div className="font-medium">{item.domain}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {item.count} תב"רים • {item.countPercentage}% מהכלל
+                          </div>
                         </div>
-                        
-                        {/* תקציב */}
-                        <div className="min-w-[85px] text-left">
-                          <span className="text-sm font-medium text-muted-foreground">
-                            {formatCurrency(item.budget)} <span className="text-[10px] opacity-70">{getCurrencyUnit(item.budget)}</span>
-                          </span>
-                        </div>
-                        
-                        {/* מספר תב"רים */}
-                        <div className="min-w-[30px] text-left ml-4">
-                          <span className="text-base font-semibold">
-                            {item.count}
-                          </span>
-                        </div>
-                        
-                        {/* שם המקור */}
-                        <div className="flex-1 ml-4">
-                          <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
-                            {item.source}
-                          </span>
+                        <div className="text-left">
+                          <div className="font-bold">{formatCurrency(item.budget)} {getCurrencyUnit(item.budget)}</div>
+                          <div className="text-sm text-muted-foreground">{item.budgetPercentage}% מהתקציב</div>
                         </div>
                       </div>
-                      
-                      {/* פרטי hover */}
-                      <div className="absolute left-0 top-full mt-1 bg-popover border rounded-md shadow-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 min-w-[200px]">
-                        <div className="text-xs space-y-1">
-                          <div className="flex justify-between">
-                            <span>מספר תב"רים:</span>
-                            <span className="font-medium">{item.count} ({item.countPercentage}%)</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>תקציב:</span>
-                            <span className="font-medium"><span className="text-[10px] text-muted-foreground">אלש"ח</span> {item.budget.toLocaleString()} ({item.budgetPercentage}%)</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>תקציב ממוצע לתב"ר:</span>
-                            <span className="font-medium"><span className="text-[10px] text-muted-foreground">אלש"ח</span> {item.count > 0 ? Math.round(item.budget / item.count).toLocaleString() : '0'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-4 text-green-600 text-sm">
-                🎉 אין תב"רים בגירעון
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Table Below */}
-        <Card ref={tableRef}>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>רשימת תב"רים ({filteredTabarim.length})</CardTitle>
-              <div className="flex gap-3 items-center">
-                {/* סינון לפי מאזן */}
-                <Select value={balanceFilter} onValueChange={(value: string) => setBalanceFilter(value as 'all' | 'deficit' | 'surplus')}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="סינון לפי מאזן" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    <SelectItem value="all">כל המאזנים</SelectItem>
-                    <SelectItem value="deficit">גירעון</SelectItem>
-                    <SelectItem value="surplus">עודף</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* סינון לפי תחום */}
-                <Select value={domainFilter} onValueChange={setDomainFilter}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="סינון לפי תחום" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    <SelectItem value="all">כל התחומים</SelectItem>
-                    {uniqueDomains.map((domain) => (
-                      <SelectItem key={domain} value={domain}>
-                        {domain}
-                      </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* סינון לפי מקור תקציב */}
-                <Select value={fundingSourceFilter} onValueChange={setFundingSourceFilter}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="סינון לפי מקור תקציב" />
-                  </SelectTrigger>
-                  <SelectContent className="z-50">
-                    <SelectItem value="all">כל המקורות</SelectItem>
-                    {uniqueFundingSources.map((source) => (
-                      <SelectItem key={source} value={source}>
-                        {source}
-                      </SelectItem>
+              <Card>
+                <CardHeader>
+                  <CardTitle>ניתוח תב"רים בגירעון</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {tabarim.filter(item => item.surplus_deficit < 0).slice(0, 6).map((item, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{item.tabar_name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {domainLabels[item.domain] || item.domain}
+                          </div>
+                        </div>
+                        <div className="text-left">
+                          <div className="font-bold text-red-600 text-sm">
+                            ₪{Math.abs(item.surplus_deficit).toLocaleString()}
+                          </div>
+                          <div className="text-xs text-muted-foreground">גירעון</div>
+                        </div>
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8 text-muted-foreground">
-                טוען נתונים...
-              </div>
-            ) : filteredTabarim.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                אין תב"רים להצגה עם הסינונים הנבחרים
-              </div>
-            ) : (
+          </TabsContent>
+
+          <TabsContent value="table" className="space-y-4">
+            <div ref={tableRef}>
               <DataTable
                 columns={columns}
-                data={filteredTabarim.sort((a, b) => a.surplus_deficit - b.surplus_deficit)}
-                searchableColumnIds={["tabar_name", "tabar_number"]}
-                searchPlaceholder="חפש תב״ר..."
+                data={filteredTabarim}
+                searchableColumnIds={["tabar_name"]}
+                searchPlaceholder="חיפוש תבר..."
+                className="mt-4"
               />
-            )}
-          </CardContent>
-        </Card>
+              <div className="flex items-center gap-4 mt-4">
+                <h2 className="text-2xl font-bold">רשימת תברים</h2>
+                <div className="flex gap-2">
+                  <Select value={balanceFilter} onValueChange={(value: string) => setBalanceFilter(value as 'all' | 'deficit' | 'surplus')}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="סינון לפי מאזן" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">כל התברים</SelectItem>
+                      <SelectItem value="surplus">עודף</SelectItem>
+                      <SelectItem value="deficit">גירעון</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={domainFilter} onValueChange={setDomainFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="סינון לפי תחום" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">כל התחומים</SelectItem>
+                      {uniqueDomains.map(domain => (
+                        <SelectItem key={domain} value={domain}>{domain}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select value={fundingSourceFilter} onValueChange={setFundingSourceFilter}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="סינון לפי מקור תקציב" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">כל המקורות</SelectItem>
+                      {uniqueFundingSources.map(source => (
+                        <SelectItem key={source} value={source}>{source}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="analysis" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Brain className="h-5 w-5" />
+                  ניתוח AI לתברים
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => handleAnalyzeTabarim(false)}
+                    disabled={isAnalyzing || analysisLoading}
+                    className="flex items-center gap-2"
+                  >
+                    {isAnalyzing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Brain className="h-4 w-4" />
+                    )}
+                    {isAnalyzing ? "מנתח..." : "נתח תברים"}
+                  </Button>
+                </div>
+                
+                {(analysisLoading || isAnalyzing) && (
+                  <div className="flex items-center justify-center p-8">
+                    <div className="text-center space-y-2">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+                      <p className="text-muted-foreground">
+                        {analysisLoading ? "טוען ניתוח קיים..." : "מבצע ניתוח נתונים..."}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {analysis && !analysisLoading && (
+                  <div className="border rounded-lg p-6 bg-muted/20">
+                    <div className="prose prose-sm max-w-none">
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                        {analysis}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
+      {/* Dialogs */}
       <AddTabarDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
@@ -1430,41 +868,30 @@ export default function TabarimPage() {
         editData={selectedTabar}
       />
 
-      {showUploader && (
-        <Dialog open={showUploader} onOpenChange={setShowUploader}>
-          <DialogContent dir="rtl" className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>ייבוא תב"רים מקובץ אקסל</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <DataUploader 
-                context="tabarim"
-                onUploadSuccess={handleUploadSuccess}
-              />
-              <div className="mt-4 text-sm text-muted-foreground">
-                העלה קובץ אקסל עם תב"רים. הקובץ צריך להכיל עמודות: מספר תב"ר, שם תב"ר, תחום, מקורות תקציב, תקציב מאושר, הכנסה בפועל, הוצאה בפועל.
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+      <Dialog open={showUploader} onOpenChange={setShowUploader}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>העלאת קובץ תברים</DialogTitle>
+          </DialogHeader>
+          <DataUploader
+            context="tabarim"
+            onUploadSuccess={handleUploadSuccess}
+          />
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>מחיקת תב"ר</AlertDialogTitle>
+            <AlertDialogTitle>מחיקת תבר</AlertDialogTitle>
             <AlertDialogDescription>
-              האם אתה בטוח שברצונך למחוק תב"ר זה? פעולה זו אינה ניתנת לביטול.
+              האם אתה בטוח שברצונך למחוק את התבר {selectedTabar?.tabar_name}?
+              פעולה זו אינה ניתנת לביטול.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>ביטול</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeleteConfirm}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              מחק
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm}>מחק</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
