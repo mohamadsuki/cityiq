@@ -121,8 +121,8 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-nano-2025-08-07',
-        max_completion_tokens: 2000, // Increased token limit
+        model: 'gpt-4.1-mini-2025-04-14',
+        max_tokens: 1500,
         messages: [
           { 
             role: 'system', 
