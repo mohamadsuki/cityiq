@@ -41,7 +41,6 @@ export default function RegularBudgetPage() {
   const [analysis, setAnalysis] = useState<string>("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
-  const [periodInfo, setPeriodInfo] = useState<string | null>(null);
   const [newItem, setNewItem] = useState({
     category_type: 'income' as 'income' | 'expense',
     category_name: '',
@@ -108,11 +107,6 @@ export default function RegularBudgetPage() {
 
   useEffect(() => {
     loadBudgetData();
-    // Load saved period info
-    const savedPeriod = localStorage.getItem('regular_budget_period');
-    if (savedPeriod) {
-      setPeriodInfo(savedPeriod);
-    }
   }, [user]);
 
   // Load saved analysis when budget data is loaded
